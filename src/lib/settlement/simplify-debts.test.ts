@@ -25,7 +25,10 @@ function randomNets(memberCount: number): NetBalances {
     nets.set(`m${i}`, net);
     runningTotal += net;
   }
-  nets.set(`m${memberCount - 1}`, -runningTotal);
+  // `|| 0` normalizes a -0 result (when runningTotal is exactly 0) to 0 --
+  // Object.is(-0, 0) is false, which would otherwise make the property
+  // assertion below flaky.
+  nets.set(`m${memberCount - 1}`, -runningTotal || 0);
   return nets;
 }
 
