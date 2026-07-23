@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { PasteLinkPanel } from "./PasteLinkPanel";
 
 const STEPS = [
@@ -39,6 +40,7 @@ const HERO_PEOPLE = [
 // all (Screen Spec P1-02 covers the returning-device case).
 export function ColdVisitorLanding() {
   const [showPasteLink, setShowPasteLink] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -55,8 +57,9 @@ export function ColdVisitorLanding() {
               fewest transfers to close it out.
             </p>
             <div className="mb-3.5 flex flex-wrap items-center gap-3.5">
-              {/* TODO: opens the create-group modal once P3-01 (Group switcher) is built */}
-              <Button variant="primary">Create a group</Button>
+              <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
+                Create a group
+              </Button>
               <p className="max-w-[150px] text-xs leading-snug text-muted">
                 No account or sign-up — just a name.
               </p>
@@ -187,6 +190,8 @@ export function ColdVisitorLanding() {
           </div>
         </div>
       </div>
+
+      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
     </div>
   );
 }

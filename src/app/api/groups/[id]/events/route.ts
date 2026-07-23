@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { listGroupEvents } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { createEventSchema } from "@/lib/validation/event";
 
@@ -23,29 +24,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Session does not match this group" }, { status: 403 });
   }
 
-  const events = await prisma.event.findMany({
-    where: { groupId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { eventMembers: true } },
-      bills: { select: { totalAmount: true, status: true } },
-    },
-  });
+  const events = await listGroupEvents(groupId);
 
-  return NextResponse.json({
-    events: events.map((event) => ({
-      id: event.id,
-      name: event.name,
-      startDate: event.startDate,
-      endDate: event.endDate,
-      status: event.status,
-      memberCount: event._count.eventMembers,
-      totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
-      unsettledAmount: event.bills
-        .filter((bill) => bill.status === "unsettled")
-        .reduce((sum, bill) => sum + bill.totalAmount, 0),
-    })),
-  });
+  return NextResponse.json({ events });
 }
 
 // POST: create an event scoped to this group, editor-only. If memberIds is

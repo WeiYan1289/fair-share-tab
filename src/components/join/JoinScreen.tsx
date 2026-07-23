@@ -63,6 +63,7 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
         groupName,
         memberId: selected.id,
         memberName: selected.name,
+        memberAvatarColor: selected.avatarColor,
         token: shareToken,
         memberCount: members.length,
       });

@@ -15,6 +15,10 @@ export interface DeviceGroupIdentity {
   groupName: string;
   memberId: string;
   memberName: string;
+  /** The claimed member's persisted avatar color, so the viewer's own badge
+   *  (e.g. the header avatar) matches their color everywhere else instead of
+   *  re-deriving a possibly-different one from a seed. */
+  memberAvatarColor: string;
   token: string;
   memberCount: number;
 }

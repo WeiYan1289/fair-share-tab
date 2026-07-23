@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     {
       group: { id: result.group.id, name: result.group.name, currency: result.group.currency },
       creatorMemberId: result.creator.id,
+      creatorAvatarColor: result.creator.avatarColor,
       shareLink: { token: result.shareLink.token, role: result.shareLink.role },
     },
     { status: 201 },
