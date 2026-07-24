@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { prisma } from "@/lib/prisma";
 import { computeSettlementPreview, SettlementValidationError } from "@/lib/settlement-service";
 import { settlementBillsSchema } from "@/lib/validation/settlement";
 
 // Computes net balances and simplified transfers for a chosen set of bills.
 // Read-only -- does not persist anything, so any valid session (editor or
-// viewer) can preview (system-design.md §5 "Settlement").
+// viewer) can preview (system-design.md §5 "Settlement"). Strictly
+// event-scoped: a settlement always covers exactly one event's bills.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id: groupId } = await params;
+  const { id: eventId } = await params;
 
   let session;
   try {
@@ -19,8 +21,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     throw error;
   }
 
-  if (session.groupId !== groupId) {
-    return NextResponse.json({ error: "Session does not match this group" }, { status: 403 });
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event || event.groupId !== session.groupId) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
   const body = await request.json().catch(() => null);
@@ -32,7 +35,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const { netBalances, transfers } = await computeSettlementPreview(
       parsed.data.billIds,
-      groupId,
+      eventId,
     );
     return NextResponse.json({ netBalances, transfers });
   } catch (error) {

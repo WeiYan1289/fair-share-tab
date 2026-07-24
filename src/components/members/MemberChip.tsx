@@ -16,6 +16,7 @@ export interface ChipMember {
 
 interface MemberChipProps {
   member: ChipMember;
+  currency: string;
   isYou: boolean;
   canEdit: boolean;
   onRenamed: (id: string, name: string) => void;
@@ -34,6 +35,7 @@ const PRESS_HOLD_MS = 600;
 // wraps normally on sm+ (the desktop mock).
 export function MemberChip({
   member,
+  currency,
   isYou,
   canEdit,
   onRenamed,
@@ -87,7 +89,7 @@ export function MemberChip({
   const balanceText =
     member.balance === 0
       ? "Settled up"
-      : `${member.balance > 0 ? "+" : "-"}${formatMoney(Math.abs(balance))}`;
+      : `${member.balance > 0 ? "+" : "-"}${formatMoney(Math.abs(balance), currency)}`;
   const balanceColor = cn(
     member.balance > 0 && "text-emerald dark:text-mint",
     member.balance < 0 && "text-coral",

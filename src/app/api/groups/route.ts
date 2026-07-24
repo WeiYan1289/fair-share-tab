@@ -15,10 +15,10 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { name, currency, creatorName } = parsed.data;
+  const { name, creatorName } = parsed.data;
 
   const result = await prisma.$transaction(async (tx) => {
-    const group = await tx.group.create({ data: { name, currency } });
+    const group = await tx.group.create({ data: { name } });
 
     const creator = await tx.member.create({
       data: { groupId: group.id, name: creatorName, avatarColor: assignAvatarColor() },
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      group: { id: result.group.id, name: result.group.name, currency: result.group.currency },
+      group: { id: result.group.id, name: result.group.name },
       creatorMemberId: result.creator.id,
       creatorAvatarColor: result.creator.avatarColor,
       shareLink: { token: result.shareLink.token, role: result.shareLink.role },

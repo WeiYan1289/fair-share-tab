@@ -6,6 +6,7 @@ import Link from "next/link";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/cn";
+import { getCurrencyMeta } from "@/lib/currency";
 import { getDeviceIdentities } from "@/lib/device-identity";
 import { formatMoney } from "@/lib/format";
 import { computeEqualSplit } from "@/lib/settlement";
@@ -32,14 +33,15 @@ interface BillFormProps {
   mode: "create" | "edit";
   groupId: string;
   eventId: string;
+  currency: string;
   members: FormMember[];
   initialBill?: InitialBill;
 }
 
-function parseSen(text: string): number {
+function parseAmount(text: string, minorUnit: number): number {
   const n = Number.parseFloat(text);
   if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100);
+  return Math.round(n * 10 ** minorUnit);
 }
 
 // Screen Spec P5-01 (equal split) / P5-02 (custom amounts) / P5-03 (locked,
@@ -49,14 +51,21 @@ function parseSen(text: string): number {
 export function BillForm(props: BillFormProps) {
   const dashboardHref = `/g/${props.groupId}/events/${props.eventId}`;
   if (props.initialBill?.status === "settled") {
-    return <LockedBillView dashboardHref={dashboardHref} bill={props.initialBill} />;
+    return (
+      <LockedBillView
+        dashboardHref={dashboardHref}
+        bill={props.initialBill}
+        currency={props.currency}
+      />
+    );
   }
   return <EditableBillForm {...props} />;
 }
 
-function EditableBillForm({ mode, groupId, eventId, members, initialBill }: BillFormProps) {
+function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill }: BillFormProps) {
   const router = useRouter();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
+  const { symbol, minorUnit } = getCurrencyMeta(currency);
 
   const activeMembers = members.filter((m) => m.isActive);
   const inactiveReferenced = members.filter((m) => !m.isActive);
@@ -69,7 +78,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
 
   const [title, setTitle] = useState(initialBill?.title ?? "");
   const [amountText, setAmountText] = useState(
-    initialBill ? (initialBill.totalAmount / 100).toFixed(2) : "",
+    initialBill ? (initialBill.totalAmount / 10 ** minorUnit).toFixed(minorUnit) : "",
   );
   const [payerId, setPayerId] = useState<string | null>(initialBill?.payerId ?? null);
   const [splitBetween, setSplitBetween] = useState<Set<string>>(
@@ -84,7 +93,10 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>(() => {
     if (initialBill?.splitMethod === "custom") {
       return Object.fromEntries(
-        initialBill.splits.map((s) => [s.memberId, (s.shareAmount / 100).toFixed(2)]),
+        initialBill.splits.map((s) => [
+          s.memberId,
+          (s.shareAmount / 10 ** minorUnit).toFixed(minorUnit),
+        ]),
       );
     }
     return {};
@@ -92,7 +104,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalAmountSen = parseSen(amountText);
+  const totalAmountSen = parseAmount(amountText, minorUnit);
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
   function toggleParticipant(id: string) {
@@ -116,7 +128,9 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
           payerId ?? undefined,
         );
         setCustomAmounts(
-          Object.fromEntries(shares.map((s) => [s.memberId, (s.shareAmount / 100).toFixed(2)])),
+          Object.fromEntries(
+            shares.map((s) => [s.memberId, (s.shareAmount / 10 ** minorUnit).toFixed(minorUnit)]),
+          ),
         );
       } catch {
         // totalAmount/participants not ready yet -- leave blank, filled in below
@@ -142,7 +156,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
   }, [splitMethod, totalAmountSen, splitBetween, payerId, memberById]);
 
   const customRunningTotal = [...splitBetween].reduce(
-    (sum, id) => sum + parseSen(customAmounts[id] ?? ""),
+    (sum, id) => sum + parseAmount(customAmounts[id] ?? "", minorUnit),
     0,
   );
   const customReconciled = splitMethod === "custom" && customRunningTotal === totalAmountSen;
@@ -176,7 +190,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
             splitMethod: "custom" as const,
             customShares: [...splitBetween].map((id) => ({
               memberId: id,
-              shareAmount: parseSen(customAmounts[id] ?? ""),
+              shareAmount: parseAmount(customAmounts[id] ?? "", minorUnit),
             })),
           };
 
@@ -231,15 +245,15 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
         <div className="mb-4.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
           <div className="num flex items-center gap-1.5 rounded-md border border-ink/16 bg-white px-4 py-3 dark:border-white/16 dark:bg-dark-card">
-            <span className="text-[15px] text-muted-2">RM</span>
+            <span className="text-[15px] text-muted-2">{symbol}</span>
             <input
               type="number"
               min="0"
-              step="0.01"
-              inputMode="decimal"
+              step={minorUnit === 0 ? "1" : "0.01"}
+              inputMode={minorUnit === 0 ? "numeric" : "decimal"}
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
-              placeholder="0.00"
+              placeholder={minorUnit === 0 ? "0" : "0.00"}
               className="w-full text-[18px] text-ink outline-none dark:text-dark-text"
             />
           </div>
@@ -327,7 +341,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                     </span>
                   </div>
                   <span className="num text-[15px] text-ink dark:text-dark-text">
-                    {share ? formatMoney(share.shareAmount) : "—"}
+                    {share ? formatMoney(share.shareAmount, currency) : "—"}
                   </span>
                 </div>
               );
@@ -339,7 +353,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                 equalShares ? "text-emerald dark:text-mint" : "text-muted-2",
               )}
             >
-              {equalShares ? `✓ Adds up to ${formatMoney(totalAmountSen)}` : "Enter an amount above"}
+              {equalShares ? `✓ Adds up to ${formatMoney(totalAmountSen, currency)}` : "Enter an amount above"}
             </div>
           </div>
         ) : (
@@ -356,17 +370,17 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                       </span>
                     </div>
                     <div className="num flex items-center gap-1 rounded-md border border-ink/16 bg-white px-2.5 py-1.5 dark:border-white/16 dark:bg-dark-bg">
-                      <span className="text-[13px] text-muted-2">RM</span>
+                      <span className="text-[13px] text-muted-2">{symbol}</span>
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
-                        inputMode="decimal"
+                        step={minorUnit === 0 ? "1" : "0.01"}
+                        inputMode={minorUnit === 0 ? "numeric" : "decimal"}
                         value={customAmounts[id] ?? ""}
                         onChange={(e) =>
                           setCustomAmounts((prev) => ({ ...prev, [id]: e.target.value }))
                         }
-                        placeholder="0.00"
+                        placeholder={minorUnit === 0 ? "0" : "0.00"}
                         className="w-20 text-[14px] text-ink outline-none dark:text-dark-text"
                       />
                     </div>
@@ -382,15 +396,15 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                   customReconciled ? "text-ink dark:text-dark-text" : "text-coral",
                 )}
               >
-                {formatMoney(customRunningTotal)} / {formatMoney(totalAmountSen)}
+                {formatMoney(customRunningTotal, currency)} / {formatMoney(totalAmountSen, currency)}
               </span>
             </div>
             {!customReconciled && (
               <div className="flex items-center gap-2 rounded-md border border-coral-tint-border bg-coral-tint px-4 py-3 text-[13px] font-bold text-coral dark:border-coral/30 dark:bg-coral/10">
                 ⚠ Amounts don&apos;t add up —{" "}
-                {formatMoney(Math.abs(totalAmountSen - customRunningTotal))}
+                {formatMoney(Math.abs(totalAmountSen - customRunningTotal), currency)}
                 {customRunningTotal < totalAmountSen ? " short of " : " over "}
-                {formatMoney(totalAmountSen)}
+                {formatMoney(totalAmountSen, currency)}
               </div>
             )}
           </div>
@@ -461,9 +475,11 @@ function MemberSelectChip({
 function LockedBillView({
   dashboardHref,
   bill,
+  currency,
 }: {
   dashboardHref: string;
   bill: InitialBill;
+  currency: string;
 }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cream px-5 py-8 dark:bg-dark-bg">
@@ -484,7 +500,7 @@ function LockedBillView({
         <div className="pointer-events-none mb-4.5 opacity-45">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
           <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[14.5px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
-            {formatMoney(bill.totalAmount)}
+            {formatMoney(bill.totalAmount, currency)}
           </div>
         </div>
         <div className="flex gap-2.5">

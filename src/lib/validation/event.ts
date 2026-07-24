@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { CURRENCY_CODES, DEFAULT_CURRENCY } from "@/lib/currency";
 
 export const createEventSchema = z.object({
   name: z.string().trim().min(1, "Event name is required"),
+  currency: z.enum(CURRENCY_CODES).default(DEFAULT_CURRENCY),
   startDate: z.iso.date().optional(),
   endDate: z.iso.date().optional(),
   // Optional per system-design.md §5; the current UI (Screen Spec P3-04)

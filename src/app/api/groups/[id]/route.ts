@@ -28,7 +28,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     select: {
       id: true,
       name: true,
-      currency: true,
       members: {
         where: { isActive: true },
         orderBy: { createdAt: "asc" },
@@ -42,7 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   return NextResponse.json({
-    group: { id: group.id, name: group.name, currency: group.currency },
+    group: { id: group.id, name: group.name },
     members: group.members,
   });
 }

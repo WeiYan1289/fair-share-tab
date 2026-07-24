@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currency";
 
 interface CreateEventModalProps {
   groupId: string;
@@ -15,6 +16,7 @@ interface CreateEventModalProps {
 export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +35,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
+          currency,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
         }),
@@ -61,6 +64,21 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
             placeholder="Ski Trip 2026"
             className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
+        </div>
+
+        <div className="mb-3.5">
+          <label className="mb-1.5 block text-xs font-bold text-muted-2">Currency</label>
+          <select
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code} — {c.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-5 flex gap-2.5">

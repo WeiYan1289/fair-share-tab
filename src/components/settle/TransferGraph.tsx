@@ -9,6 +9,7 @@ import type { SettleMember, Transfer } from "./SettleUpFlow";
 interface TransferGraphProps {
   transfers: Transfer[];
   members: SettleMember[];
+  currency: string;
   viewerMemberId: string | null;
 }
 
@@ -26,7 +27,7 @@ const ROW_HEIGHT = 92;
 // that (mobile mockup) -- these aren't just two sizes of the same layout in
 // the designs, they're different shapes, so both are implemented rather
 // than one being a scaled-down version of the other.
-export function TransferGraph({ transfers, members, viewerMemberId }: TransferGraphProps) {
+export function TransferGraph({ transfers, members, currency, viewerMemberId }: TransferGraphProps) {
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
   const debtorIds = useMemo(() => {
@@ -147,7 +148,7 @@ export function TransferGraph({ transfers, members, viewerMemberId }: TransferGr
                 transitionDelay: `${i * 150}ms`,
               }}
             >
-              {formatMoney(t.amount)}
+              {formatMoney(t.amount, currency)}
             </div>
           );
         })}
@@ -195,7 +196,7 @@ export function TransferGraph({ transfers, members, viewerMemberId }: TransferGr
                 <TransferEndpoint member={from} isYou={t.fromMemberId === viewerMemberId} />
                 <div className="flex flex-1 flex-col items-center gap-1 px-1">
                   <span className="num rounded-full border border-ink/10 bg-white px-2.5 py-1 text-[13px] text-ink">
-                    {formatMoney(t.amount)}
+                    {formatMoney(t.amount, currency)}
                   </span>
                   <div className="h-0.5 w-full bg-ink/18" />
                 </div>

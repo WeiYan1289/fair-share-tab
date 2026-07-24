@@ -25,9 +25,11 @@ so login can be added later without a migration.
 
 ## Ten rules that must not be broken
 
-1. Money is **integers in sen**. MYR only. `RM 12.50` → `1250`.
+1. Money is **integers in the event currency's smallest unit**. Each event picks its
+   own currency (default MYR) from a curated list — see `src/lib/currency.ts`.
+   `RM 12.50` → `1250`; `¥1,500` → `1500` (JPY has zero decimal places).
 2. **Splits always sum to the bill total** — validated server-side, in a transaction.
-3. **Equal-split rounding is deterministic** — remainder sen go to the payer first,
+3. **Equal-split rounding is deterministic** — the remainder goes to the payer first,
    then by `created_at`.
 4. **Members are never deleted** — deactivated only.
 5. **Show the viewer's real name**, never the bare word "You".
@@ -64,6 +66,4 @@ so login can be added later without a migration.
 Design decisions still open, listed so they don't get silently invented:
 
 - **Audit log** of bill edits — not designed; worth adding early if disputes occur.
-- **Multi-currency** — schema supports it, but zero-decimal currencies (JPY) need
-  parsing, display, and rounding work before enabling.
 - **Concurrent edit conflicts** — v1 is last-write-wins.

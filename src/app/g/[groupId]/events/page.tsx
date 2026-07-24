@@ -36,6 +36,7 @@ export default async function EventsPage({
       events={events.map((event) => ({
         id: event.id,
         name: event.name,
+        currency: event.currency,
         memberCount: event.memberCount,
         totalSpend: event.totalSpend,
         unsettledAmount: event.unsettledAmount,

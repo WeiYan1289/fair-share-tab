@@ -37,14 +37,12 @@ enum SettlementStatus {
 model Group {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
-  currency  String   @db.VarChar(3)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  shareLinks  GroupShareLink[]
-  members     Member[]
-  events      Event[]
-  settlements Settlement[]
+  shareLinks GroupShareLink[]
+  members    Member[]
+  events     Event[]
 
   @@map("group")
 }
@@ -88,6 +86,7 @@ model Event {
   id        String      @id @default(uuid()) @db.Uuid
   groupId   String      @map("group_id") @db.Uuid
   name      String
+  currency  String      @default("MYR") @db.VarChar(3)
   startDate DateTime?   @map("start_date") @db.Date
   endDate   DateTime?   @map("end_date") @db.Date
   status    EventStatus @default(active)
@@ -96,6 +95,7 @@ model Event {
   group        Group         @relation(fields: [groupId], references: [id], onDelete: Restrict)
   eventMembers EventMember[]
   bills        Bill[]
+  settlements  Settlement[]
 
   @@index([groupId])
   @@index([groupId, status])
@@ -153,11 +153,11 @@ model Split {
 
 model Settlement {
   id        String           @id @default(uuid()) @db.Uuid
-  groupId   String           @map("group_id") @db.Uuid
+  eventId   String           @map("event_id") @db.Uuid
   status    SettlementStatus @default(draft)
   createdAt DateTime         @default(now()) @map("created_at")
 
-  group           Group            @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
   settlementBills SettlementBill[]
   transfers       Transfer[]
 

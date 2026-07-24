@@ -8,9 +8,10 @@ import { settlementBillsSchema } from "@/lib/validation/settlement";
 // settled -- one transaction (system-design.md §5, §6.4). Transfers are
 // always recomputed server-side from billIds; the client never supplies
 // transfer amounts directly, the same "never trust client money math"
-// pattern as bill splits (src/lib/bills.ts). Editor-only.
+// pattern as bill splits (src/lib/bills.ts). Editor-only. Strictly
+// event-scoped: a settlement always covers exactly one event's bills.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id: groupId } = await params;
+  const { id: eventId } = await params;
 
   let session;
   try {
@@ -22,8 +23,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     throw error;
   }
 
-  if (session.groupId !== groupId) {
-    return NextResponse.json({ error: "Session does not match this group" }, { status: 403 });
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event || event.groupId !== session.groupId) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
   const body = await request.json().catch(() => null);
@@ -34,7 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let preview;
   try {
-    preview = await computeSettlementPreview(parsed.data.billIds, groupId);
+    preview = await computeSettlementPreview(parsed.data.billIds, eventId);
   } catch (error) {
     if (error instanceof SettlementValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -44,7 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const settlement = await prisma.$transaction(async (tx) => {
     const created = await tx.settlement.create({
-      data: { groupId, status: "confirmed" },
+      data: { eventId, status: "confirmed" },
     });
 
     await tx.settlementBill.createMany({
@@ -74,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     {
       settlement: {
         id: settlement.id,
-        groupId: settlement.groupId,
+        eventId: settlement.eventId,
         status: settlement.status,
         createdAt: settlement.createdAt,
         billIds: preview.billIds,

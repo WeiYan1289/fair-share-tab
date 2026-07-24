@@ -30,18 +30,22 @@ Zod · Vitest · Vercel. Fonts: Instrument Serif (display) + Work Sans (UI) via
 
 These are correctness requirements, not preferences. Violating any of them is a bug.
 
-**1. Money is integers in sen.** v1 is MYR only. `RM 12.50` is stored and computed as
-`1250`. Never use float, never use decimal-as-string. Convert to display only at the UI
-boundary (`sen / 100`, `RM 1,240.00`, always 2 decimal places).
+**1. Money is integers in the smallest unit of the event's currency.** Each event
+independently selects its currency (default MYR) from a curated list (MYR, SGD, JPY,
+CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. Only JPY has
+zero decimal places; every other currency in the list uses 2. `RM 12.50` is stored and
+computed as `1250`; `¥1,500` is stored and computed as `1500`. Never use float, never
+use decimal-as-string. Convert to display only at the UI boundary
+(`amount / 10 ** minorUnit`, `RM 1,240.00` / `¥1,500`).
 
 **2. Splits must sum to the bill total.** `SUM(split.share_amount) === bill.total_amount`
 for every bill, always. Validate on the server inside a transaction, on every create
 and update. Client-side validation is UX only.
 
 **3. Equal-split rounding is deterministic.** `base = floor(total / n)`, then
-distribute the remainder sen one at a time — to the payer first if the payer
-participates, then by `member.created_at`. Sum must equal total exactly.
-`RM 250.00 / 3` → `8334 / 8333 / 8333`.
+distribute the remainder in the currency's smallest unit one at a time — to the payer
+first if the payer participates, then by `member.created_at`. Sum must equal total
+exactly. `RM 250.00 / 3` → `8334 / 8333 / 8333`.
 
 **4. Members are never deleted.** Only `is_active = false`. They stay on every bill
 they already appear on and remain settleable. Do not add a delete endpoint or a delete
@@ -80,8 +84,8 @@ the address bar. Validate `revoked_at` on every request, not just at exchange.
   member's net exactly; only reroutes who pays whom.
 - Payer and participants are **independent** — someone can pay for a bill they aren't
   part of.
-- Settlement is **group-scoped** in the schema (bills from several events can settle
-  together) even though the v1 UI settles within one event.
+- Settlement is **strictly event-scoped** — a settlement always covers bills from
+  exactly one event, guaranteeing a single currency by construction.
 
 ## Conventions
 

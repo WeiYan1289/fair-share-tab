@@ -32,7 +32,7 @@ Two things changed from v1 and both matter:
 
 - **Members moved from `event` to `group`.** The same people travel together
   repeatedly, so they're added once per group and each event records which subset
-  participated. This also lets balances net across trips.
+  participated, without re-creating the person each trip.
 - **`member.user_id` exists and is nullable.** A `member` is an *accounting entity*
   (a name that owes and is owed money). A `user` is an *authenticated identity*. They
   are deliberately separate so login can be added later without a data migration.
@@ -47,7 +47,7 @@ erDiagram
   GROUP ||--o{ GROUP_SHARE_LINK : "granted by"
   GROUP ||--o{ MEMBER : has
   GROUP ||--o{ EVENT : contains
-  GROUP ||--o{ SETTLEMENT : "settled by"
+  EVENT ||--o{ SETTLEMENT : "settled by"
   EVENT ||--o{ EVENT_MEMBER : "participated by"
   MEMBER ||--o{ EVENT_MEMBER : "joins"
   EVENT ||--o{ BILL : contains
@@ -61,7 +61,6 @@ erDiagram
   GROUP {
     uuid id PK
     string name
-    string currency
     timestamp created_at
   }
   GROUP_SHARE_LINK {
@@ -83,6 +82,7 @@ erDiagram
     uuid id PK
     uuid group_id FK
     string name
+    string currency
     date start_date
     date end_date
     string status
@@ -109,7 +109,7 @@ erDiagram
   }
   SETTLEMENT {
     uuid id PK
-    uuid group_id FK
+    uuid event_id FK
     string status
     timestamp created_at
   }
@@ -134,7 +134,6 @@ The top-level container. Never hard-deleted.
 |---|---|---|
 | `id` | UUID (PK) | Primary key. |
 | `name` | string | e.g. "Family & Friends". Required, trimmed, non-empty. |
-| `currency` | string(3) | ISO 4217. **v1 launches with `MYR` only** (see §5). Lives on the group, not the event, because balances net across events and you cannot net across currencies. |
 | `created_at` | timestamp | Set on creation. |
 | `updated_at` | timestamp | Updated on any change. |
 
@@ -177,12 +176,11 @@ One trip within a group.
 | `id` | UUID (PK) | Primary key. |
 | `group_id` | UUID (FK) | References `group.id`. |
 | `name` | string | e.g. "Japan Trip 2025". Required. |
+| `currency` | string(3) | ISO 4217, from a curated list (MYR, SGD, JPY, CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. Defaults to `MYR`. Chosen at creation and **locked once the event has its first bill** (see §5, §6 invariant 9). |
 | `start_date` | date NULL | Optional, for the date range in the header. |
 | `end_date` | date NULL | Optional. |
 | `status` | enum | `active` or `archived`. Never hard-deleted. |
 | `created_at` | timestamp | Set on creation. |
-
-An event has no `currency` — it inherits the group's.
 
 ### 3.5 `event_member`
 
@@ -206,7 +204,7 @@ A single expense within an event.
 | `event_id` | UUID (FK) | References `event.id`. |
 | `payer_id` | UUID (FK) | The member who paid. **Independent of participation** — the payer need not be in the split. |
 | `title` | string | e.g. "Dinner at Ichiran". Required. |
-| `total_amount` | integer | **In sen** (see §5). Must be > 0. |
+| `total_amount` | integer | **In the event currency's smallest unit** (see §5). Must be > 0. |
 | `split_method` | enum | `equal` or `custom`. |
 | `status` | enum | `unsettled` or `settled`. Settled bills are locked from editing (§6, invariant 8). |
 | `category` | string NULL | Optional (food, transport, lodging…). |
@@ -223,23 +221,22 @@ One member's share of one bill. Rows exist only for participating members.
 | `id` | UUID (PK) | Primary key. |
 | `bill_id` | UUID (FK) | References `bill.id`. Cascade-delete with the bill. |
 | `member_id` | UUID (FK) | References `member.id`. |
-| `share_amount` | integer | This member's owed portion, in sen. Must be ≥ 0. |
+| `share_amount` | integer | This member's owed portion, in the event currency's smallest unit. Must be ≥ 0. |
 
 Unique constraint: `(bill_id, member_id)`.
 
 ### 3.8 `settlement`, `settlement_bill`, `transfer`
 
-A settlement is one "settle up" run. It is **group-scoped**, not event-scoped, so
-bills from multiple events in the same group can be settled together. The v1 UI
-settles within a single event, but the schema supports cross-event settlement with no
-migration.
+A settlement is one "settle up" run. It is **strictly event-scoped** — a settlement
+always covers bills from exactly one event, which guarantees a single currency by
+construction. Cross-event settlement is not supported.
 
 `settlement`
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | Primary key. |
-| `group_id` | UUID (FK) | References `group.id`. |
+| `event_id` | UUID (FK) | References `event.id`. |
 | `status` | enum | `draft` or `confirmed`. |
 | `created_at` | timestamp | Set on creation. |
 
@@ -253,7 +250,7 @@ migration.
 | `settlement_id` | UUID (FK) | References `settlement.id`. |
 | `from_member_id` | UUID (FK) | The debtor (pays). |
 | `to_member_id` | UUID (FK) | The creditor (receives). |
-| `amount` | integer | In sen. Must be > 0. |
+| `amount` | integer | In the event currency's smallest unit. Must be > 0. |
 
 ---
 
@@ -269,19 +266,25 @@ whose name gets the "you" marker.
 
 ---
 
-## 5. Money handling — MYR
+## 5. Money handling — multi-currency
 
-v1 launches with **Malaysian Ringgit (MYR)** only.
+Each **event** picks its own currency (default MYR) from a curated list defined in
+`src/lib/currency.ts`: MYR, SGD, JPY, CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD.
 
-- 1 MYR = 100 sen. **Store every amount as an integer number of sen.**
-  `RM 12.50` is stored as `1250`.
+- Every amount is stored as an integer number of the currency's smallest unit — its
+  ISO 4217 minor unit. For 2-decimal currencies (everything in the list except JPY),
+  1 unit = 100 smallest units, so `RM 12.50` is stored as `1250`. **JPY has zero
+  decimal places** — `¥1,500` is stored as `1500`, not `150000`.
 - Never use `float`, `double`, or `Decimal`-as-string for amounts. Integer columns only.
-- Convert to display only at the UI boundary: `sen / 100`, formatted with the `RM`
-  prefix and exactly 2 decimal places (`RM 1,240.00`).
-- Parse user input at the UI boundary too: accept `1240`, `1240.00`, `1,240.00` →
-  `124000` sen. Reject more than 2 decimal places.
-- The schema already supports other currencies via `group.currency`. Anything with a
-  different minor unit (JPY has none) must be handled before enabling it — see §11.
+- Convert to display only at the UI boundary: `amount / 10 ** minorUnit`, formatted
+  with the currency's symbol and the correct number of decimal places
+  (`RM 1,240.00`, `¥1,500`) — see `formatMoney` in `src/lib/format.ts`.
+- Parse user input at the UI boundary too, respecting the event's minor unit: for
+  2-decimal currencies, accept `1240`, `1240.00`, `1,240.00` → `124000`; for JPY, accept
+  whole numbers only (`1500` → `1500`), reject a decimal point.
+- Equal-split rounding (§6 invariant 5) is minor-unit-agnostic — it only ever
+  distributes a remainder of whole smallest units, so it needs no special case for
+  zero-decimal currencies.
 
 ---
 
@@ -295,16 +298,18 @@ v1 launches with **Malaysian Ringgit (MYR)** only.
    event's group.
 4. **Net balances sum to zero** — across any set of bills, the sum of all members' net
    positions is exactly 0. This is a computed property, never stored.
-5. **Equal-split rounding** — when the total doesn't divide evenly, the remainder sen
-   are assigned deterministically: to the **payer** if the payer is a participant,
-   otherwise to participants in `member.created_at` order, one sen each. The sum must
-   still equal the total exactly. Example: `RM 250.00 / 3` → `8334 / 8333 / 8333` sen.
+5. **Equal-split rounding** — when the total doesn't divide evenly, the remainder
+   (in the event currency's smallest unit) is assigned deterministically: to the
+   **payer** if the payer is a participant, otherwise to participants in
+   `member.created_at` order, one unit each. The sum must still equal the total
+   exactly. Example: `RM 250.00 / 3` → `8334 / 8333 / 8333` sen.
 6. **Members are never deleted** — only `is_active = false`.
 7. **Groups and events are never hard-deleted** — events use `status = 'archived'`.
 8. **Settled bills are immutable** — a bill with `status = 'settled'` cannot be edited
    or deleted until it is unsettled.
-9. **One currency per group** — all bills in a group share `group.currency`. Netting
-   across currencies is not permitted.
+9. **One currency per event, locked at creation** — an event's `currency` is chosen
+   when it's created and cannot change once the event has its first bill. Settlement
+   is always scoped to a single event (§3.8), so netting never crosses currencies.
 10. **Share tokens are unique and unguessable** — ≥128 bits of CSPRNG entropy.
 
 ---
@@ -331,8 +336,8 @@ so the owner is never an unnamed member. See `system-design.md` §5.
 
 ## 8. Relationships and delete behaviour
 
-- `group` → many `member`, `event`, `group_share_link`, `settlement`.
-- `event` → many `bill`; many `member` via `event_member`.
+- `group` → many `member`, `event`, `group_share_link`.
+- `event` → many `bill`, `settlement`; many `member` via `event_member`.
 - `bill` → one `payer` (member), many `split`. **Deleting a bill cascades to its
   splits.**
 - `settlement` → many `transfer`; many `bill` via `settlement_bill`.
@@ -373,10 +378,9 @@ survive whether or not a person ever creates an account.
 ## 11. Out of scope for v1
 
 - **User accounts / login** — designed for (§9) but not built.
-- **Multi-currency** — schema supports it; MYR only at launch. Enabling another
-  currency requires handling zero-decimal currencies (JPY) in parsing, display, and
-  the rounding rule, plus a decision on whether groups may ever change currency after
-  bills exist (recommended: no).
+- **Changing an event's currency after its first bill, and cross-currency
+  settlement** — an event's currency is fixed once money has been recorded against
+  it (§6 invariant 9), and settlement never spans more than one event/currency.
 - **Multiple payers per bill** — would need a `bill_payer` join table with amounts.
 - **Receipt image attachments.**
 - **Audit log of edits** — worth adding early if disputes become a problem.

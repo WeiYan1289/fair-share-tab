@@ -32,6 +32,7 @@ interface SettleUpFlowProps {
   groupId: string;
   eventId: string;
   eventName: string;
+  currency: string;
   viewerRole: "editor" | "viewer";
   members: SettleMember[];
   bills: SettleBill[];
@@ -43,6 +44,7 @@ export function SettleUpFlow({
   groupId,
   eventId,
   eventName,
+  currency,
   viewerRole,
   members,
   bills,
@@ -82,7 +84,7 @@ export function SettleUpFlow({
     setCalculating(true);
     setError(null);
     try {
-      const res = await fetch(`/api/groups/${groupId}/settlement/preview`, {
+      const res = await fetch(`/api/events/${eventId}/settlement/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billIds: [...selectedIds] }),
@@ -102,7 +104,7 @@ export function SettleUpFlow({
     setConfirming(true);
     setError(null);
     try {
-      const res = await fetch(`/api/groups/${groupId}/settlement/confirm`, {
+      const res = await fetch(`/api/events/${eventId}/settlement/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billIds: [...selectedIds] }),
@@ -170,7 +172,7 @@ export function SettleUpFlow({
                         </p>
                       </div>
                       <p className="num text-[17px] text-ink dark:text-dark-text">
-                        {formatMoney(bill.totalAmount)}
+                        {formatMoney(bill.totalAmount, currency)}
                       </p>
                     </button>
                   );
@@ -182,7 +184,7 @@ export function SettleUpFlow({
               <div className="flex items-center justify-between rounded-md bg-mint-tint px-5.5 py-4.5 dark:bg-mint/16">
                 <p className="text-sm font-bold text-emerald dark:text-mint">
                   {selectedIds.size} bill{selectedIds.size === 1 ? "" : "s"} selected ·{" "}
-                  {formatMoney(selectedTotal)} total
+                  {formatMoney(selectedTotal, currency)} total
                 </p>
                 <button
                   type="button"
@@ -221,7 +223,12 @@ export function SettleUpFlow({
           from {selectedBills.length} bill{selectedBills.length === 1 ? "" : "s"}.
         </p>
 
-        <TransferGraph transfers={transfers} members={members} viewerMemberId={viewerMemberId} />
+        <TransferGraph
+          transfers={transfers}
+          members={members}
+          currency={currency}
+          viewerMemberId={viewerMemberId}
+        />
 
         <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-mint-tint px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">
           ✓ {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone
@@ -251,6 +258,7 @@ export function SettleUpFlow({
         <ConfirmSettleModal
           transfers={transfers}
           members={members}
+          currency={currency}
           billCount={selectedBills.length}
           confirming={confirming}
           onCancel={() => setShowConfirm(false)}
@@ -264,6 +272,7 @@ export function SettleUpFlow({
 function ConfirmSettleModal({
   transfers,
   members,
+  currency,
   billCount,
   confirming,
   onCancel,
@@ -271,6 +280,7 @@ function ConfirmSettleModal({
 }: {
   transfers: Transfer[];
   members: SettleMember[];
+  currency: string;
   billCount: number;
   confirming: boolean;
   onCancel: () => void;
@@ -294,7 +304,7 @@ function ConfirmSettleModal({
               <span>
                 {nameById.get(t.fromMemberId)} → {nameById.get(t.toMemberId)}
               </span>
-              <span className="num text-[14px]">{formatMoney(t.amount)}</span>
+              <span className="num text-[14px]">{formatMoney(t.amount, currency)}</span>
             </div>
           ))}
         </div>

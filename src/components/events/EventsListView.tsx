@@ -10,6 +10,7 @@ import { CreateEventModal } from "./CreateEventModal";
 interface EventSummary {
   id: string;
   name: string;
+  currency: string;
   memberCount: number;
   totalSpend: number;
   unsettledAmount: number;
@@ -139,7 +140,7 @@ function EventCard({ groupId, event }: { groupId: string; event: EventSummary })
         <div>
           <p className="mb-1 text-[11.5px] tracking-wide text-muted-2 uppercase">Total spent</p>
           <p className="num text-[20px] text-ink sm:text-[22px] dark:text-dark-text">
-            {formatMoney(event.totalSpend)}
+            {formatMoney(event.totalSpend, event.currency)}
           </p>
         </div>
         <div className="text-right">
@@ -149,7 +150,9 @@ function EventCard({ groupId, event }: { groupId: string; event: EventSummary })
               event.unsettledAmount > 0 ? "text-coral" : "text-emerald dark:text-mint"
             }`}
           >
-            {event.unsettledAmount > 0 ? formatMoney(event.unsettledAmount) : "Settled"}
+            {event.unsettledAmount > 0
+              ? formatMoney(event.unsettledAmount, event.currency)
+              : "Settled"}
           </p>
         </div>
       </div>

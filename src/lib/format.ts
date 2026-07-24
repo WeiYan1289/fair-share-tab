@@ -1,14 +1,18 @@
+import { DEFAULT_CURRENCY, getCurrencyMeta } from "@/lib/currency";
+
 /**
- * Converts an integer sen amount to a display string, e.g. 124000 -> "RM
- * 1,240.00" (CLAUDE.md rule 1). Money is only ever converted to a decimal
- * at this UI boundary -- never store or compute with the result.
+ * Converts an integer amount (in the smallest unit of `currencyCode`) to a
+ * display string, e.g. 124000 -> "RM 1,240.00" for MYR, or 1500 -> "¥1,500"
+ * for JPY (CLAUDE.md rule 1). Money is only ever converted to a decimal at
+ * this UI boundary -- never store or compute with the result.
  */
-export function formatMoney(sen: number, currency = "RM"): string {
-  const amount = (sen / 100).toLocaleString("en-MY", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+export function formatMoney(amount: number, currencyCode: string = DEFAULT_CURRENCY): string {
+  const { symbol, minorUnit } = getCurrencyMeta(currencyCode);
+  const display = (amount / 10 ** minorUnit).toLocaleString("en-MY", {
+    minimumFractionDigits: minorUnit,
+    maximumFractionDigits: minorUnit,
   });
-  return `${currency} ${amount}`;
+  return `${symbol}${minorUnit === 0 ? "" : " "}${display}`;
 }
 
 /** e.g. "Mar 12 – Mar 20" or just "Mar 12" when only one date is set. */

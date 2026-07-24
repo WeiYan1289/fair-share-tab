@@ -11,26 +11,25 @@ export interface NetBalanceView {
 
 /**
  * Loads and validates the bills a settlement run covers, then computes net
- * balances and simplified transfers. Settlement is group-scoped, not
- * event-scoped -- bills from several events in the group can settle
- * together even though the v1 UI only ever selects within one event
- * (system-design.md §4.1, data-model.md §8). Only unsettled bills belonging
- * to this group are ever eligible (system-design.md §7).
+ * balances and simplified transfers. Settlement is strictly event-scoped --
+ * a settlement always covers bills from exactly one event, which guarantees
+ * a single currency by construction. Only unsettled bills belonging to this
+ * event are ever eligible (system-design.md §7).
  */
 export async function computeSettlementPreview(
   billIds: string[],
-  groupId: string,
+  eventId: string,
 ): Promise<{ netBalances: NetBalanceView[]; transfers: Transfer[]; billIds: string[] }> {
   const uniqueBillIds = [...new Set(billIds)];
 
   const bills = await prisma.bill.findMany({
-    where: { id: { in: uniqueBillIds }, status: "unsettled", event: { groupId } },
+    where: { id: { in: uniqueBillIds }, status: "unsettled", eventId },
     include: { splits: true },
   });
 
   if (bills.length !== uniqueBillIds.length) {
     throw new SettlementValidationError(
-      "billIds must all be unsettled bills belonging to this group",
+      "billIds must all be unsettled bills belonging to this event",
     );
   }
 

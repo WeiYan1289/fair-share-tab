@@ -37,6 +37,7 @@ export default async function NewBillPage({
       mode="create"
       groupId={groupId}
       eventId={eventId}
+      currency={event.currency}
       members={event.eventMembers.map(({ member }) => ({
         id: member.id,
         name: member.name,

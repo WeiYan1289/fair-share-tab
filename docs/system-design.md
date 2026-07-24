@@ -14,11 +14,13 @@ with the fewest possible person-to-person transfers, while everyone ends up exac
 financially whole.
 
 **In scope (v1):** groups with shareable-link access, members (add / rename /
-deactivate, never delete), events, bills with equal or custom splits, debt
-simplification with a visual transfer graph, landing page, MYR only.
+deactivate, never delete), events with a per-event currency (curated list, default
+MYR), bills with equal or custom splits, debt simplification with a visual transfer
+graph, landing page.
 
 **Out of scope (v1):** authentication (designed for — `data-model.md` §9),
-multi-currency, multiple payers per bill, receipts.
+changing an event's currency after its first bill, cross-currency settlement,
+multiple payers per bill, receipts.
 
 ---
 
@@ -182,14 +184,14 @@ Write these before any UI exists:
 
 ## 5. API endpoints
 
-REST over JSON. **All amounts are integers in sen.** Every route below is
-server-side and performs the §3 access check first.
+REST over JSON. **All amounts are integers in the event currency's smallest unit.**
+Every route below is server-side and performs the §3 access check first.
 
 ### Landing / access
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/groups` | Create a group. Body: `{ name, currency, creatorName }`. Creates the group, its first member (`creatorName`), and an `editor` share link in one transaction. Returns the group and link. |
+| `POST` | `/api/groups` | Create a group. Body: `{ name, creatorName }`. Creates the group, its first member (`creatorName`), and an `editor` share link in one transaction. Returns the group and link. |
 | `GET` | `/g/{token}` | Validate token → set session cookie → redirect to the group. Invalid/revoked → error screen. |
 | `POST` | `/api/groups/{id}/claim` | Record which member the device is. Sets the client-side identity. |
 
@@ -217,9 +219,9 @@ is what forced the old "You" label (`data-model.md` §7).
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/groups/{id}/events` | List with computed total spend and unsettled amount. |
-| `POST` | `/api/groups/{id}/events` | Create `{ name, startDate?, endDate?, memberIds[] }`. |
+| `POST` | `/api/groups/{id}/events` | Create `{ name, currency?, startDate?, endDate?, memberIds[] }`. `currency` defaults to `MYR`; see the curated list in `data-model.md` §5. |
 | `GET` | `/api/events/{id}` | Detail with members, bills, and computed balances. |
-| `PATCH` | `/api/events/{id}` | Rename, change dates, or archive. |
+| `PATCH` | `/api/events/{id}` | Rename, change dates, or archive. Currency cannot be changed here — it is fixed at creation and locked once the event has its first bill. |
 
 ### Bills
 
@@ -250,8 +252,8 @@ For `splitMethod: "custom"`, send
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/groups/{id}/settlement/preview` | Body `{ billIds[] }`. Returns net balances + simplified transfers. **Does not persist.** |
-| `POST` | `/api/groups/{id}/settlement/confirm` | Persists the settlement, its transfers, and marks the included bills `settled`. One transaction. |
+| `POST` | `/api/events/{id}/settlement/preview` | Body `{ billIds[] }`. Returns net balances + simplified transfers. **Does not persist.** |
+| `POST` | `/api/events/{id}/settlement/confirm` | Persists the settlement, its transfers, and marks the included bills `settled`. One transaction. |
 
 Preview response:
 
@@ -273,9 +275,9 @@ Preview response:
 
 ### 6.1 Create a group (owner entry)
 
-Landing → "Create group" → `{ groupName, currency: MYR, creatorName }` → server
-creates group + first member + editor link in one transaction → device identity set to
-that member → land on the events list.
+Landing → "Create group" → `{ groupName, creatorName }` → server creates group + first
+member + editor link in one transaction → device identity set to that member → land on
+the events list. Currency is chosen later, per event, when the first event is created.
 
 ### 6.2 Join via link (invitee entry)
 
@@ -306,13 +308,15 @@ Client-side validation is UX. Server-side validation is correctness. Do both.
 
 ## 7. Validation rules (server-enforced)
 
-- `totalAmount > 0`, integer sen.
+- `totalAmount > 0`, integer in the event currency's smallest unit.
 - `SUM(split.shareAmount) === bill.totalAmount` on every create and update.
 - Every `shareAmount >= 0`, integer.
 - At least one participant per bill.
 - `payerId` and every participant are members of the event's group.
 - Names non-empty after trimming; `creatorName` required on group creation.
-- Settlement includes only `unsettled` bills from the same group.
+- Event `currency` must be one of the curated codes; defaults to `MYR`; rejected on
+  `PATCH` once the event has a bill.
+- Settlement includes only `unsettled` bills from the same event.
 - Mutating endpoints reject `role = 'viewer'`.
 - Editing or deleting a `settled` bill is rejected.
 

@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { name, startDate, endDate, memberIds } = parsed.data;
+  const { name, currency, startDate, endDate, memberIds } = parsed.data;
 
   let resolvedMemberIds: string[];
   if (memberIds) {
@@ -83,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       data: {
         groupId,
         name,
+        currency,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
@@ -102,6 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       event: {
         id: event.id,
         name: event.name,
+        currency: event.currency,
         startDate: event.startDate,
         endDate: event.endDate,
         status: event.status,

@@ -8,6 +8,7 @@ interface DeleteBillConfirmModalProps {
   billId: string;
   billTitle: string;
   billAmount: number;
+  currency: string;
   onClose: () => void;
   onDeleted: () => void;
 }
@@ -17,6 +18,7 @@ export function DeleteBillConfirmModal({
   billId,
   billTitle,
   billAmount,
+  currency,
   onClose,
   onDeleted,
 }: DeleteBillConfirmModalProps) {
@@ -44,7 +46,7 @@ export function DeleteBillConfirmModal({
           Delete &quot;{billTitle}&quot;?
         </h2>
         <p className="mb-5.5 text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
-          This removes the {formatMoney(billAmount)} bill and recalculates everyone&apos;s
+          This removes the {formatMoney(billAmount, currency)} bill and recalculates everyone&apos;s
           balance. This can&apos;t be undone.
         </p>
 

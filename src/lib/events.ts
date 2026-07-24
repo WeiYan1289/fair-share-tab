@@ -17,6 +17,7 @@ export async function listGroupEvents(groupId: string) {
   return events.map((event) => ({
     id: event.id,
     name: event.name,
+    currency: event.currency,
     startDate: event.startDate,
     endDate: event.endDate,
     status: event.status,
@@ -59,6 +60,7 @@ export async function getEventDetail(eventId: string, groupId: string) {
     id: event.id,
     groupId: event.groupId,
     name: event.name,
+    currency: event.currency,
     startDate: event.startDate,
     endDate: event.endDate,
     status: event.status,

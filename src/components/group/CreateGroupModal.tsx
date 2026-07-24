@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { saveDeviceIdentity } from "@/lib/device-identity";
-import { SUPPORTED_CURRENCY } from "@/lib/validation/group";
 
 interface CreateGroupModalProps {
   onClose: () => void;
@@ -36,7 +35,6 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: groupName.trim(),
-          currency: SUPPORTED_CURRENCY,
           creatorName: yourName.trim(),
         }),
       });
@@ -101,14 +99,6 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
               ? "Required — this is how the group will see you in bills and balances."
               : "This is how the group will see you in bills and balances."}
           </p>
-        </div>
-
-        <div className="mb-5">
-          <label className="mb-1.5 block text-xs font-bold text-muted-2">Default currency</label>
-          {/* v1 is MYR only (CLAUDE.md) — shown as a fixed value, not a real picker. */}
-          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
-            RM {SUPPORTED_CURRENCY}
-          </div>
         </div>
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}

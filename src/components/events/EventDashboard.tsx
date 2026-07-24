@@ -36,6 +36,7 @@ interface EventView {
   id: string;
   groupId: string;
   name: string;
+  currency: string;
   startDate: string | null;
   endDate: string | null;
   status: string;
@@ -121,7 +122,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
               Total spend
             </p>
             <p className="num text-[30px] text-ink sm:text-[38px] dark:text-dark-text">
-              {formatMoney(totalSpend)}
+              {formatMoney(totalSpend, event.currency)}
             </p>
           </div>
         </div>
@@ -134,6 +135,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
             <MemberChip
               key={member.id}
               member={member}
+              currency={event.currency}
               isYou={member.id === viewerMemberId}
               canEdit={canEdit}
               onRenamed={handleRename}
@@ -197,6 +199,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
                 bill={bill}
                 groupId={groupId}
                 eventId={event.id}
+                currency={event.currency}
                 canEdit={canEdit}
                 onRequestDelete={() => setDeleteTarget(bill)}
               />
@@ -234,6 +237,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
           billId={deleteTarget.id}
           billTitle={deleteTarget.title}
           billAmount={deleteTarget.totalAmount}
+          currency={event.currency}
           onClose={() => setDeleteTarget(null)}
           onDeleted={() => {
             setDeleteTarget(null);
@@ -279,12 +283,14 @@ function BillRow({
   bill,
   groupId,
   eventId,
+  currency,
   canEdit,
   onRequestDelete,
 }: {
   bill: EventBillView;
   groupId: string;
   eventId: string;
+  currency: string;
   canEdit: boolean;
   onRequestDelete: () => void;
 }) {
@@ -299,7 +305,7 @@ function BillRow({
       </div>
       <div className="flex items-center gap-4">
         <p className="num text-[18px] text-ink dark:text-dark-text">
-          {formatMoney(bill.totalAmount)}
+          {formatMoney(bill.totalAmount, currency)}
         </p>
         <span
           className={

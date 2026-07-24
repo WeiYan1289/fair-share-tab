@@ -70,6 +70,7 @@ export default async function EditBillPage({
       mode="edit"
       groupId={groupId}
       eventId={eventId}
+      currency={event.currency}
       members={members}
       initialBill={{
         id: bill.id,
