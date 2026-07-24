@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
-import { getDeviceIdentities } from "@/lib/device-identity";
 import { formatMoney } from "@/lib/format";
 import { computeEqualSplit } from "@/lib/settlement";
 
@@ -69,12 +68,6 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
 
   const activeMembers = members.filter((m) => m.isActive);
   const inactiveReferenced = members.filter((m) => !m.isActive);
-
-  const [viewerMemberId, setViewerMemberId] = useState<string | null>(null);
-  useEffect(() => {
-    const identity = getDeviceIdentities().find((entry) => entry.groupId === groupId);
-    setViewerMemberId(identity?.memberId ?? null);
-  }, [groupId]);
 
   const [title, setTitle] = useState(initialBill?.title ?? "");
   const [amountText, setAmountText] = useState(
@@ -267,7 +260,6 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
                 key={m.id}
                 member={m}
                 selected={payerId === m.id}
-                isYou={m.id === viewerMemberId}
                 onClick={() => setPayerId(m.id)}
               />
             ))}
@@ -282,7 +274,6 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
                 key={m.id}
                 member={m}
                 selected={splitBetween.has(m.id)}
-                isYou={m.id === viewerMemberId}
                 onClick={() => toggleParticipant(m.id)}
               />
             ))}
@@ -333,11 +324,6 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
                     <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
                     <span className="text-[13.5px] text-ink dark:text-dark-text">
                       {member.name}
-                      {id === viewerMemberId && (
-                        <span className="ml-1.5 rounded-full bg-mint-tint px-[6px] py-px text-[9px] font-extrabold text-emerald dark:bg-mint/16 dark:text-mint">
-                          you
-                        </span>
-                      )}
                     </span>
                   </div>
                   <span className="num text-[15px] text-ink dark:text-dark-text">
@@ -433,12 +419,10 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
 function MemberSelectChip({
   member,
   selected,
-  isYou,
   onClick,
 }: {
   member: FormMember;
   selected: boolean;
-  isYou: boolean;
   onClick: () => void;
 }) {
   return (
@@ -453,21 +437,7 @@ function MemberSelectChip({
       )}
     >
       <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
-      <span className="text-[13px] font-bold">
-        {member.name}
-        {isYou && (
-          <span
-            className={cn(
-              "ml-1.5 rounded-full px-[6px] py-px text-[9px] font-extrabold",
-              selected
-                ? "bg-forest text-cream dark:bg-mint dark:text-dark-bg"
-                : "bg-cream text-muted-2 dark:bg-dark-bg dark:text-dark-muted",
-            )}
-          >
-            you
-          </span>
-        )}
-      </span>
+      <span className="text-[13px] font-bold">{member.name}</span>
     </button>
   );
 }

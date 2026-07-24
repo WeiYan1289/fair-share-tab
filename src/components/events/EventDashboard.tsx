@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GroupHeader } from "@/components/group/GroupHeader";
@@ -10,7 +10,6 @@ import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmMo
 import { MemberChip } from "@/components/members/MemberChip";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
 import { formatDateRange, formatMoney } from "@/lib/format";
-import { getDeviceIdentities } from "@/lib/device-identity";
 import { useCountUp } from "@/lib/useCountUp";
 
 interface EventMemberView {
@@ -58,7 +57,6 @@ interface EventDashboardProps {
 export function EventDashboard({ groupId, groupName, viewerRole, event }: EventDashboardProps) {
   const router = useRouter();
   const canEdit = viewerRole === "editor";
-  const [viewerMemberId, setViewerMemberId] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(
@@ -66,11 +64,6 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
   );
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
   const totalSpend = useCountUp(event.totalSpend);
-
-  useEffect(() => {
-    const identity = getDeviceIdentities().find((entry) => entry.groupId === groupId);
-    setViewerMemberId(identity?.memberId ?? null);
-  }, [groupId]);
 
   async function handleRename(memberId: string, name: string) {
     await fetch(`/api/members/${memberId}`, {
@@ -86,7 +79,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupId={groupId} groupName={groupName} />
+        <GroupHeader groupName={groupName} />
 
         <div className="mb-3 flex items-center justify-between">
           <Link
@@ -136,7 +129,6 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
               key={member.id}
               member={member}
               currency={event.currency}
-              isYou={member.id === viewerMemberId}
               canEdit={canEdit}
               onRenamed={handleRename}
               onRequestDeactivate={(id, name) => setDeactivateTarget({ id, name })}

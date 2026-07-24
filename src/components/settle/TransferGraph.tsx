@@ -2,7 +2,6 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
-import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import type { SettleMember, Transfer } from "./SettleUpFlow";
 
@@ -10,7 +9,6 @@ interface TransferGraphProps {
   transfers: Transfer[];
   members: SettleMember[];
   currency: string;
-  viewerMemberId: string | null;
 }
 
 interface Point {
@@ -27,7 +25,7 @@ const ROW_HEIGHT = 92;
 // that (mobile mockup) -- these aren't just two sizes of the same layout in
 // the designs, they're different shapes, so both are implemented rather
 // than one being a scaled-down version of the other.
-export function TransferGraph({ transfers, members, currency, viewerMemberId }: TransferGraphProps) {
+export function TransferGraph({ transfers, members, currency }: TransferGraphProps) {
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
   const debtorIds = useMemo(() => {
@@ -165,7 +163,6 @@ export function TransferGraph({ transfers, members, currency, viewerMemberId }: 
             <GraphNode
               key={id}
               member={memberById.get(id)}
-              isYou={id === viewerMemberId}
               setRef={(el) => {
                 if (el) nodeRefs.current.set(id, el);
               }}
@@ -177,7 +174,6 @@ export function TransferGraph({ transfers, members, currency, viewerMemberId }: 
             <GraphNode
               key={id}
               member={memberById.get(id)}
-              isYou={id === viewerMemberId}
               setRef={(el) => {
                 if (el) nodeRefs.current.set(id, el);
               }}
@@ -193,14 +189,14 @@ export function TransferGraph({ transfers, members, currency, viewerMemberId }: 
           return (
             <div key={i} className="rounded-lg border border-ink/8 bg-white p-3.5">
               <div className="flex items-center justify-between">
-                <TransferEndpoint member={from} isYou={t.fromMemberId === viewerMemberId} />
+                <TransferEndpoint member={from} />
                 <div className="flex flex-1 flex-col items-center gap-1 px-1">
                   <span className="num rounded-full border border-ink/10 bg-white px-2.5 py-1 text-[13px] text-ink">
                     {formatMoney(t.amount, currency)}
                   </span>
                   <div className="h-0.5 w-full bg-ink/18" />
                 </div>
-                <TransferEndpoint member={to} isYou={t.toMemberId === viewerMemberId} />
+                <TransferEndpoint member={to} />
               </div>
             </div>
           );
@@ -212,11 +208,9 @@ export function TransferGraph({ transfers, members, currency, viewerMemberId }: 
 
 function GraphNode({
   member,
-  isYou,
   setRef,
 }: {
   member: SettleMember | undefined;
-  isYou: boolean;
   setRef: (el: HTMLDivElement | null) => void;
 }) {
   if (!member) return null;
@@ -226,42 +220,21 @@ function GraphNode({
         name={member.name}
         color={member.avatarColor}
         size={NODE_SIZE}
-        className={cn(
-          "text-[19px] shadow-[0_10px_22px_-8px_rgba(19,46,40,0.35)]",
-          isYou && "ring-4 ring-mint-tint dark:ring-mint/18",
-        )}
+        className="text-[19px] shadow-[0_10px_22px_-8px_rgba(19,46,40,0.35)]"
       />
       <p className="text-center text-[13px] font-bold text-ink dark:text-dark-text">
         {member.name}
-        {isYou && (
-          <>
-            <br />
-            <span className="rounded-full bg-mint-tint px-[7px] py-px text-[9.5px] font-extrabold text-emerald dark:bg-mint/16 dark:text-mint">
-              you
-            </span>
-          </>
-        )}
       </p>
     </div>
   );
 }
 
-function TransferEndpoint({ member, isYou }: { member: SettleMember | undefined; isYou: boolean }) {
+function TransferEndpoint({ member }: { member: SettleMember | undefined }) {
   if (!member) return null;
   return (
     <div className="flex w-[66px] flex-col items-center gap-1.5">
-      <InitialsAvatar
-        name={member.name}
-        color={member.avatarColor}
-        size={34}
-        className={cn(isYou && "ring-2 ring-mint")}
-      />
+      <InitialsAvatar name={member.name} color={member.avatarColor} size={34} />
       <p className="text-center text-[10.5px] font-bold text-ink">{member.name}</p>
-      {isYou && (
-        <span className="rounded-full bg-mint-tint px-[5px] py-px text-[8px] font-extrabold text-emerald">
-          you
-        </span>
-      )}
     </div>
   );
 }

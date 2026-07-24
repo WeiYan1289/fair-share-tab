@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { getDeviceIdentities } from "@/lib/device-identity";
 import { formatMoney } from "@/lib/format";
 import { TransferGraph } from "./TransferGraph";
 
@@ -60,12 +59,6 @@ export function SettleUpFlow({
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewerMemberId, setViewerMemberId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const identity = getDeviceIdentities().find((entry) => entry.groupId === groupId);
-    setViewerMemberId(identity?.memberId ?? null);
-  }, [groupId]);
 
   const selectedBills = bills.filter((b) => selectedIds.has(b.id));
   const selectedTotal = selectedBills.reduce((sum, b) => sum + b.totalAmount, 0);
@@ -227,7 +220,6 @@ export function SettleUpFlow({
           transfers={transfers}
           members={members}
           currency={currency}
-          viewerMemberId={viewerMemberId}
         />
 
         <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-mint-tint px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">

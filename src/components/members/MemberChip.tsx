@@ -17,7 +17,6 @@ export interface ChipMember {
 interface MemberChipProps {
   member: ChipMember;
   currency: string;
-  isYou: boolean;
   canEdit: boolean;
   onRenamed: (id: string, name: string) => void;
   onRequestDeactivate: (id: string, name: string) => void;
@@ -27,8 +26,8 @@ interface MemberChipProps {
 const PRESS_HOLD_MS = 600;
 
 // Screen Spec P4-01 member chip + P4-04 inline rename / deactivated states.
-// CLAUDE.md rule 5: the viewer's own name is always shown, with a quiet
-// "you" marker -- never the bare word "You". Renders two layouts sharing
+// No per-viewer identity is tracked (CLAUDE.md rule 5) -- every member
+// renders identically for anyone with the link. Renders two layouts sharing
 // the same rename/press-hold state: a compact vertical card in a single
 // horizontally-scrolling row on mobile (P4-01's mobile mock -- members
 // never wrap to a second row there), and the wider horizontal chip that
@@ -36,7 +35,6 @@ const PRESS_HOLD_MS = 600;
 export function MemberChip({
   member,
   currency,
-  isYou,
   canEdit,
   onRenamed,
   onRequestDeactivate,
@@ -150,7 +148,6 @@ export function MemberChip({
           name={member.name}
           color={member.avatarColor}
           size={34}
-          className={cn(isYou && "ring-2 ring-mint ring-offset-0")}
         />
         <p className="max-w-[70px] truncate text-[10.5px] font-semibold text-ink dark:text-dark-text">
           {member.name}
@@ -171,7 +168,6 @@ export function MemberChip({
           name={member.name}
           color={member.avatarColor}
           size={38}
-          className={cn(isYou && "ring-2 ring-mint ring-offset-0")}
         />
         <div className="flex-1">
           {renaming ? (
@@ -197,11 +193,6 @@ export function MemberChip({
               className="flex items-center gap-1.5 text-left text-[13.5px] font-bold text-ink dark:text-dark-text"
             >
               {member.name}
-              {isYou && (
-                <span className="rounded-full bg-mint-tint px-[7px] py-px text-[9.5px] font-extrabold tracking-wide text-emerald dark:bg-mint/16 dark:text-mint">
-                  you
-                </span>
-              )}
               {canEdit && <span className="text-[11px] text-muted-2">✎</span>}
             </button>
           )}
