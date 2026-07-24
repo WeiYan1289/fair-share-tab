@@ -18,12 +18,14 @@ interface EventSummary {
 interface EventsListViewProps {
   groupId: string;
   groupName: string;
+  viewerRole: "editor" | "viewer";
   events: EventSummary[];
 }
 
 // Screen Spec P3-02 (populated) / P3-03 (empty state).
-export function EventsListView({ groupId, groupName, events }: EventsListViewProps) {
+export function EventsListView({ groupId, groupName, viewerRole, events }: EventsListViewProps) {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const canEdit = viewerRole === "editor";
 
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
@@ -31,7 +33,7 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
         <GroupHeader groupId={groupId} groupName={groupName} />
 
         {events.length === 0 ? (
-          <EmptyState onCreate={() => setShowCreateEvent(true)} />
+          <EmptyState canEdit={canEdit} onCreate={() => setShowCreateEvent(true)} />
         ) : (
           <>
             <div className="mb-6 flex items-end justify-between sm:mb-[30px]">
@@ -43,13 +45,15 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
                   {events.length} trip{events.length === 1 ? "" : "s"} together
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateEvent(true)}
-                className="hidden rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover sm:block dark:bg-dark-forest"
-              >
-                + Create event
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowCreateEvent(true)}
+                  className="hidden rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover sm:block dark:bg-dark-forest"
+                >
+                  + Create event
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
@@ -61,14 +65,16 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowCreateEvent(true)}
-        aria-label="Create event"
-        className="fixed right-5 bottom-8 flex h-14 w-14 items-center justify-center rounded-full bg-forest text-3xl text-cream shadow-[0_10px_24px_-6px_rgba(22,58,46,0.55)] sm:hidden dark:bg-dark-forest"
-      >
-        +
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => setShowCreateEvent(true)}
+          aria-label="Create event"
+          className="fixed right-5 bottom-8 flex h-14 w-14 items-center justify-center rounded-full bg-forest text-3xl text-cream shadow-[0_10px_24px_-6px_rgba(22,58,46,0.55)] sm:hidden dark:bg-dark-forest"
+        >
+          +
+        </button>
+      )}
 
       {showCreateEvent && (
         <CreateEventModal groupId={groupId} onClose={() => setShowCreateEvent(false)} />
@@ -77,7 +83,7 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({ canEdit, onCreate }: { canEdit: boolean; onCreate: () => void }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
       <div className="mb-6 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-mint-tint dark:bg-mint/16">
@@ -90,15 +96,19 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         No events yet
       </h1>
       <p className="mb-6 max-w-[380px] text-[14px] leading-relaxed text-muted sm:text-[14.5px] dark:text-dark-muted">
-        Create an event for your next trip to start splitting bills with friends and family.
+        {canEdit
+          ? "Create an event for your next trip to start splitting bills with friends and family."
+          : "Nothing here yet — check back once whoever shared this link creates the first event."}
       </p>
-      <button
-        type="button"
-        onClick={onCreate}
-        className="rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
-      >
-        + Create your first event
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={onCreate}
+          className="rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
+        >
+          + Create your first event
+        </button>
+      )}
     </div>
   );
 }

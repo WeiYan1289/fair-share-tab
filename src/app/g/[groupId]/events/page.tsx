@@ -32,6 +32,7 @@ export default async function EventsPage({
     <EventsListView
       groupId={groupId}
       groupName={group.name}
+      viewerRole={session.role}
       events={events.map((event) => ({
         id: event.id,
         name: event.name,
