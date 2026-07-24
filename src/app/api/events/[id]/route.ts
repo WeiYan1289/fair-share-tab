@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { getEventDetail } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
-import { computeNetBalances } from "@/lib/settlement";
 import { updateEventSchema } from "@/lib/validation/event";
 
 // GET: detail with members, bills, and computed balances (system-design.md
-// §5 "Events", Screen Spec P4-01). Balances are netted over unsettled bills
-// only -- a settled bill's debts are already resolved via its transfers, so
-// it shouldn't keep contributing to an ongoing "you owe" figure.
+// §5 "Events", Screen Spec P4-01).
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
@@ -21,56 +19,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     throw error;
   }
 
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    include: {
-      eventMembers: { include: { member: true } },
-      bills: { include: { splits: true } },
-    },
-  });
-
-  if (!event || event.groupId !== session.groupId) {
+  const event = await getEventDetail(eventId, session.groupId);
+  if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  const unsettledBills = event.bills.filter((bill) => bill.status === "unsettled");
-  const balances = computeNetBalances(
-    unsettledBills.map((bill) => ({
-      payerId: bill.payerId,
-      totalAmount: bill.totalAmount,
-      splits: bill.splits.map((split) => ({
-        memberId: split.memberId,
-        shareAmount: split.shareAmount,
-      })),
-    })),
-  );
-
   return NextResponse.json({
-    event: {
-      id: event.id,
-      groupId: event.groupId,
-      name: event.name,
-      startDate: event.startDate,
-      endDate: event.endDate,
-      status: event.status,
-      memberCount: event.eventMembers.length,
-      totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
-      members: event.eventMembers.map(({ member }) => ({
-        id: member.id,
-        name: member.name,
-        avatarColor: member.avatarColor,
-        isActive: member.isActive,
-        balance: balances.get(member.id) ?? 0,
-      })),
-      bills: event.bills.map((bill) => ({
-        id: bill.id,
-        title: bill.title,
-        payerId: bill.payerId,
-        splitCount: bill.splits.length,
-        totalAmount: bill.totalAmount,
-        status: bill.status,
-      })),
-    },
+    event: { ...event, memberCount: event.members.length },
   });
 }
 
