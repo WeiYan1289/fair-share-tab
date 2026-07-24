@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GroupHeader } from "@/components/group/GroupHeader";
 import { colorForSeed } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
@@ -20,18 +21,46 @@ interface EventsListViewProps {
   groupId: string;
   groupName: string;
   viewerRole: "editor" | "viewer";
+  saveLinkToken: string | null;
   events: EventSummary[];
 }
 
 // Screen Spec P3-02 (populated) / P3-03 (empty state).
-export function EventsListView({ groupId, groupName, viewerRole, events }: EventsListViewProps) {
+export function EventsListView({
+  groupId,
+  groupName,
+  viewerRole,
+  saveLinkToken,
+  events,
+}: EventsListViewProps) {
+  const router = useRouter();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showSaveLinkBanner, setShowSaveLinkBanner] = useState(saveLinkToken !== null);
+  // Captured once on mount: `router.replace` below causes the server to
+  // re-render this page with `saveLinkToken` as null (the query param is
+  // gone), so the live prop can't be used for the banner's contents — it
+  // would disappear on its own the instant the URL strip lands, instead of
+  // staying up until the user dismisses it.
+  const [savedToken] = useState(saveLinkToken);
   const canEdit = viewerRole === "editor";
+
+  // The token arrives as a one-time query param from the /g/{token} redirect
+  // (CLAUDE.md rule 8: never let it sit persistently in the address bar) —
+  // strip it immediately so a refresh or re-visit never shows it again.
+  useEffect(() => {
+    if (saveLinkToken !== null) {
+      router.replace(`/g/${groupId}/events`);
+    }
+  }, [saveLinkToken, groupId, router]);
 
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupId={groupId} groupName={groupName} />
+        <GroupHeader groupName={groupName} />
+
+        {showSaveLinkBanner && savedToken && (
+          <SaveLinkBanner token={savedToken} onDismiss={() => setShowSaveLinkBanner(false)} />
+        )}
 
         {events.length === 0 ? (
           <EmptyState canEdit={canEdit} onCreate={() => setShowCreateEvent(true)} />
@@ -157,5 +186,53 @@ function EventCard({ groupId, event }: { groupId: string; event: EventSummary })
         </div>
       </div>
     </Link>
+  );
+}
+
+function SaveLinkBanner({ token, onDismiss }: { token: string; onDismiss: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
+  async function handleCopy() {
+    const link = `${window.location.origin}/g/${token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopyError(false);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Insecure context or permission denial — nothing we can do about
+      // the copy itself, so surface it instead of failing silently.
+      setCopied(false);
+      setCopyError(true);
+      setTimeout(() => setCopyError(false), 2000);
+    }
+  }
+
+  return (
+    <div className="mb-6 flex items-center justify-between gap-3 rounded-md border border-ink/10 bg-mint-tint px-4.5 py-3 dark:border-white/10 dark:bg-mint/16">
+      <p className="text-[12.5px] leading-snug text-emerald dark:text-mint">
+        {copyError
+          ? "Couldn't copy — select and copy the link from your address bar instead."
+          : "Save this link to get back in — there's no account, so this is the only way back."}
+      </p>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="rounded-md bg-forest px-3.5 py-2 text-[12.5px] font-bold whitespace-nowrap text-cream dark:bg-dark-forest"
+        >
+          {copied ? "Copied!" : "Copy link"}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className="text-[13px] text-muted-2"
+        >
+          ×
+        </button>
+      </div>
+    </div>
   );
 }

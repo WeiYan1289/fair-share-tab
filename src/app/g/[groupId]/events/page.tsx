@@ -5,14 +5,17 @@ import { prisma } from "@/lib/prisma";
 import { EventsListView } from "@/components/events/EventsListView";
 
 // Screen Spec P3-02/P3-03. Server Component: reads the session set at
-// /g/[groupId] (or by the join screen) and loads data directly via Prisma
-// (CLAUDE.md rule 7 — all DB access goes through server code).
+// /g/[groupId] and loads data directly via Prisma (CLAUDE.md rule 7 — all
+// DB access goes through server code).
 export default async function EventsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ savelink?: string }>;
 }) {
   const { groupId } = await params;
+  const { savelink } = await searchParams;
 
   let session;
   try {
@@ -33,6 +36,7 @@ export default async function EventsPage({
       groupId={groupId}
       groupName={group.name}
       viewerRole={session.role}
+      saveLinkToken={savelink ?? null}
       events={events.map((event) => ({
         id: event.id,
         name: event.name,
