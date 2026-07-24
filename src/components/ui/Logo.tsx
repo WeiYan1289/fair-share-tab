@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { cn } from "@/lib/cn";
 
 interface LogoProps {
@@ -10,13 +9,17 @@ interface LogoProps {
 
 // Badge + wordmark lockup from the mockups' Part 0 brand section (P0-01):
 // a two-tone forest/mint gradient badge with a cream fold-and-checkmark
-// mark, "FairShare" in forest + "Tab" in emerald.
-export function Logo({ size = 26, wordmark = true, wordmarkClassName, className }: LogoProps) {
-  const uid = useId();
-  const fgId = `logo-fg-${uid}`;
-  const mgId = `logo-mg-${uid}`;
-  const clipId = `logo-clip-${uid}`;
+// mark, "FairShare" in forest + "Tab" in emerald. Fixed (not useId-derived)
+// gradient/clip ids -- every instance renders the identical gradient, so
+// there's nothing per-instance to disambiguate, and a fixed id sidesteps a
+// server/client useId mismatch when the number of Logo instances on the
+// page differs between the SSR pass and the client (e.g. GroupHeader vs.
+// landing headers).
+const fgId = "fst-logo-fg";
+const mgId = "fst-logo-mg";
+const clipId = "fst-logo-clip";
 
+export function Logo({ size = 26, wordmark = true, wordmarkClassName, className }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <svg width={size} height={size} viewBox="0 0 64 64" className="shrink-0">
@@ -62,8 +65,8 @@ export function Logo({ size = 26, wordmark = true, wordmarkClassName, className 
       </svg>
       {wordmark && (
         <span className={cn("font-sans font-extrabold tracking-tight", wordmarkClassName)}>
-          <span className="text-forest">FairShare</span>
-          <span className="text-emerald">Tab</span>
+          <span className="text-forest dark:text-dark-text">FairShare</span>
+          <span className="text-emerald dark:text-mint">Tab</span>
         </span>
       )}
     </div>

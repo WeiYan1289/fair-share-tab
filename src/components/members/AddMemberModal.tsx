@@ -52,8 +52,10 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[400px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg">
-        <h2 className="num mb-4.5 text-xl text-ink sm:text-[22px]">Add a member</h2>
+      <div className="relative w-full max-w-[400px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg dark:bg-dark-card">
+        <h2 className="num mb-4.5 text-xl text-ink sm:text-[22px] dark:text-dark-text">
+          Add a member
+        </h2>
 
         <div className="mb-3.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Name</label>
@@ -63,7 +65,7 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Emma Torres"
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest"
+            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
 
@@ -76,7 +78,7 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="emma@email.com"
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest"
+            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
 

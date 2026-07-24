@@ -41,9 +41,11 @@ export function DeactivateConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[400px] rounded-lg bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)]">
-        <h2 className="num mb-2.5 text-[21px] text-ink">Deactivate {memberName}?</h2>
-        <p className="mb-5.5 text-[13.5px] leading-relaxed text-muted">
+      <div className="relative w-full max-w-[400px] rounded-lg bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] dark:bg-dark-card">
+        <h2 className="num mb-2.5 text-[21px] text-ink dark:text-dark-text">
+          Deactivate {memberName}?
+        </h2>
+        <p className="mb-5.5 text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
           They&apos;ll stay attached to past bills but won&apos;t appear when adding new ones.
           Members are never deleted — you can reactivate them anytime.
         </p>

@@ -49,8 +49,8 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[420px] rounded-lg bg-white p-7 shadow-[0_24px_48px_-16px_rgba(19,46,40,0.28)]">
-        <h2 className="num mb-4 text-xl text-ink">Create a new event</h2>
+      <div className="relative w-full max-w-[420px] rounded-lg bg-white p-7 shadow-[0_24px_48px_-16px_rgba(19,46,40,0.28)] dark:bg-dark-card">
+        <h2 className="num mb-4 text-xl text-ink dark:text-dark-text">Create a new event</h2>
 
         <div className="mb-3.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Event name</label>
@@ -59,7 +59,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ski Trip 2026"
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest"
+            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
 
@@ -70,7 +70,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest"
+              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
           <div className="flex-1">
@@ -79,7 +79,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest"
+              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
         </div>

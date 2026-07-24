@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getDeviceIdentities } from "@/lib/device-identity";
 import { formatMoney } from "@/lib/format";
 import { TransferGraph } from "./TransferGraph";
@@ -117,18 +118,26 @@ export function SettleUpFlow({
 
   if (step === "select") {
     return (
-      <div className="min-h-screen bg-cream px-5 py-8 sm:px-9">
+      <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
         <div className="mx-auto max-w-[620px]">
-          <Link href={dashboardHref} className="mb-4 block text-[13px] font-bold text-link">
-            ← {eventName}
-          </Link>
-          <h1 className="num mb-1.5 text-2xl text-ink sm:text-[28px]">Settle up — {eventName}</h1>
-          <p className="mb-6 text-[13.5px] text-muted sm:text-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <Link
+              href={dashboardHref}
+              className="block text-[13px] font-bold text-link dark:text-mint"
+            >
+              ← {eventName}
+            </Link>
+            <ThemeToggle />
+          </div>
+          <h1 className="num mb-1.5 text-2xl text-ink sm:text-[28px] dark:text-dark-text">
+            Settle up — {eventName}
+          </h1>
+          <p className="mb-6 text-[13.5px] text-muted sm:text-sm dark:text-dark-muted">
             Select which unsettled bills to include.
           </p>
 
           {bills.length === 0 ? (
-            <p className="rounded-md bg-white px-5 py-8 text-center text-[13.5px] text-muted">
+            <p className="rounded-md bg-white px-5 py-8 text-center text-[13.5px] text-muted dark:bg-dark-card dark:text-dark-muted">
               Nothing to settle — every bill in this event is already settled.
             </p>
           ) : (
@@ -141,24 +150,28 @@ export function SettleUpFlow({
                       key={bill.id}
                       type="button"
                       onClick={() => toggleBill(bill.id)}
-                      className="flex items-center gap-3.5 rounded-md border border-ink/8 bg-white px-4.5 py-3.5 text-left"
+                      className="flex items-center gap-3.5 rounded-md border border-ink/8 bg-white px-4.5 py-3.5 text-left dark:border-white/8 dark:bg-dark-card"
                     >
                       <span
                         className={
                           checked
-                            ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-forest text-[13px] text-cream"
-                            : "h-5 w-5 shrink-0 rounded-md border-2 border-ink/16"
+                            ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-forest text-[13px] text-cream dark:bg-dark-forest"
+                            : "h-5 w-5 shrink-0 rounded-md border-2 border-ink/16 dark:border-white/20"
                         }
                       >
                         {checked && "✓"}
                       </span>
                       <div className="flex-1">
-                        <p className="text-[14.5px] font-bold text-ink">{bill.title}</p>
+                        <p className="text-[14.5px] font-bold text-ink dark:text-dark-text">
+                          {bill.title}
+                        </p>
                         <p className="mt-0.5 text-[12.5px] text-muted-2">
                           Paid by {bill.payerName} · {bill.splitCount}-way split
                         </p>
                       </div>
-                      <p className="num text-[17px] text-ink">{formatMoney(bill.totalAmount)}</p>
+                      <p className="num text-[17px] text-ink dark:text-dark-text">
+                        {formatMoney(bill.totalAmount)}
+                      </p>
                     </button>
                   );
                 })}
@@ -166,8 +179,8 @@ export function SettleUpFlow({
 
               {error && <p className="mb-3 text-xs text-coral">{error}</p>}
 
-              <div className="flex items-center justify-between rounded-md bg-mint-tint px-5.5 py-4.5">
-                <p className="text-sm font-bold text-emerald">
+              <div className="flex items-center justify-between rounded-md bg-mint-tint px-5.5 py-4.5 dark:bg-mint/16">
+                <p className="text-sm font-bold text-emerald dark:text-mint">
                   {selectedIds.size} bill{selectedIds.size === 1 ? "" : "s"} selected ·{" "}
                   {formatMoney(selectedTotal)} total
                 </p>
@@ -175,7 +188,7 @@ export function SettleUpFlow({
                   type="button"
                   disabled={selectedIds.size === 0 || calculating}
                   onClick={handleCalculate}
-                  className="rounded-md bg-forest px-6 py-3 text-sm font-bold text-cream disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-forest px-6 py-3 text-sm font-bold text-cream disabled:cursor-not-allowed disabled:opacity-60 dark:bg-dark-forest"
                 >
                   Calculate →
                 </button>
@@ -188,7 +201,8 @@ export function SettleUpFlow({
   }
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
+    <div className="relative min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
+      <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
       <div className="mx-auto flex max-w-[900px] flex-col items-center">
         <h1 className="num mb-1.5 text-center text-2xl text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
@@ -258,15 +272,15 @@ function ConfirmSettleModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink/35" onClick={onCancel} />
-      <div className="relative w-full max-w-[420px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg">
-        <h2 className="num mb-2.5 text-[21px] text-ink">
+      <div className="relative w-full max-w-[420px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg dark:bg-dark-card">
+        <h2 className="num mb-2.5 text-[21px] text-ink dark:text-dark-text">
           Mark these {transfers.length} transfer{transfers.length === 1 ? "" : "s"} as settled?
         </h2>
         <div className="mb-4 flex flex-col gap-2">
           {transfers.map((t, i) => (
             <div
               key={i}
-              className="flex justify-between rounded-md bg-cream px-3 py-2 text-[13px] text-ink"
+              className="flex justify-between rounded-md bg-cream px-3 py-2 text-[13px] text-ink dark:bg-dark-bg dark:text-dark-text"
             >
               <span>
                 {nameById.get(t.fromMemberId)} → {nameById.get(t.toMemberId)}
@@ -275,7 +289,7 @@ function ConfirmSettleModal({
             </div>
           ))}
         </div>
-        <p className="mb-5 text-[12.5px] leading-relaxed text-muted">
+        <p className="mb-5 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
           This can&apos;t be undone — the {billCount} selected bill{billCount === 1 ? "" : "s"}{" "}
           will be marked settled and balances reset to zero.
         </p>
@@ -283,7 +297,7 @@ function ConfirmSettleModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink"
+            className="flex-1 rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
           >
             Cancel
           </button>
@@ -291,7 +305,7 @@ function ConfirmSettleModal({
             type="button"
             disabled={confirming}
             onClick={onConfirm}
-            className="flex-1 rounded-md bg-forest py-3.5 text-center text-sm font-bold text-cream disabled:opacity-60"
+            className="flex-1 rounded-md bg-forest py-3.5 text-center text-sm font-bold text-cream disabled:opacity-60 dark:bg-dark-forest"
           >
             Yes, mark as settled
           </button>

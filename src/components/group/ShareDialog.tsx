@@ -116,11 +116,13 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[440px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg sm:p-8">
+      <div className="relative w-full max-w-[440px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg sm:p-8 dark:bg-dark-card">
         {confirmRegenerate ? (
           <>
-            <h2 className="num mb-2.5 text-[21px] text-ink">Regenerate this link?</h2>
-            <p className="mb-6 text-[13.5px] leading-relaxed text-muted">
+            <h2 className="num mb-2.5 text-[21px] text-ink dark:text-dark-text">
+              Regenerate this link?
+            </h2>
+            <p className="mb-6 text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
               The current link stops working the moment you do this. Anyone still using it will
               land on an expired-link page — you&apos;ll need to share the new one.
             </p>
@@ -144,13 +146,15 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
           </>
         ) : (
           <>
-            <h2 className="num mb-1 text-[22px] text-ink">Share {groupName}</h2>
-            <p className="mb-5 text-[13px] leading-relaxed text-muted">
+            <h2 className="num mb-1 text-[22px] text-ink dark:text-dark-text">
+              Share {groupName}
+            </h2>
+            <p className="mb-5 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
               Anyone with this link can open the group — no account needed.
             </p>
 
             <div className="mb-2.5 flex gap-2">
-              <div className="flex-1 truncate rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[13px] text-ink">
+              <div className="flex-1 truncate rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[13px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
                 {loading || switchingRole ? "Loading…" : (url ?? "—")}
               </div>
               <Button
@@ -178,20 +182,22 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                 type="button"
                 onClick={handleShareVia}
                 disabled={!url}
-                className="mb-4 w-full rounded-md border border-ink/16 bg-white py-3 text-center text-[13.5px] font-bold text-ink hover:bg-cream disabled:opacity-60 sm:hidden"
+                className="mb-4 w-full rounded-md border border-ink/16 bg-white py-3 text-center text-[13.5px] font-bold text-ink hover:bg-cream disabled:opacity-60 sm:hidden dark:border-white/16 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
               >
                 Share via…
               </button>
             )}
 
             <p className="mb-2 text-xs font-bold text-muted-2">Link permissions</p>
-            <div className="mb-2.5 flex w-fit rounded-md bg-app-bg p-1">
+            <div className="mb-2.5 flex w-fit rounded-md bg-app-bg p-1 dark:bg-dark-bg">
               <button
                 type="button"
                 onClick={() => handleRoleChange("editor")}
                 className={cn(
                   "rounded-[10px] px-4.5 py-2 text-[13px] font-bold",
-                  role === "editor" ? "bg-forest text-cream" : "text-muted",
+                  role === "editor"
+                    ? "bg-forest text-cream dark:bg-dark-forest"
+                    : "text-muted dark:text-dark-muted",
                 )}
               >
                 Can edit
@@ -201,21 +207,23 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                 onClick={() => handleRoleChange("viewer")}
                 className={cn(
                   "rounded-[10px] px-4.5 py-2 text-[13px] font-bold",
-                  role === "viewer" ? "bg-forest text-cream" : "text-muted",
+                  role === "viewer"
+                    ? "bg-forest text-cream dark:bg-dark-forest"
+                    : "text-muted dark:text-dark-muted",
                 )}
               >
                 View only
               </button>
             </div>
-            <p className="mb-5 text-[12.5px] leading-relaxed text-muted">
+            <p className="mb-5 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
               {role === "editor"
                 ? "Can edit — anyone with this link can add, change, and settle bills."
                 : "View only — anyone with this link can see bills and balances but can't change anything."}
             </p>
 
-            <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5">
+            <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5 dark:bg-sky/12">
               <span className="text-sm">🔗</span>
-              <p className="text-[11.5px] leading-relaxed text-sky-text">
+              <p className="text-[11.5px] leading-relaxed text-sky-text dark:text-dark-text/80">
                 <strong>Heads up</strong> — this link doesn&apos;t need a password. Anyone who has
                 it can view this group&apos;s bills, and edit them unless you switch to View only.
               </p>

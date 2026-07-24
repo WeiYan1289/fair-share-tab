@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getDeviceIdentities } from "@/lib/device-identity";
 import { GroupSwitcher } from "./GroupSwitcher";
 
@@ -39,16 +40,17 @@ export function GroupHeader({ groupId, groupName }: GroupHeaderProps) {
     <div className="mb-6 flex items-center justify-between sm:mb-[26px]">
       <Logo size={26} wordmarkClassName="text-base sm:text-[17px]" />
       <GroupSwitcher currentGroupId={groupId} currentGroupName={groupName} />
-      {viewer ? (
-        <InitialsAvatar
-          name={viewer.memberName}
-          color={viewer.memberAvatarColor}
-          size={36}
-          className="hidden sm:flex"
-        />
-      ) : (
-        <div className="hidden sm:block sm:h-9 sm:w-9" />
-      )}
+      <div className="flex items-center gap-2.5">
+        <ThemeToggle />
+        {viewer && (
+          <InitialsAvatar
+            name={viewer.memberName}
+            color={viewer.memberAvatarColor}
+            size={36}
+            className="hidden sm:flex"
+          />
+        )}
+      </div>
     </div>
   );
 }

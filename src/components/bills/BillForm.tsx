@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { getDeviceIdentities } from "@/lib/device-identity";
 import { formatMoney } from "@/lib/format";
@@ -198,15 +199,22 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
   }
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9">
+    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[580px]">
         <div className="mb-5.5 flex items-center justify-between">
-          <h1 className="num text-2xl text-ink sm:text-[26px]">
+          <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
             {mode === "create" ? "Add a bill" : "Edit bill"}
           </h1>
-          <Link href={dashboardHref} className="text-xl text-muted-2" aria-label="Close">
-            ×
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href={dashboardHref}
+              className="text-xl text-muted-2 dark:text-dark-muted"
+              aria-label="Close"
+            >
+              ×
+            </Link>
+          </div>
         </div>
 
         <div className="mb-4">
@@ -216,13 +224,13 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Nabe Dinner – Last Night"
-            className="w-full rounded-md border border-ink/16 bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-forest"
+            className="w-full rounded-md border border-ink/16 bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-forest dark:border-white/16 dark:bg-dark-card dark:text-dark-text"
           />
         </div>
 
         <div className="mb-4.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
-          <div className="num flex items-center gap-1.5 rounded-md border border-ink/16 bg-white px-4 py-3">
+          <div className="num flex items-center gap-1.5 rounded-md border border-ink/16 bg-white px-4 py-3 dark:border-white/16 dark:bg-dark-card">
             <span className="text-[15px] text-muted-2">RM</span>
             <input
               type="number"
@@ -232,7 +240,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
               placeholder="0.00"
-              className="w-full text-[18px] text-ink outline-none"
+              className="w-full text-[18px] text-ink outline-none dark:text-dark-text"
             />
           </div>
         </div>
@@ -273,13 +281,15 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
           )}
         </div>
 
-        <div className="mb-5 flex w-fit gap-1 rounded-md bg-app-bg p-1">
+        <div className="mb-5 flex w-fit gap-1 rounded-md bg-app-bg p-1 dark:bg-dark-card">
           <button
             type="button"
             onClick={() => setSplitMethod("equal")}
             className={cn(
               "rounded-[10px] px-4.5 py-2.5 text-[13.5px] font-bold",
-              splitMethod === "equal" ? "bg-forest text-cream" : "text-muted",
+              splitMethod === "equal"
+                ? "bg-forest text-cream dark:bg-dark-forest"
+                : "text-muted dark:text-dark-muted",
             )}
           >
             Split equally
@@ -289,7 +299,9 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
             onClick={switchToCustom}
             className={cn(
               "rounded-[10px] px-4.5 py-2.5 text-[13.5px] font-bold",
-              splitMethod === "custom" ? "bg-forest text-cream" : "text-muted",
+              splitMethod === "custom"
+                ? "bg-forest text-cream dark:bg-dark-forest"
+                : "text-muted dark:text-dark-muted",
             )}
           >
             Custom amounts
@@ -297,7 +309,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
         </div>
 
         {splitMethod === "equal" ? (
-          <div className="mb-5 rounded-md border border-ink/8 bg-white px-4.5 py-4">
+          <div className="mb-5 rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
             {[...splitBetween].map((id) => {
               const member = memberById.get(id)!;
               const share = equalShares?.find((s) => s.memberId === id);
@@ -305,26 +317,26 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                 <div key={id} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2.5">
                     <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
-                    <span className="text-[13.5px] text-ink">
+                    <span className="text-[13.5px] text-ink dark:text-dark-text">
                       {member.name}
                       {id === viewerMemberId && (
-                        <span className="ml-1.5 rounded-full bg-mint-tint px-[6px] py-px text-[9px] font-extrabold text-emerald">
+                        <span className="ml-1.5 rounded-full bg-mint-tint px-[6px] py-px text-[9px] font-extrabold text-emerald dark:bg-mint/16 dark:text-mint">
                           you
                         </span>
                       )}
                     </span>
                   </div>
-                  <span className="num text-[15px] text-ink">
+                  <span className="num text-[15px] text-ink dark:text-dark-text">
                     {share ? formatMoney(share.shareAmount) : "—"}
                   </span>
                 </div>
               );
             })}
-            <div className="my-2 h-px bg-ink/7" />
+            <div className="my-2 h-px bg-ink/7 dark:bg-white/10" />
             <div
               className={cn(
                 "flex items-center gap-2 text-[13px] font-bold",
-                equalShares ? "text-emerald" : "text-muted-2",
+                equalShares ? "text-emerald dark:text-mint" : "text-muted-2",
               )}
             >
               {equalShares ? `✓ Adds up to ${formatMoney(totalAmountSen)}` : "Enter an amount above"}
@@ -332,16 +344,18 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
           </div>
         ) : (
           <div className="mb-5">
-            <div className="mb-3.5 rounded-md border border-ink/8 bg-white px-4.5 py-4">
+            <div className="mb-3.5 rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
               {[...splitBetween].map((id) => {
                 const member = memberById.get(id)!;
                 return (
                   <div key={id} className="flex items-center justify-between py-1.5">
                     <div className="flex items-center gap-2.5">
                       <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
-                      <span className="text-[13.5px] text-ink">{member.name}</span>
+                      <span className="text-[13.5px] text-ink dark:text-dark-text">
+                        {member.name}
+                      </span>
                     </div>
-                    <div className="num flex items-center gap-1 rounded-md border border-ink/16 bg-white px-2.5 py-1.5">
+                    <div className="num flex items-center gap-1 rounded-md border border-ink/16 bg-white px-2.5 py-1.5 dark:border-white/16 dark:bg-dark-bg">
                       <span className="text-[13px] text-muted-2">RM</span>
                       <input
                         type="number"
@@ -353,26 +367,26 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                           setCustomAmounts((prev) => ({ ...prev, [id]: e.target.value }))
                         }
                         placeholder="0.00"
-                        className="w-20 text-[14px] text-ink outline-none"
+                        className="w-20 text-[14px] text-ink outline-none dark:text-dark-text"
                       />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mb-3.5 flex items-center justify-between rounded-md border border-ink/8 bg-white px-4 py-3">
+            <div className="mb-3.5 flex items-center justify-between rounded-md border border-ink/8 bg-white px-4 py-3 dark:border-white/8 dark:bg-dark-card">
               <span className="text-[13px] font-bold text-muted-2">Running total</span>
               <span
                 className={cn(
                   "num text-[16px]",
-                  customReconciled ? "text-ink" : "text-coral",
+                  customReconciled ? "text-ink dark:text-dark-text" : "text-coral",
                 )}
               >
                 {formatMoney(customRunningTotal)} / {formatMoney(totalAmountSen)}
               </span>
             </div>
             {!customReconciled && (
-              <div className="flex items-center gap-2 rounded-md border border-coral-tint-border bg-coral-tint px-4 py-3 text-[13px] font-bold text-coral">
+              <div className="flex items-center gap-2 rounded-md border border-coral-tint-border bg-coral-tint px-4 py-3 text-[13px] font-bold text-coral dark:border-coral/30 dark:bg-coral/10">
                 ⚠ Amounts don&apos;t add up —{" "}
                 {formatMoney(Math.abs(totalAmountSen - customRunningTotal))}
                 {customRunningTotal < totalAmountSen ? " short of " : " over "}
@@ -391,8 +405,8 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
           className={cn(
             "w-full rounded-md py-4 text-center text-[15.5px] font-bold",
             canSubmit
-              ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover"
-              : "cursor-not-allowed bg-disabled text-disabled-text",
+              ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest dark:hover:bg-dark-forest-hover"
+              : "cursor-not-allowed bg-disabled text-disabled-text dark:bg-white/10 dark:text-white/30",
           )}
         >
           Save bill
@@ -420,8 +434,8 @@ function MemberSelectChip({
       className={cn(
         "flex items-center gap-1.5 rounded-full border-[1.5px] py-1.5 pr-3.5 pl-1.5",
         selected
-          ? "border-forest bg-mint-tint text-forest"
-          : "border-ink/14 bg-white text-muted",
+          ? "border-forest bg-mint-tint text-forest dark:border-mint dark:bg-mint/16 dark:text-mint"
+          : "border-ink/14 bg-white text-muted dark:border-white/14 dark:bg-dark-card dark:text-dark-muted",
       )}
     >
       <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
@@ -431,7 +445,9 @@ function MemberSelectChip({
           <span
             className={cn(
               "ml-1.5 rounded-full px-[6px] py-px text-[9px] font-extrabold",
-              selected ? "bg-forest text-cream" : "bg-cream text-muted-2",
+              selected
+                ? "bg-forest text-cream dark:bg-mint dark:text-dark-bg"
+                : "bg-cream text-muted-2 dark:bg-dark-bg dark:text-dark-muted",
             )}
           >
             you
@@ -450,36 +466,38 @@ function LockedBillView({
   bill: InitialBill;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-cream px-5 py-8">
-      <div className="w-full max-w-[520px] rounded-lg bg-white p-7 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-cream px-5 py-8 dark:bg-dark-bg">
+      <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
+      <div className="w-full max-w-[520px] rounded-lg bg-white p-7 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-8 dark:bg-dark-card">
         <div className="mb-4 flex items-center gap-2.5">
           <span className="text-xl">🔒</span>
-          <h1 className="num text-[22px] text-ink">{bill.title}</h1>
+          <h1 className="num text-[22px] text-ink dark:text-dark-text">{bill.title}</h1>
         </div>
-        <div className="mb-4.5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4">
+        <div className="mb-4.5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
           <span className="text-[15px]">🔒</span>
-          <p className="text-[13px] leading-relaxed text-muted">
-            This bill is <strong className="text-ink">settled and locked</strong>. Unmark it as
-            settled from Settle up to make changes.
+          <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
+            This bill is{" "}
+            <strong className="text-ink dark:text-dark-text">settled and locked</strong>. Unmark
+            it as settled from Settle up to make changes.
           </p>
         </div>
         <div className="pointer-events-none mb-4.5 opacity-45">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
-          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[14.5px] text-ink">
+          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[14.5px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
             {formatMoney(bill.totalAmount)}
           </div>
         </div>
         <div className="flex gap-2.5">
           <Link
             href={dashboardHref}
-            className="flex-1 rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink"
+            className="flex-1 rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
           >
             Close
           </Link>
           <button
             type="button"
             disabled
-            className="flex-1 cursor-not-allowed rounded-md bg-disabled py-3.5 text-center text-sm font-bold text-disabled-text"
+            className="flex-1 cursor-not-allowed rounded-md bg-disabled py-3.5 text-center text-sm font-bold text-disabled-text dark:bg-white/10 dark:text-white/30"
           >
             Save bill
           </button>

@@ -32,6 +32,7 @@ const config: Config = {
         "dark-bg": "#0E1712",
         "dark-card": "#16241D",
         "dark-forest": "#2E8562",
+        "dark-forest-hover": "#256B4E",
         "dark-text": "#F2F6F3",
         "dark-muted": "#91A399",
       },

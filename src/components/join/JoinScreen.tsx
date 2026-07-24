@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { getDeviceIdentities, saveDeviceIdentity } from "@/lib/device-identity";
 
@@ -40,7 +41,7 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
   }, [groupId]);
 
   if (checking) {
-    return <div className="min-h-screen bg-cream" />;
+    return <div className="min-h-screen bg-cream dark:bg-dark-bg" />;
   }
 
   const selected = members.find((member) => member.id === selectedId) ?? null;
@@ -75,14 +76,15 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-cream px-6 py-10">
-      <div className="w-full max-w-[440px] rounded-lg bg-white p-8 text-center shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-cream px-6 py-10 dark:bg-dark-bg">
+      <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
+      <div className="w-full max-w-[440px] rounded-lg bg-white p-8 text-center shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-10 dark:bg-dark-card">
         <Logo size={40} wordmark={false} className="mx-auto mb-4 justify-center" />
-        <p className="mb-0.5 font-display text-[15px] text-muted italic">
+        <p className="mb-0.5 font-display text-[15px] text-muted italic dark:text-dark-muted">
           You&apos;ve been invited to
         </p>
-        <h1 className="num mb-3.5 text-[26px] text-ink">{groupName}</h1>
-        <p className="mb-6 text-[13.5px] leading-relaxed text-muted">
+        <h1 className="num mb-3.5 text-[26px] text-ink dark:text-dark-text">{groupName}</h1>
+        <p className="mb-6 text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
           Pick which one you are, so we can show your personal balance.
         </p>
 
@@ -97,17 +99,20 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
                 className={cn(
                   "flex items-center gap-3 rounded-md border-[1.5px] px-4 py-2.5 text-left transition-colors",
                   isSelected
-                    ? "border-forest bg-mint-tint"
-                    : "border-transparent bg-cream hover:bg-cream-hover",
+                    ? "border-forest bg-mint-tint dark:border-mint dark:bg-mint/16"
+                    : "border-transparent bg-cream hover:bg-cream-hover dark:bg-dark-bg dark:hover:bg-white/5",
                 )}
               >
                 <InitialsAvatar name={member.name} color={member.avatarColor} size={38} />
                 <span
-                  className={cn("flex-1 text-sm font-bold", isSelected ? "text-forest" : "text-ink")}
+                  className={cn(
+                    "flex-1 text-sm font-bold",
+                    isSelected ? "text-forest dark:text-mint" : "text-ink dark:text-dark-text",
+                  )}
                 >
                   {member.name}
                 </span>
-                {isSelected && <span className="text-emerald">✓</span>}
+                {isSelected && <span className="text-emerald dark:text-mint">✓</span>}
               </button>
             );
           })}
@@ -115,7 +120,7 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
           {/* TODO: opens the add-member flow (P4-04) once that screen is built */}
           <button
             type="button"
-            className="flex items-center gap-2.5 rounded-md border border-dashed border-ink/18 bg-app-bg px-4 py-2.5 text-left text-[13px] font-bold text-muted"
+            className="flex items-center gap-2.5 rounded-md border border-dashed border-ink/18 bg-app-bg px-4 py-2.5 text-left text-[13px] font-bold text-muted dark:border-white/18 dark:bg-dark-bg dark:text-dark-muted"
           >
             + I&apos;m not listed — add me
           </button>

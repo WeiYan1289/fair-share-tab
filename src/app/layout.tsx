@@ -20,13 +20,27 @@ export const metadata: Metadata = {
   description: "Split bills fairly, settle up with the fewest transfers.",
 };
 
+// Runs before paint so the stored theme applies immediately -- without
+// this, the page would flash light before React hydrates and reads
+// localStorage (CLAUDE.md/design goal: one consistent mode, no flicker).
+const themeInitScript = `
+  try {
+    if (localStorage.getItem("fst-theme") === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+  } catch (e) {}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className={`${instrumentSerif.variable} ${workSans.variable} antialiased`}
       >

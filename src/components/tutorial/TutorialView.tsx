@@ -4,26 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 
 const STEPS = [
   {
     label: "1",
-    tint: "bg-mint-tint",
-    color: "text-emerald",
+    tint: "bg-mint-tint dark:bg-mint/16",
+    color: "text-emerald dark:text-mint",
     title: "Create a group",
     body: "Give it a name — a ski trip, a shared flat, a running tab with your roommates. No email, no password: just create it and you're in.",
   },
   {
     label: "2",
-    tint: "bg-sky-tint",
+    tint: "bg-sky-tint dark:bg-sky/16",
     color: "text-sky",
     title: "Add friends & bills",
     body: "Share the link so everyone can join. Log bills as they come up — who paid, how much, and how it's split between you.",
   },
   {
     label: "3",
-    tint: "bg-gold-tint",
+    tint: "bg-gold-tint dark:bg-gold/16",
     color: "text-gold",
     title: "Settle up",
     body: "When it's time to square up, FairShareTab nets every bill down to the fewest possible transfers, so nobody sends more payments than they have to.",
@@ -52,24 +53,30 @@ export function TutorialView() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
       <div className="mx-auto max-w-[720px] px-6 py-10 sm:px-10 sm:py-14">
         <div className="mb-14 flex items-center justify-between">
           <Link href="/">
             <Logo size={24} wordmarkClassName="text-base" />
           </Link>
-          <Link href="/" className="text-[13px] font-bold text-link hover:text-forest">
-            ← Back home
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
+            >
+              ← Back home
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
           How it works
         </p>
-        <h1 className="num mb-4 text-[30px] leading-[1.2] text-ink sm:text-[36px]">
+        <h1 className="num mb-4 text-[30px] leading-[1.2] text-ink sm:text-[36px] dark:text-dark-text">
           Three steps from &ldquo;who paid for this?&rdquo; to everyone settled.
         </h1>
-        <p className="mb-14 max-w-[520px] text-[15px] leading-relaxed text-muted">
+        <p className="mb-14 max-w-[520px] text-[15px] leading-relaxed text-muted dark:text-dark-muted">
           No spreadsheets, no math in a group chat. Here&apos;s the whole flow, and what
           makes it safe to use with people you trust.
         </p>
@@ -83,8 +90,10 @@ export function TutorialView() {
                 {step.label}
               </div>
               <div>
-                <p className="mb-1.5 text-[17px] font-bold text-ink">{step.title}</p>
-                <p className="max-w-[480px] text-[14px] leading-relaxed text-muted">
+                <p className="mb-1.5 text-[17px] font-bold text-ink dark:text-dark-text">
+                  {step.title}
+                </p>
+                <p className="max-w-[480px] text-[14px] leading-relaxed text-muted dark:text-dark-muted">
                   {step.body}
                 </p>
               </div>
@@ -92,15 +101,17 @@ export function TutorialView() {
           ))}
         </div>
 
-        <div className="mb-16 border-t border-ink/8 pt-12">
+        <div className="mb-16 border-t border-ink/8 pt-12 dark:border-white/10">
           <p className="mb-7 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
             Good to know
           </p>
           <div className="flex flex-col gap-7">
             {GOOD_TO_KNOW.map((item) => (
-              <div key={item.title} className="rounded-lg bg-white p-5 sm:p-6">
-                <p className="mb-1.5 text-[14.5px] font-bold text-ink">{item.title}</p>
-                <p className="max-w-[540px] text-[13.5px] leading-relaxed text-muted">
+              <div key={item.title} className="rounded-lg bg-white p-5 sm:p-6 dark:bg-dark-card">
+                <p className="mb-1.5 text-[14.5px] font-bold text-ink dark:text-dark-text">
+                  {item.title}
+                </p>
+                <p className="max-w-[540px] text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
                   {item.body}
                 </p>
               </div>
@@ -108,10 +119,14 @@ export function TutorialView() {
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-4 border-t border-ink/8 pt-12 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-start gap-4 border-t border-ink/8 pt-12 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
           <div>
-            <p className="mb-1 text-[17px] font-bold text-ink">Ready to split your first bill?</p>
-            <p className="text-[13px] text-muted">Takes about ten seconds — just a name.</p>
+            <p className="mb-1 text-[17px] font-bold text-ink dark:text-dark-text">
+              Ready to split your first bill?
+            </p>
+            <p className="text-[13px] text-muted dark:text-dark-muted">
+              Takes about ten seconds — just a name.
+            </p>
           </div>
           <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
             Create a group

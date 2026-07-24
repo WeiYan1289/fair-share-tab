@@ -62,8 +62,8 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[400px] rounded-lg bg-white p-7 shadow-[0_24px_48px_-16px_rgba(19,46,40,0.28)]">
-        <h2 className="num mb-4 text-xl text-ink">Create a new group</h2>
+      <div className="relative w-full max-w-[400px] rounded-lg bg-white p-7 shadow-[0_24px_48px_-16px_rgba(19,46,40,0.28)] dark:bg-dark-card">
+        <h2 className="num mb-4 text-xl text-ink dark:text-dark-text">Create a new group</h2>
 
         <div className="mb-3.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Group name</label>
@@ -72,7 +72,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             placeholder="Ski Trip Crew"
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest"
+            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
 
@@ -85,8 +85,10 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
             onBlur={() => setNameTouched(true)}
             placeholder="Your name"
             className={cn(
-              "w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-sm text-ink outline-none",
-              nameMissing ? "border-coral bg-coral-tint" : "border-ink/14 focus:border-forest",
+              "w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-sm text-ink outline-none dark:bg-dark-bg dark:text-dark-text",
+              nameMissing
+                ? "border-coral bg-coral-tint dark:bg-coral/10"
+                : "border-ink/14 focus:border-forest dark:border-white/14",
             )}
           />
           <p
@@ -104,7 +106,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
         <div className="mb-5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Default currency</label>
           {/* v1 is MYR only (CLAUDE.md) — shown as a fixed value, not a real picker. */}
-          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink">
+          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
             RM {SUPPORTED_CURRENCY}
           </div>
         </div>

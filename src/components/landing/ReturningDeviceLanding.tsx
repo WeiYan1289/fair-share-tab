@@ -2,6 +2,7 @@
 
 import { Logo } from "@/components/ui/Logo";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { DeviceGroupIdentity } from "@/lib/device-identity";
 
 interface ReturningDeviceLandingProps {
@@ -24,15 +25,18 @@ export function ReturningDeviceLanding({
   }
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px] px-6 py-10 sm:px-10 sm:py-14">
-        <Logo size={26} wordmarkClassName="text-lg" className="mb-11 sm:mb-13" />
+        <div className="mb-11 flex items-center justify-between sm:mb-13">
+          <Logo size={26} wordmarkClassName="text-lg" />
+          <ThemeToggle />
+        </div>
 
         <div className="mx-auto max-w-[440px]">
-          <h1 className="num mb-1.5 text-2xl text-ink sm:text-[25px]">
+          <h1 className="num mb-1.5 text-2xl text-ink sm:text-[25px] dark:text-dark-text">
             Welcome back, {primary.memberName}.
           </h1>
-          <p className="mb-6 text-[13px] text-muted sm:text-[13.5px]">
+          <p className="mb-6 text-[13px] text-muted sm:text-[13.5px] dark:text-dark-muted">
             Pick up where you left off.
           </p>
 
@@ -70,7 +74,7 @@ export function ReturningDeviceLanding({
                     key={identity.groupId}
                     type="button"
                     onClick={() => continueTo(identity)}
-                    className="flex items-center gap-3 rounded-lg border border-ink/8 px-3 py-2.5 text-left hover:bg-white"
+                    className="flex items-center gap-3 rounded-lg border border-ink/8 px-3 py-2.5 text-left hover:bg-white dark:border-white/8 dark:hover:bg-dark-card"
                   >
                     <InitialsAvatar
                       name={identity.groupName}
@@ -79,7 +83,9 @@ export function ReturningDeviceLanding({
                       size={32}
                     />
                     <div className="flex-1">
-                      <p className="text-[13.5px] font-bold text-ink">{identity.groupName}</p>
+                      <p className="text-[13.5px] font-bold text-ink dark:text-dark-text">
+                        {identity.groupName}
+                      </p>
                       <p className="text-[11px] text-muted-2">
                         {identity.memberCount} member{identity.memberCount === 1 ? "" : "s"}
                       </p>
@@ -95,7 +101,7 @@ export function ReturningDeviceLanding({
             <button
               type="button"
               onClick={onUseDifferentLink}
-              className="font-bold text-link hover:text-forest"
+              className="font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
             >
               Use a different link
             </button>

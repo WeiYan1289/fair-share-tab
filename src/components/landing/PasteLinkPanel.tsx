@@ -31,7 +31,7 @@ export function PasteLinkPanel({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "max-w-[420px] rounded-lg border border-ink/8 bg-white p-6 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)]",
+        "max-w-[420px] rounded-lg border border-ink/8 bg-white p-6 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] dark:border-white/8 dark:bg-dark-card",
         className,
       )}
     >
@@ -42,8 +42,8 @@ export function PasteLinkPanel({ className }: { className?: string }) {
         onChange={(e) => setValue(e.target.value)}
         placeholder="fairsharetab.app/g/..."
         className={cn(
-          "mb-2 w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-[13px] text-ink outline-none",
-          isInvalid ? "border-coral" : "border-emerald",
+          "mb-2 w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-[13px] text-ink outline-none dark:bg-dark-bg dark:text-dark-text",
+          isInvalid ? "border-coral" : "border-emerald dark:border-mint",
         )}
       />
       {isInvalid && (

@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+/* Dark mode is an explicit choice via the .dark class on <html> (see
+   ThemeToggle + the no-FOUC script in layout.tsx), never the OS
+   `prefers-color-scheme` media query -- that was what let some screens
+   follow the system setting while others (never given a dark treatment)
+   stayed light, so navigating the app could flip modes mid-flow. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #eee7d8;
   --foreground: #16201b;
@@ -13,11 +20,9 @@
   --font-display: var(--font-instrument-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0e1712;
-    --foreground: #f6f1e7;
-  }
+:root.dark {
+  --background: #0e1712;
+  --foreground: #f6f1e7;
 }
 
 body {
