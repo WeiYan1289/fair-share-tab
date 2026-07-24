@@ -90,7 +90,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
         <div className="mb-3 flex items-center justify-between">
           <Link
             href={`/g/${groupId}/events`}
-            className="text-[13px] font-bold text-[#1F5C46] dark:text-mint"
+            className="text-[13px] font-bold text-link dark:text-mint"
           >
             ← All events
           </Link>
@@ -98,7 +98,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
             <button
               type="button"
               onClick={() => setShowShare(true)}
-              className="flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-[#F2F6F3]"
+              className="flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-dark-text"
             >
               🔗 Share
             </button>
@@ -107,26 +107,26 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
 
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="num text-[28px] text-ink sm:text-[36px] dark:text-[#F2F6F3]">
+            <h1 className="num text-[28px] text-ink sm:text-[36px] dark:text-dark-text">
               {event.name}
             </h1>
             {dateRange && (
-              <p className="mt-1 text-[13px] text-muted dark:text-[#91A399]">
+              <p className="mt-1 text-[13px] text-muted dark:text-dark-muted">
                 {dateRange} · {event.members.length} member{event.members.length === 1 ? "" : "s"}
               </p>
             )}
           </div>
           <div className="text-right">
-            <p className="text-[11.5px] tracking-wide text-muted-2 uppercase dark:text-[#91A399]">
+            <p className="text-[11.5px] tracking-wide text-muted-2 uppercase dark:text-dark-muted">
               Total spend
             </p>
-            <p className="num text-[30px] text-ink sm:text-[38px] dark:text-[#F2F6F3]">
+            <p className="num text-[30px] text-ink sm:text-[38px] dark:text-dark-text">
               {formatMoney(totalSpend)}
             </p>
           </div>
         </div>
 
-        <p className="mb-3 text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-[#91A399]">
+        <p className="mb-3 text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
           Members
         </p>
         <div className="mb-8 flex flex-wrap gap-3">
@@ -145,7 +145,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
             <button
               type="button"
               onClick={() => setShowAddMember(true)}
-              className="flex min-w-[150px] items-center gap-2 rounded-md border border-dashed border-ink/18 bg-app-bg px-4.5 py-3 text-[13px] font-bold text-muted dark:border-white/18 dark:bg-dark-card dark:text-[#91A399]"
+              className="flex min-w-[150px] items-center gap-2 rounded-md border border-dashed border-ink/18 bg-app-bg px-4.5 py-3 text-[13px] font-bold text-muted dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
             >
               + Add member
             </button>
@@ -153,20 +153,20 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
         </div>
 
         <div className="mb-3.5 flex items-center justify-between">
-          <p className="text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-[#91A399]">
+          <p className="text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
             Bills
           </p>
           {canEdit && event.bills.length > 0 && (
             <div className="flex gap-2.5">
               <Link
                 href={`/g/${groupId}/events/${event.id}/settle`}
-                className="rounded-md border border-ink/16 bg-white px-5 py-2.5 text-[13.5px] font-bold text-ink dark:border-white/16 dark:bg-dark-card dark:text-[#F2F6F3]"
+                className="rounded-md border border-ink/16 bg-white px-5 py-2.5 text-[13.5px] font-bold text-ink dark:border-white/16 dark:bg-dark-card dark:text-dark-text"
               >
                 Settle up
               </Link>
               <Link
                 href={`/g/${groupId}/events/${event.id}/bills/new`}
-                className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-[#1a4536] dark:bg-[#2E8562]"
+                className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
               >
                 + Add bill
               </Link>
@@ -243,17 +243,17 @@ function EmptyBillsState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-md bg-white px-6 py-11 text-center dark:bg-dark-card">
-      <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#E4F9EE] text-2xl dark:bg-mint/16">
+      <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-2xl dark:bg-mint/16">
         🧾
       </div>
-      <p className="mb-1.5 text-[15px] font-bold text-ink dark:text-[#F2F6F3]">No bills yet</p>
-      <p className="mb-4 max-w-[320px] text-[13px] text-muted dark:text-[#91A399]">
+      <p className="mb-1.5 text-[15px] font-bold text-ink dark:text-dark-text">No bills yet</p>
+      <p className="mb-4 max-w-[320px] text-[13px] text-muted dark:text-dark-muted">
         Log your first expense to start tracking who owes what.
       </p>
       {canEdit && (
         <Link
           href={`/g/${groupId}/events/${eventId}/bills/new`}
-          className="rounded-md bg-forest px-5.5 py-3 text-[13.5px] font-bold text-cream dark:bg-[#2E8562]"
+          className="rounded-md bg-forest px-5.5 py-3 text-[13.5px] font-bold text-cream dark:bg-dark-forest"
         >
           + Add bill
         </Link>
@@ -279,20 +279,20 @@ function BillRow({
   return (
     <div className="flex items-center justify-between rounded-md border border-ink/7 bg-white px-4.5 py-3.5 dark:border-white/7 dark:bg-dark-card">
       <div>
-        <p className="text-[15px] font-bold text-ink dark:text-[#F2F6F3]">{bill.title}</p>
-        <p className="mt-0.5 text-[12.5px] text-muted-2 dark:text-[#91A399]">
+        <p className="text-[15px] font-bold text-ink dark:text-dark-text">{bill.title}</p>
+        <p className="mt-0.5 text-[12.5px] text-muted-2 dark:text-dark-muted">
           Paid by {bill.payerName} · split {bill.splitCount} ways
         </p>
       </div>
       <div className="flex items-center gap-4">
-        <p className="num text-[18px] text-ink dark:text-[#F2F6F3]">
+        <p className="num text-[18px] text-ink dark:text-dark-text">
           {formatMoney(bill.totalAmount)}
         </p>
         <span
           className={
             settled
-              ? "rounded-full bg-[#E4F9EE] px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-emerald dark:bg-mint/16 dark:text-mint"
-              : "rounded-full bg-cream px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-muted dark:bg-dark-bg dark:text-[#91A399]"
+              ? "rounded-full bg-mint-tint px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-emerald dark:bg-mint/16 dark:text-mint"
+              : "rounded-full bg-cream px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-muted dark:bg-dark-bg dark:text-dark-muted"
           }
         >
           {settled ? "Settled" : "Unsettled"}

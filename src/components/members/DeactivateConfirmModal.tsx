@@ -58,7 +58,7 @@ export function DeactivateConfirmModal({
             type="button"
             disabled={submitting}
             onClick={handleDeactivate}
-            className="flex-1 rounded-md bg-[#B08A3E] py-3.5 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex-1 rounded-md bg-gold py-3.5 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             Deactivate
           </button>

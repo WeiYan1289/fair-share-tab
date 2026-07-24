@@ -1,34 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { PasteLinkPanel } from "./PasteLinkPanel";
-
-const STEPS = [
-  {
-    label: "1",
-    tint: "bg-[#E4F9EE]",
-    color: "text-emerald",
-    title: "Create a group",
-    body: "Name it, get a link. No signup.",
-  },
-  {
-    label: "2",
-    tint: "bg-[#EAF0F7]",
-    color: "text-[#4A6FA5]",
-    title: "Add friends & bills",
-    body: "Log expenses as they happen.",
-  },
-  {
-    label: "3",
-    tint: "bg-[#F6EFDF]",
-    color: "text-[#B08A3E]",
-    title: "Settle up",
-    body: "Fewest transfers to even out.",
-  },
-];
 
 const HERO_PEOPLE = [
   { initials: "PS", color: "#B5654A", top: "15%", amount: "RM 355" },
@@ -37,7 +14,9 @@ const HERO_PEOPLE = [
 ];
 
 // Screen Spec P1-01. Shown when this device has no stored group identity at
-// all (Screen Spec P1-02 covers the returning-device case).
+// all (Screen Spec P1-02 covers the returning-device case). Kept to a
+// single, uncluttered hero moment -- the step-by-step explainer and the
+// no-password disclosure live on /tutorial instead, one quiet link away.
 export function ColdVisitorLanding() {
   const [showPasteLink, setShowPasteLink] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -45,18 +24,18 @@ export function ColdVisitorLanding() {
   return (
     <div className="min-h-screen bg-cream">
       <div className="mx-auto max-w-[1160px] px-6 py-10 sm:px-10 sm:py-12">
-        <Logo size={26} wordmarkClassName="text-lg" className="mb-10 sm:mb-11" />
+        <Logo size={26} wordmarkClassName="text-lg" className="mb-12 sm:mb-16" />
 
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
+        <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
           <div className="lg:max-w-[440px] lg:flex-1">
-            <h1 className="num mb-3.5 text-[32px] leading-[1.15] font-bold text-ink sm:text-4xl">
+            <h1 className="num mb-4 text-[34px] leading-[1.15] text-ink sm:text-[42px]">
               Split trip costs fairly. Settle up in one step.
             </h1>
-            <p className="mb-6 text-[14.5px] leading-relaxed text-muted">
+            <p className="mb-7 text-[15px] leading-relaxed text-muted">
               Log bills as you go — FairShareTab works out who owes who, then shows the
               fewest transfers to close it out.
             </p>
-            <div className="mb-3.5 flex flex-wrap items-center gap-3.5">
+            <div className="mb-4 flex flex-wrap items-center gap-3.5">
               <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
                 Create a group
               </Button>
@@ -67,43 +46,19 @@ export function ColdVisitorLanding() {
             <button
               type="button"
               onClick={() => setShowPasteLink((v) => !v)}
-              className="text-[13px] font-bold text-[#1F5C46] hover:text-forest"
+              className="text-[13px] font-bold text-link hover:text-forest"
             >
               I have an invite link →
             </button>
 
             {showPasteLink && <PasteLinkPanel className="mt-4" />}
 
-            <div className="mt-9">
-              <p className="mb-1 text-[11.5px] font-bold tracking-wide text-muted-2 uppercase">
-                How it works
-              </p>
-              <div className="mt-2 grid grid-cols-3 gap-5 sm:gap-7">
-                {STEPS.map((step) => (
-                  <div key={step.label}>
-                    <div
-                      className={`mb-2.5 flex h-9 w-9 items-center justify-center rounded-[11px] text-sm font-extrabold ${step.tint} ${step.color}`}
-                    >
-                      {step.label}
-                    </div>
-                    <p className="mb-0.5 text-[13.5px] font-bold text-ink">{step.title}</p>
-                    <p className="text-xs leading-snug text-muted">{step.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-7 flex gap-2 rounded-lg bg-[#EAF0F7] p-3.5">
-              <span className="text-sm">🔗</span>
-              <p className="text-[11.5px] leading-relaxed text-[#3B5876]">
-                Anyone with your group&apos;s link can view and edit it — there are no
-                passwords yet. Only share it with people you trust.
-              </p>
-            </div>
-
-            <p className="mt-8 border-t border-ink/8 pt-4 text-[11.5px] text-muted-2">
-              FairShareTab — built for trips, not spreadsheets.
-            </p>
+            <Link
+              href="/tutorial"
+              className="mt-10 block w-fit text-[12.5px] text-muted-2 underline decoration-dotted underline-offset-4 hover:text-muted"
+            >
+              See how it works →
+            </Link>
           </div>
 
           <div className="lg:flex-1">
@@ -125,13 +80,13 @@ export function ColdVisitorLanding() {
                       refY="4"
                       orient="auto"
                     >
-                      <path d="M0,0 L8,4 L0,8 Z" fill="#16201B" fillOpacity="0.4" />
+                      <path d="M0,0 L8,4 L0,8 Z" className="fill-ink" fillOpacity="0.4" />
                     </marker>
                   </defs>
                   <path
                     d="M78,44 Q210,20 350,80"
                     fill="none"
-                    stroke="#16201B"
+                    className="stroke-ink"
                     strokeOpacity="0.16"
                     strokeWidth="2.5"
                     markerEnd="url(#heroArrow)"
@@ -139,7 +94,7 @@ export function ColdVisitorLanding() {
                   <path
                     d="M78,115 Q210,105 350,100"
                     fill="none"
-                    stroke="#16201B"
+                    className="stroke-ink"
                     strokeOpacity="0.16"
                     strokeWidth="2.5"
                     markerEnd="url(#heroArrow)"
@@ -147,7 +102,7 @@ export function ColdVisitorLanding() {
                   <path
                     d="M78,186 Q210,164 350,120"
                     fill="none"
-                    stroke="#16201B"
+                    className="stroke-ink"
                     strokeOpacity="0.16"
                     strokeWidth="2.5"
                     markerEnd="url(#heroArrow)"
@@ -164,8 +119,7 @@ export function ColdVisitorLanding() {
                   </div>
                 ))}
                 <div
-                  className="absolute top-1/2 right-[6%] flex h-[24%] w-[13%] min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full text-[15px] font-bold text-white shadow-[0_0_0_4px_#E4F9EE]"
-                  style={{ backgroundColor: "#4A6FA5" }}
+                  className="absolute top-1/2 right-[6%] flex h-[24%] w-[13%] min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-sky text-[15px] font-bold text-white ring-4 ring-mint-tint"
                 >
                   YO
                 </div>
@@ -180,7 +134,7 @@ export function ColdVisitorLanding() {
                   </div>
                 ))}
               </div>
-              <div className="mt-1.5 flex items-center gap-1.5 rounded-[11px] bg-[#E4F9EE] px-3.5 py-2.5">
+              <div className="mt-1.5 flex items-center gap-1.5 rounded-[11px] bg-mint-tint px-3.5 py-2.5">
                 <span className="text-[13px] text-emerald">✓</span>
                 <span className="text-[12.5px] font-bold text-emerald">
                   3 transfers settle everyone

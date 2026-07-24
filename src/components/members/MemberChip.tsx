@@ -93,7 +93,7 @@ export function MemberChip({
             type="button"
             onClick={handleReactivate}
             disabled={reactivating}
-            className="text-[11px] font-bold whitespace-nowrap text-[#1F5C46] disabled:opacity-60"
+            className="text-[11px] font-bold whitespace-nowrap text-link disabled:opacity-60"
           >
             Reactivate
           </button>
@@ -131,18 +131,18 @@ export function MemberChip({
                 setRenaming(false);
               }
             }}
-            className="w-full border-b-[1.5px] border-forest bg-transparent text-[13.5px] font-bold text-ink outline-none dark:text-[#F2F6F3]"
+            className="w-full border-b-[1.5px] border-forest bg-transparent text-[13.5px] font-bold text-ink outline-none dark:text-dark-text"
           />
         ) : (
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => canEdit && setRenaming(true)}
-            className="flex items-center gap-1.5 text-left text-[13.5px] font-bold text-ink dark:text-[#F2F6F3]"
+            className="flex items-center gap-1.5 text-left text-[13.5px] font-bold text-ink dark:text-dark-text"
           >
             {member.name}
             {isYou && (
-              <span className="rounded-full bg-[#E4F9EE] px-[7px] py-px text-[9.5px] font-extrabold tracking-wide text-emerald dark:bg-mint/16 dark:text-mint">
+              <span className="rounded-full bg-mint-tint px-[7px] py-px text-[9.5px] font-extrabold tracking-wide text-emerald dark:bg-mint/16 dark:text-mint">
                 you
               </span>
             )}

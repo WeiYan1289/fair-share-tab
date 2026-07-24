@@ -138,7 +138,7 @@ export function TransferGraph({ transfers, members, viewerMemberId }: TransferGr
           return (
             <div
               key={i}
-              className="num absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-ink/10 bg-white px-3.5 py-1.5 text-[15px] text-ink shadow-[0_8px_18px_-8px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-card dark:text-[#F2F6F3]"
+              className="num absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-ink/10 bg-white px-3.5 py-1.5 text-[15px] text-ink shadow-[0_8px_18px_-8px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-card dark:text-dark-text"
               style={{
                 left: midX,
                 top: midY,
@@ -227,15 +227,15 @@ function GraphNode({
         size={NODE_SIZE}
         className={cn(
           "text-[19px] shadow-[0_10px_22px_-8px_rgba(19,46,40,0.35)]",
-          isYou && "ring-4 ring-[#E4F9EE] dark:ring-mint/18",
+          isYou && "ring-4 ring-mint-tint dark:ring-mint/18",
         )}
       />
-      <p className="text-center text-[13px] font-bold text-ink dark:text-[#F2F6F3]">
+      <p className="text-center text-[13px] font-bold text-ink dark:text-dark-text">
         {member.name}
         {isYou && (
           <>
             <br />
-            <span className="rounded-full bg-[#E4F9EE] px-[7px] py-px text-[9.5px] font-extrabold text-emerald dark:bg-mint/16 dark:text-mint">
+            <span className="rounded-full bg-mint-tint px-[7px] py-px text-[9.5px] font-extrabold text-emerald dark:bg-mint/16 dark:text-mint">
               you
             </span>
           </>
@@ -257,7 +257,7 @@ function TransferEndpoint({ member, isYou }: { member: SettleMember | undefined;
       />
       <p className="text-center text-[10.5px] font-bold text-ink">{member.name}</p>
       {isYou && (
-        <span className="rounded-full bg-[#E4F9EE] px-[5px] py-px text-[8px] font-extrabold text-emerald">
+        <span className="rounded-full bg-mint-tint px-[5px] py-px text-[8px] font-extrabold text-emerald">
           you
         </span>
       )}

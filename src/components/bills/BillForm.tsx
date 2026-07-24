@@ -308,7 +308,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
                     <span className="text-[13.5px] text-ink">
                       {member.name}
                       {id === viewerMemberId && (
-                        <span className="ml-1.5 rounded-full bg-[#E4F9EE] px-[6px] py-px text-[9px] font-extrabold text-emerald">
+                        <span className="ml-1.5 rounded-full bg-mint-tint px-[6px] py-px text-[9px] font-extrabold text-emerald">
                           you
                         </span>
                       )}
@@ -372,7 +372,7 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
               </span>
             </div>
             {!customReconciled && (
-              <div className="flex items-center gap-2 rounded-md border border-[#EFC2B7] bg-[#FBEAE6] px-4 py-3 text-[13px] font-bold text-coral">
+              <div className="flex items-center gap-2 rounded-md border border-coral-tint-border bg-coral-tint px-4 py-3 text-[13px] font-bold text-coral">
                 ⚠ Amounts don&apos;t add up —{" "}
                 {formatMoney(Math.abs(totalAmountSen - customRunningTotal))}
                 {customRunningTotal < totalAmountSen ? " short of " : " over "}
@@ -391,8 +391,8 @@ function EditableBillForm({ mode, groupId, eventId, members, initialBill }: Bill
           className={cn(
             "w-full rounded-md py-4 text-center text-[15.5px] font-bold",
             canSubmit
-              ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-[#1a4536]"
-              : "cursor-not-allowed bg-[#E4E2DC] text-[#A9A49C]",
+              ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover"
+              : "cursor-not-allowed bg-disabled text-disabled-text",
           )}
         >
           Save bill
@@ -420,7 +420,7 @@ function MemberSelectChip({
       className={cn(
         "flex items-center gap-1.5 rounded-full border-[1.5px] py-1.5 pr-3.5 pl-1.5",
         selected
-          ? "border-forest bg-[#E4F9EE] text-forest"
+          ? "border-forest bg-mint-tint text-forest"
           : "border-ink/14 bg-white text-muted",
       )}
     >
@@ -479,7 +479,7 @@ function LockedBillView({
           <button
             type="button"
             disabled
-            className="flex-1 cursor-not-allowed rounded-md bg-[#E4E2DC] py-3.5 text-center text-sm font-bold text-[#A9A49C]"
+            className="flex-1 cursor-not-allowed rounded-md bg-disabled py-3.5 text-center text-sm font-bold text-disabled-text"
           >
             Save bill
           </button>

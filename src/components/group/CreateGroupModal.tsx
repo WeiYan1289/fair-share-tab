@@ -86,7 +86,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
             placeholder="Your name"
             className={cn(
               "w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-sm text-ink outline-none",
-              nameMissing ? "border-coral bg-[#FBEAE6]" : "border-ink/14 focus:border-forest",
+              nameMissing ? "border-coral bg-coral-tint" : "border-ink/14 focus:border-forest",
             )}
           />
           <p

@@ -44,7 +44,7 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
               <button
                 type="button"
                 onClick={() => setShowCreateEvent(true)}
-                className="hidden rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-[#1a4536] sm:block"
+                className="hidden rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover sm:block"
               >
                 + Create event
               </button>
@@ -78,7 +78,7 @@ export function EventsListView({ groupId, groupName, events }: EventsListViewPro
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <div className="mb-6 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#E4F9EE]">
+      <div className="mb-6 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-mint-tint">
         <div className="relative h-8 w-8 rounded-[9px] border-[3px] border-forest">
           <span className="absolute top-1/2 left-1/2 h-[3px] w-[15px] -translate-x-1/2 -translate-y-1/2 bg-forest" />
           <span className="absolute top-1/2 left-1/2 h-[15px] w-[3px] -translate-x-1/2 -translate-y-1/2 bg-forest" />
@@ -91,7 +91,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <button
         type="button"
         onClick={onCreate}
-        className="rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-[#1a4536]"
+        className="rounded-md bg-forest px-6 py-3.5 text-sm font-bold text-cream shadow-[0_8px_20px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover"
       >
         + Create your first event
       </button>

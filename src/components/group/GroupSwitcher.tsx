@@ -51,7 +51,7 @@ export function GroupSwitcher({ currentGroupId, currentGroupName }: GroupSwitche
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-ink/10 bg-cream py-1.5 pr-3.5 pl-1.5 hover:bg-[#efe9db]"
+        className="flex items-center gap-2 rounded-full border border-ink/10 bg-cream py-1.5 pr-3.5 pl-1.5 hover:bg-cream-hover"
       >
         <InitialsAvatar name={currentGroupName} colorSeed={currentGroupId} shape="square" size={24} />
         <span className="text-[13.5px] font-bold text-ink">{currentGroupName}</span>
@@ -73,7 +73,7 @@ export function GroupSwitcher({ currentGroupId, currentGroupName }: GroupSwitche
                   onClick={() => switchTo(g)}
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-left",
-                    g.groupId === currentGroupId ? "bg-[#E4F9EE]" : "hover:bg-cream",
+                    g.groupId === currentGroupId ? "bg-mint-tint" : "hover:bg-cream",
                   )}
                 >
                   <InitialsAvatar name={g.groupName} colorSeed={g.groupId} shape="square" size={32} />

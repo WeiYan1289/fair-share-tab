@@ -97,8 +97,8 @@ export function JoinScreen({ groupId, groupName, members, shareToken }: JoinScre
                 className={cn(
                   "flex items-center gap-3 rounded-md border-[1.5px] px-4 py-2.5 text-left transition-colors",
                   isSelected
-                    ? "border-forest bg-[#E4F9EE]"
-                    : "border-transparent bg-cream hover:bg-[#efe9db]",
+                    ? "border-forest bg-mint-tint"
+                    : "border-transparent bg-cream hover:bg-cream-hover",
                 )}
               >
                 <InitialsAvatar name={member.name} color={member.avatarColor} size={38} />

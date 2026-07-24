@@ -119,7 +119,7 @@ export function SettleUpFlow({
     return (
       <div className="min-h-screen bg-cream px-5 py-8 sm:px-9">
         <div className="mx-auto max-w-[620px]">
-          <Link href={dashboardHref} className="mb-4 block text-[13px] font-bold text-[#1F5C46]">
+          <Link href={dashboardHref} className="mb-4 block text-[13px] font-bold text-link">
             ← {eventName}
           </Link>
           <h1 className="num mb-1.5 text-2xl text-ink sm:text-[28px]">Settle up — {eventName}</h1>
@@ -166,7 +166,7 @@ export function SettleUpFlow({
 
               {error && <p className="mb-3 text-xs text-coral">{error}</p>}
 
-              <div className="flex items-center justify-between rounded-md bg-[#E4F9EE] px-5.5 py-4.5">
+              <div className="flex items-center justify-between rounded-md bg-mint-tint px-5.5 py-4.5">
                 <p className="text-sm font-bold text-emerald">
                   {selectedIds.size} bill{selectedIds.size === 1 ? "" : "s"} selected ·{" "}
                   {formatMoney(selectedTotal)} total
@@ -190,17 +190,17 @@ export function SettleUpFlow({
   return (
     <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
       <div className="mx-auto flex max-w-[900px] flex-col items-center">
-        <h1 className="num mb-1.5 text-center text-2xl text-ink sm:text-[30px] dark:text-[#F2F6F3]">
+        <h1 className="num mb-1.5 text-center text-2xl text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
         </h1>
-        <p className="mb-7 text-center text-[13.5px] text-muted sm:text-[14.5px] dark:text-[#91A399]">
+        <p className="mb-7 text-center text-[13.5px] text-muted sm:text-[14.5px] dark:text-dark-muted">
           {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone — down
           from {selectedBills.length} bill{selectedBills.length === 1 ? "" : "s"}.
         </p>
 
         <TransferGraph transfers={transfers} members={members} viewerMemberId={viewerMemberId} />
 
-        <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-[#E4F9EE] px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">
+        <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-mint-tint px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">
           ✓ {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone
         </div>
 
@@ -210,14 +210,14 @@ export function SettleUpFlow({
           <button
             type="button"
             onClick={() => setShowConfirm(true)}
-            className="rounded-md bg-forest px-10 py-4 text-[15.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] dark:bg-[#2E8562]"
+            className="rounded-md bg-forest px-10 py-4 text-[15.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] dark:bg-dark-forest"
           >
             Mark as settled
           </button>
         ) : (
           <Link
             href={dashboardHref}
-            className="rounded-md border border-ink/16 bg-white px-8 py-3.5 text-[14px] font-bold text-ink dark:border-white/16 dark:bg-dark-card dark:text-[#F2F6F3]"
+            className="rounded-md border border-ink/16 bg-white px-8 py-3.5 text-[14px] font-bold text-ink dark:border-white/16 dark:bg-dark-card dark:text-dark-text"
           >
             Back to dashboard
           </Link>

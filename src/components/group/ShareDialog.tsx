@@ -136,7 +136,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                 type="button"
                 disabled={regenerating}
                 onClick={handleRegenerateConfirm}
-                className="flex-1 rounded-md bg-[#B08A3E] py-3.5 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="flex-1 rounded-md bg-gold py-3.5 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 Regenerate link
               </button>
@@ -213,9 +213,9 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                 : "View only — anyone with this link can see bills and balances but can't change anything."}
             </p>
 
-            <div className="mb-6 flex gap-2.5 rounded-md bg-[#EAF0F7] px-4 py-3.5">
+            <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5">
               <span className="text-sm">🔗</span>
-              <p className="text-[11.5px] leading-relaxed text-[#3B5876]">
+              <p className="text-[11.5px] leading-relaxed text-sky-text">
                 <strong>Heads up</strong> — this link doesn&apos;t need a password. Anyone who has
                 it can view this group&apos;s bills, and edit them unless you switch to View only.
               </p>
@@ -225,7 +225,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
               <button
                 type="button"
                 onClick={() => setConfirmRegenerate(true)}
-                className="text-[13px] font-bold text-[#B08A3E] hover:opacity-80"
+                className="text-[13px] font-bold text-gold hover:opacity-80"
               >
                 Regenerate link
               </button>

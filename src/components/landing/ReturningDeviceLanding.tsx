@@ -50,7 +50,7 @@ export function ReturningDeviceLanding({
                 className="!bg-mint !text-[#12251C]"
               />
               <div>
-                <p className="mb-0.5 text-[11px] tracking-wide text-[#91A399] uppercase">
+                <p className="mb-0.5 text-[11px] tracking-wide text-dark-muted uppercase">
                   Continue to
                 </p>
                 <p className="text-[17px] font-bold text-cream">{primary.groupName}</p>
@@ -95,7 +95,7 @@ export function ReturningDeviceLanding({
             <button
               type="button"
               onClick={onUseDifferentLink}
-              className="font-bold text-[#1F5C46] hover:text-forest"
+              className="font-bold text-link hover:text-forest"
             >
               Use a different link
             </button>
