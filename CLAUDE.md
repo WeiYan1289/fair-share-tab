@@ -51,10 +51,11 @@ exactly. `RM 250.00 / 3` → `8334 / 8333 / 8333`.
 they already appear on and remain settleable. Do not add a delete endpoint or a delete
 button. Same for groups (never deleted) and events (archived).
 
-**5. The viewer's name is shown, never the bare word "You".** Render the real member
-name plus a quiet "you" marker (`Sarah (you)`, or a chip / avatar ring). People
-screenshot these screens into group chats — "Sarah owes RM 158.30" must be meaningful
-to everyone who sees it. This applies to every screen including the settle-up graph.
+**5. Member names are shown plainly, identically to everyone with the link.**
+No per-viewer identity is tracked anywhere in the app, so there is no "you" to
+mark — access is granted purely by which link you opened, not by who you are.
+People screenshot these screens into group chats — "Sarah owes RM 158.30" must
+be meaningful to everyone who sees it, which a plain name already is.
 
 **6. `member` and `user` are separate concepts.** `member.user_id` is nullable and
 always NULL in v1. A member is an accounting entity (a name that owes money); a user is

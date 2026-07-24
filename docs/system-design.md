@@ -90,16 +90,6 @@ its role level (`editor` or `viewer`).
 - Be honest in the UI: the share dialog states plainly that anyone with the link can
   view and edit.
 
-### 3.4 Identity (separate from access)
-
-After access is granted, the visitor picks which member they are on the "Who are you?"
-screen. Store client-side as a map `group_id → member_id`.
-
-This is **personalisation, not authorisation** — never gate a permission on it. Its
-only job is deciding whose name carries the "you" marker (`data-model.md` §7).
-
-Provide a "That's not me — switch member" escape hatch for a mis-claim.
-
 ---
 
 ## 4. Core domain logic
@@ -192,11 +182,10 @@ Every route below is server-side and performs the §3 access check first.
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/groups` | Create a group. Body: `{ name, creatorName }`. Creates the group, its first member (`creatorName`), and an `editor` share link in one transaction. Returns the group and link. |
-| `GET` | `/g/{token}` | Validate token → set session cookie → redirect to the group. Invalid/revoked → error screen. |
-| `POST` | `/api/groups/{id}/claim` | Record which member the device is. Sets the client-side identity. |
+| `GET` | `/g/{token}` | Validate token → set session cookie → redirect to the events list. Invalid/revoked → error screen. |
 
-`creatorName` is **required** — without it the owner becomes an unnamed member, which
-is what forced the old "You" label (`data-model.md` §7).
+`creatorName` is **required** — it's the name that appears on the group's first
+bills and balances, same as any other member.
 
 ### Share links
 
@@ -276,13 +265,15 @@ Preview response:
 ### 6.1 Create a group (owner entry)
 
 Landing → "Create group" → `{ groupName, creatorName }` → server creates group + first
-member + editor link in one transaction → device identity set to that member → land on
-the events list. Currency is chosen later, per event, when the first event is created.
+member + editor link in one transaction → land directly on the events list. Currency is
+chosen later, per event, when the first event is created.
 
-### 6.2 Join via link (invitee entry)
+### 6.2 Open a link (invitee entry)
 
-Open `/g/{token}` → validate → session cookie → clean redirect → "Who are you?" →
-pick an existing member or add themselves → identity stored on device → events list.
+Open `/g/{token}` → validate → session cookie → clean redirect straight to the events
+list. No identity step — access and role (editor/viewer) come entirely from which link
+was opened. A one-time "save this link" banner offers a copy-link button on first
+landing, since there's no other way back in without the original link.
 
 ### 6.3 Add a bill
 
@@ -331,7 +322,10 @@ Client-side validation is UX. Server-side validation is correctness. Do both.
   *new* bill pickers.
 - **Editing a settled bill** — blocked. The UI shows a lock banner explaining it must
   be unsettled first.
-- **Mis-claimed identity** — provide "switch member"; it changes only the "you" marker.
+- **Lost or unsaved link** — there's no device-side fallback once you navigate away
+  without saving the link (no localStorage, no login). The one-time save-link banner
+  (§6.2) is the mitigation, not a full solution — if a link is truly lost, whoever
+  shared it must resend it (or an editor can regenerate/reshare from the Share dialog).
 - **Revoked link mid-session** — session cookies must be validated against
   `revoked_at` on each request, not just at exchange time.
 - **Concurrent edits** — last write wins is acceptable in v1; wrap each mutation in a

@@ -256,13 +256,12 @@ construction. Cross-event settlement is not supported.
 
 ## 4. What is *not* in the database
 
-**Device identity.** When someone opens a share link they pick which member they are.
-That choice is stored **client-side only** (cookie or `localStorage`), as a map of
-`group_id → member_id` so one device can hold identities in several groups.
-
-It is an unverified self-declaration — treat it as **personalisation, never
-authorisation**. Access is granted by the share token; the claimed member only decides
-whose name gets the "you" marker.
+**Per-viewer identity.** Access is granted purely by which share link (token)
+was opened — there is no concept of "which member is browsing" stored
+anywhere, client- or server-side. Anyone with an editor link can act as any
+member; anyone with a viewer link sees everything read-only. This is a
+deliberate simplification: no localStorage, no "who am I" step, and no
+per-viewer "you" marker (see §7 below, which no longer describes a "you" marker).
 
 ---
 
@@ -314,13 +313,13 @@ Each **event** picks its own currency (default MYR) from a curated list defined 
 
 ---
 
-## 7. Display rule: the viewer's own name
+## 7. Display rule: member names
 
-The viewer's member record renders as **their actual name plus a quiet "you" marker** —
-never as the bare word "You".
+Member names render plainly and identically for anyone with the link — there
+is no per-viewer identity to mark, so there is no "you" variant anywhere.
 
-- Correct: `Sarah (you)`, or `Sarah` with a "you" chip / highlighted avatar ring.
-- Wrong: `You`, `You owe RM 158.30`, `Paid by You`.
+- Correct: `Sarah`, `Sarah owes RM 158.30`, `Paid by Sarah`.
+- Not applicable: any per-viewer "you" rendering — no such state exists.
 
 The reason is concrete: people screenshot these screens into group chats. "Sarah owes
 RM 158.30" is meaningful to all six people who see it; "You owe RM 158.30" is
@@ -353,8 +352,8 @@ migration. When the time comes:
 
 1. Add a `user` table (id, email, password hash / OAuth identity) and auth endpoints.
 2. Add `group_membership (group_id, user_id, role)`.
-3. On signup, set `member.user_id` on the member that device had already claimed. All
-   historical bills, splits and balances carry over untouched.
+3. On signup, link `member.user_id` to the authenticated user's chosen member
+   record. All historical bills, splits and balances carry over untouched.
 4. Change the access check from "valid share token" to "valid session **or** valid
    share token". Both can coexist permanently — guest links remain a feature.
 

@@ -1,8 +1,8 @@
 # FairShareTab — Screen Spec
 
-Build-detail companion to `FairShareTab - Mockups.dc.html`. Screen IDs (e.g. `P2-04`) are the link between the two files — find the ID here, find the same ID as a quiet caption above its mockup there.
+Build-detail companion to `FairShareTab - Mockups.dc.html`. Screen IDs (e.g. `P2-01`) are the link between the two files — find the ID here, find the same ID as a quiet caption above its mockup there.
 
-**Display rule — the viewer's own member:** the viewer's member renders as their name plus a "you" marker — never as the word "You" alone. In rosters and lists (dashboard member chips, add-bill Paid-by/Split-between/breakdown lists, the settle-up transfer graph, and confirm-transfer dialogs) the marker is a small mint "you" pill next to the name plus a mint ring on the avatar; on space-constrained mobile scrollers the ring alone is used. Screenshots of any screen must read correctly to someone who isn't the viewer.
+**Display rule — member names:** no per-viewer identity is tracked (CLAUDE.md rule 5) — every member renders as their plain name, identically for anyone with the link. Screenshots of any screen must read correctly to someone who isn't the viewer.
 
 ## Part 0 — Foundations
 Brand, tokens, and component primitives. Reference only — not routed screens.
@@ -23,32 +23,23 @@ Reference only — not a routed screen.
 Reference only — not a routed screen.
 
 ## Part 1 — Landing
-The app root with no share link and no stored identity yet.
+The app root, shown identically to every visitor regardless of prior visits.
 
-### P1-01 — Landing — cold visitor
-- **Route:** App root, / — no share link, no stored member identity on this device
+### P1-01 — Landing
+- **Route:** App root, /
 - **Entered from:** a bare visit to the app root.
-- **Exits to:** P1-03 (I have an invite link) or to the Create-group flow inside P3-01 Group switcher.
+- **Exits to:** P1-03 (I have an invite link) or the Create-group modal (P2-01).
 - **Data read:** None — static marketing content plus the transfer-graph illustration
-- **Actions → writes:** Create a group → opens the create-group modal (P3-01). I have an invite link → expands P1-03 inline.
+- **Actions → writes:** Create a group → opens the create-group modal (P2-01). I have an invite link → expands P1-03 inline.
 - **States:** Default only
-- **Notes:** Only shown when no member identity is stored on this device at all — see P1-02 for the returning-device case.
-
-### P1-02 — Landing — returning device
-- **Route:** App root, / — a member identity is already stored on this device
-- **Entered from:** a bare visit to the app root when a prior claim exists.
-- **Exits to:** the stored group's events list (P3-02) on Continue, or to P1-01 via Use a different link.
-- **Data read:** This device's stored member identity and the list of groups it belongs to (name, initials, color, member count)
-- **Actions → writes:** Continue to [Group] → opens that group's events list. Row tap on another stored group → switches to it. Use a different link → clears the shortcut and falls back to the paste-link flow.
-- **States:** Default only
-- **Notes:** This is the state most repeat visitors see — no marketing content, fastest path back in.
+- **Notes:** The only landing view — shown to every visitor regardless of device history. Access to a group is granted purely by opening its link; there is no returning-device variant and no join/claim step.
 
 ### P1-03 — Paste-link state — valid / invalid
 - **Route:** Inline expansion of P1-01 — no dedicated path
 - **Entered from:** P1-01 I have an invite link.
-- **Exits to:** P2-04 Who are you (claim) on a valid link, or stays open with an inline error on an invalid one.
+- **Exits to:** the group's events list (P3-02) on a valid link, or stays open with an inline error on an invalid one.
 - **Data read:** None until submitted; the pasted string is validated client-side against the expected link shape
-- **Actions → writes:** Continue → validates the pasted link and navigates to P2-04, or shows the inline error state shown here.
+- **Actions → writes:** Continue → validates the pasted link and navigates straight into the group, or shows the inline error state shown here.
 - **States:** Empty / valid / invalid (shown)
 - **Notes:** Same link format as everywhere else in the app — the link itself is the credential, no separate code entry.
 
@@ -56,13 +47,13 @@ The app root with no share link and no stored identity yet.
 How a group comes to exist and how someone gets into it via a share link.
 
 ### P2-01 — Create group (cross-reference)
-- **Route:** Modal, no dedicated path — opened from Group switcher → + Create new group
-- **Entered from:** P3-01 Group switcher.
-- **Exits to:** P3-02 Events list (new, empty group) on Create, or back to P3-01 on Cancel.
+- **Route:** Modal, no dedicated path — opened from the landing page's Create a group button
+- **Entered from:** P1-01 Landing.
+- **Exits to:** P3-02 Events list (new, empty group) on Create, or back to P1-01 on Cancel.
 - **Data read:** None — blank form
-- **Actions → writes:** Create group → writes a new Group{name, currency} and makes it active. Cancel → discards, no write.
+- **Actions → writes:** Create group → writes a new Group{name} and its first Member{creatorName}, plus an editor share link. Cancel → discards, no write.
 - **States:** Default only
-- **Notes:** See P3-01 for the actual mockup; not duplicated here.
+- **Notes:** See P1-01 for the actual mockup; not duplicated here.
 
 ### P2-02 — Share dialog
 - **Route:** Modal (desktop) / bottom sheet (mobile) over /g/:groupId, no dedicated path
@@ -81,15 +72,6 @@ How a group comes to exist and how someone gets into it via a share link.
 - **States:** Single state
 - **Notes:** Old link stops resolving immediately, no grace period — anyone still on it lands on P2-05.
 
-### P2-04 — Who are you — member claim
-- **Route:** /g/:groupId/join
-- **Entered from:** Entered by opening a shared link for the first time on a device.
-- **Exits to:** P3-02 Events list once a member is chosen, or to P4-04 via I'm not listed.
-- **Data read:** Group.name, Group.members[] (active only: name, avatar/initials)
-- **Actions → writes:** Select a member chip → stages the choice. Continue as [Name] → writes the chosen memberId to this device's local storage. I'm not listed → opens P4-04 add-member.
-- **States:** Unselected (Continue not actionable) / selected (pictured)
-- **Notes:** Claim is per device, not per person — a shared computer needs re-claiming for each user. ↳ the chosen member id is stored in this browser's local storage — no login, no password. Reopening the same link on this device skips straight to the group next time.
-
 ### P2-05 — Invalid / revoked link
 - **Route:** Shown for any /g/:token that no longer resolves to a group
 - **Entered from:** a stale or regenerated link. Exits out of the app to fairsharetab.app (no in-app path back).
@@ -99,20 +81,11 @@ How a group comes to exist and how someone gets into it via a share link.
 - **Notes:** Same screen for link-was-regenerated and access-was-removed cases — copy stays generic on purpose.
 
 ## Part 3 — Group & events
-Once inside a group: switching groups, the events list, and creating an event.
-
-### P3-01 — Group switcher
-- **Route:** Dropdown/sheet over any /g/:groupId/* route
-- **Entered from:** the nav pill on any in-group screen.
-- **Exits to:** P3-02 Events list of the chosen group, or opens the Create-group modal (P2-01).
-- **Data read:** The claimed member's Group[] (name, avatar/initials, member count, active flag)
-- **Actions → writes:** Select a group row → switches active group, navigates to its events list. + Create new group → opens the create-group modal.
-- **States:** Collapsed (nav pill) / open (dropdown desktop, sheet mobile) / create-group modal (filled, and your-name-missing validation)
-- **Notes:** List is scoped to groups the claimed member on this device belongs to. The create-group modal now also requires **Your name** (with helper text: "This is how the group will see you in bills and balances") — the creator was previously left as an unnamed member. Missing name blocks the Create-group button (disabled state) and shows a coral inline error, same pattern as other required-field validation in the file.
+Once inside a group: the events list and creating an event.
 
 ### P3-02 — Events list
 - **Route:** /g/:groupId/events
-- **Entered from:** P3-01 switcher, P2-04 claim screen, or app launch (last-active group).
+- **Entered from:** opening a share link (direct or pasted at P1-01), or creating a new group (P2-01).
 - **Exits to:** P4-01 Event dashboard on selecting an event.
 - **Data read:** Group.events[] (name, member count, total spent, unsettled amount)
 - **Actions → writes:** Select an event card → opens its dashboard. + Create event → opens P3-04.
@@ -166,11 +139,11 @@ The event dashboard and the member roster it depends on.
 
 ### P4-04 — Member management — add / inline rename / deactivate
 - **Route:** Modal (desktop) / bottom sheet (mobile) over P4-01; rename & deactivate act in place on the dashboard's member chips
-- **Entered from:** P4-01 + Add member or P2-04 I'm not listed. Exits back to P4-01 on save/cancel.
+- **Entered from:** P4-01 + Add member. Exits back to P4-01 on save/cancel.
 - **Data read:** Event.members[] (for rename/deactivate); new-member form (name, optional email)
-- **Actions → writes:** Add member → writes a new Member. Tap name → inline rename, writes Member.name (including the viewer's own — same affordance, no separate UI). Press-hold → opens P4-05 deactivate confirm. That's not me — switch member → clears this device's claimed identity and returns to the paste-link flow (P1-03), recovering from a mis-claim.
-- **States:** Add form / inline-rename (shown for both another member and the viewer's own, tagged with the "you" marker) / deactivated (55% opacity, Reactivate link)
-- **Notes:** Members are never hard-deleted — deactivation is the only removal path, and it's reversible. "That's not me" is the only recovery path from claiming the wrong identity at P2-04 — previously there was none.
+- **Actions → writes:** Add member → writes a new Member. Tap name → inline rename, writes Member.name.
+- **States:** Add form / inline-rename / deactivated (55% opacity, Reactivate link)
+- **Notes:** Members are never hard-deleted — deactivation is the only removal path, and it's reversible.
 
 ### P4-05 — Deactivate — confirmation
 - **Route:** Confirm dialog over P4-01/P4-04
