@@ -129,7 +129,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
         <p className="mb-3 text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
           Members
         </p>
-        <div className="mb-8 flex flex-wrap gap-3">
+        <div className="mb-8 flex gap-3 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {event.members.map((member) => (
             <MemberChip
               key={member.id}
@@ -145,7 +145,18 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
             <button
               type="button"
               onClick={() => setShowAddMember(true)}
-              className="flex min-w-[150px] items-center gap-2 rounded-md border border-dashed border-ink/18 bg-app-bg px-4.5 py-3 text-[13px] font-bold text-muted dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
+              aria-label="Add member"
+              className="flex min-w-[64px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-ink/18 bg-app-bg px-3 py-2.5 text-muted sm:hidden dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
+            >
+              <span className="text-lg leading-none">+</span>
+              <span className="text-[9.5px] font-bold">Add</span>
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setShowAddMember(true)}
+              className="hidden min-w-[150px] items-center gap-2 rounded-md border border-dashed border-ink/18 bg-app-bg px-4.5 py-3 text-[13px] font-bold text-muted sm:flex dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
             >
               + Add member
             </button>
@@ -156,7 +167,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
           <p className="text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
             Bills
           </p>
-          {canEdit && event.bills.length > 0 && (
+          {event.bills.length > 0 && (
             <div className="flex gap-2.5">
               <Link
                 href={`/g/${groupId}/events/${event.id}/settle`}
@@ -164,12 +175,14 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
               >
                 Settle up
               </Link>
-              <Link
-                href={`/g/${groupId}/events/${event.id}/bills/new`}
-                className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
-              >
-                + Add bill
-              </Link>
+              {canEdit && (
+                <Link
+                  href={`/g/${groupId}/events/${event.id}/bills/new`}
+                  className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
+                >
+                  + Add bill
+                </Link>
+              )}
             </div>
           )}
         </div>

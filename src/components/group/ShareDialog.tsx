@@ -20,18 +20,28 @@ interface ShareDialogProps {
   onClose: () => void;
 }
 
+const ROLE_COPY: Record<LinkRole, { label: string; description: string }> = {
+  editor: {
+    label: "Can edit",
+    description: "Adds, changes, and settles bills.",
+  },
+  viewer: {
+    label: "View only",
+    description: "Sees bills and balances, can't change anything.",
+  },
+};
+
 // Screen Spec P2-02/P2-03. Editor-only (GET /api/groups/{id}/links rejects
-// viewer sessions — system-design.md README "Known gaps" leaves open whether
-// viewers should ever reach this dialog, so callers should only render it
-// from editor-gated UI). Modal on desktop, bottom sheet on mobile via
-// responsive classes on the same markup rather than two components.
+// viewer sessions). Both links are shown side by side rather than behind a
+// role toggle over a single URL field -- the toggle made it easy to copy
+// the wrong link without noticing it had switched underneath you, and made
+// "Regenerate link" ambiguous about which link it touched. Modal on
+// desktop, bottom sheet on mobile via responsive classes on one markup.
 export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
   const [links, setLinks] = useState<Partial<Record<LinkRole, LinkInfo>>>({});
-  const [role, setRole] = useState<LinkRole>("editor");
   const [loading, setLoading] = useState(true);
-  const [switchingRole, setSwitchingRole] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [copiedRole, setCopiedRole] = useState<LinkRole | null>(null);
+  const [confirmRole, setConfirmRole] = useState<LinkRole | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   // Resolved after mount, not during render: `navigator` differs between the
   // server render pass and the client, so checking it synchronously here
@@ -43,52 +53,61 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
   }, []);
 
   useEffect(() => {
-    fetch(`/api/groups/${groupId}/links`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data: { links: LinkInfo[] }) => {
-        const byRole: Partial<Record<LinkRole, LinkInfo>> = {};
-        for (const link of data.links) byRole[link.role] = link;
+    let cancelled = false;
+
+    async function loadLinks() {
+      const res = await fetch(`/api/groups/${groupId}/links`);
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      const data: { links: LinkInfo[] } = await res.json();
+      const byRole: Partial<Record<LinkRole, LinkInfo>> = {};
+      for (const link of data.links) byRole[link.role] = link;
+
+      // The viewer-role link isn't created at group-creation time (only the
+      // editor link is — system-design.md §5). Create it up front here so
+      // both links are ready to show side by side, instead of lazily
+      // creating it the first time someone toggled to "View only".
+      if (!byRole.viewer) {
+        const createRes = await fetch(`/api/groups/${groupId}/links/regenerate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: "viewer" }),
+        });
+        if (createRes.ok) {
+          const created: { link: LinkInfo } = await createRes.json();
+          byRole.viewer = created.link;
+        }
+      }
+
+      if (!cancelled) {
         setLinks(byRole);
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }
+    }
+
+    loadLinks();
+    return () => {
+      cancelled = true;
+    };
   }, [groupId]);
 
-  const currentLink = links[role];
-  const url =
-    currentLink && typeof window !== "undefined"
-      ? `${window.location.origin}/g/${currentLink.token}`
-      : "";
-
-  // The viewer-role link isn't created at group-creation time (only the
-  // editor link is — system-design.md §5). Switching to "View only" for the
-  // first time lazily creates it via the regenerate endpoint, which
-  // no-ops the revoke step when there's nothing to revoke yet.
-  async function handleRoleChange(next: LinkRole) {
-    setRole(next);
-    setCopied(false);
-    if (links[next]) return;
-
-    setSwitchingRole(true);
-    const res = await fetch(`/api/groups/${groupId}/links/regenerate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: next }),
-    });
-    if (res.ok) {
-      const data: { link: LinkInfo } = await res.json();
-      setLinks((prev) => ({ ...prev, [next]: data.link }));
-    }
-    setSwitchingRole(false);
+  function urlFor(link: LinkInfo | undefined): string {
+    if (!link || typeof window === "undefined") return "";
+    return `${window.location.origin}/g/${link.token}`;
   }
 
-  function handleCopy() {
+  function handleCopy(role: LinkRole) {
+    const url = urlFor(links[role]);
     if (!url) return;
     navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedRole(role);
+    setTimeout(() => setCopiedRole((current) => (current === role ? null : current)), 2000);
   }
 
-  async function handleShareVia() {
+  async function handleShareVia(role: LinkRole) {
+    const url = urlFor(links[role]);
     if (!url || !canShare) return;
     try {
       await navigator.share({ url });
@@ -98,39 +117,41 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
   }
 
   async function handleRegenerateConfirm() {
+    if (!confirmRole) return;
     setRegenerating(true);
     const res = await fetch(`/api/groups/${groupId}/links/regenerate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ role: confirmRole }),
     });
     if (res.ok) {
       const data: { link: LinkInfo } = await res.json();
-      setLinks((prev) => ({ ...prev, [role]: data.link }));
-      setCopied(false);
+      setLinks((prev) => ({ ...prev, [confirmRole]: data.link }));
+      setCopiedRole((current) => (current === confirmRole ? null : current));
     }
     setRegenerating(false);
-    setConfirmRegenerate(false);
+    setConfirmRole(null);
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink/35" onClick={onClose} />
-      <div className="relative w-full max-w-[440px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg sm:p-8 dark:bg-dark-card">
-        {confirmRegenerate ? (
+      <div className="relative w-full max-w-[460px] rounded-t-xl bg-white p-7 shadow-[0_30px_60px_-20px_rgba(19,46,40,0.35)] sm:rounded-lg sm:p-8 dark:bg-dark-card">
+        {confirmRole ? (
           <>
             <h2 className="num mb-2.5 text-[21px] text-ink dark:text-dark-text">
-              Regenerate this link?
+              Regenerate the {ROLE_COPY[confirmRole].label.toLowerCase()} link?
             </h2>
             <p className="mb-6 text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
-              The current link stops working the moment you do this. Anyone still using it will
-              land on an expired-link page — you&apos;ll need to share the new one.
+              The current {ROLE_COPY[confirmRole].label.toLowerCase()} link stops working the
+              moment you do this. Anyone still using it will land on an expired-link page —
+              you&apos;ll need to share the new one. The other link is not affected.
             </p>
             <div className="flex gap-2.5">
               <Button
                 variant="secondary"
                 className="flex-1 text-center"
-                onClick={() => setConfirmRegenerate(false)}
+                onClick={() => setConfirmRole(null)}
               >
                 Cancel
               </Button>
@@ -150,93 +171,94 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
               Share {groupName}
             </h2>
             <p className="mb-5 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-              Anyone with this link can open the group — no account needed.
+              Two separate links, no account needed for either — pick the one that fits who
+              you&apos;re sending it to.
             </p>
 
-            <div className="mb-2.5 flex gap-2">
-              <div className="flex-1 truncate rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[13px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
-                {loading || switchingRole ? "Loading…" : (url ?? "—")}
-              </div>
-              <Button
-                variant="primary"
-                disabled={!url || loading || switchingRole}
-                onClick={handleCopy}
-                className="!px-4.5 !py-3 text-[13.5px] whitespace-nowrap"
-              >
-                Copy link
-              </Button>
+            <div className="mb-5 flex flex-col gap-3">
+              {(["editor", "viewer"] as const).map((role) => {
+                const link = links[role];
+                const url = urlFor(link);
+                const copied = copiedRole === role;
+                return (
+                  <div
+                    key={role}
+                    className="rounded-md border border-ink/10 p-3.5 dark:border-white/10"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                          role === "editor"
+                            ? "bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint"
+                            : "bg-sky-tint text-sky dark:bg-sky/16",
+                        )}
+                      >
+                        {ROLE_COPY[role].label}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={loading || !link}
+                        onClick={() => setConfirmRole(role)}
+                        className="text-[12px] font-bold text-gold hover:opacity-80 disabled:opacity-50"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
+
+                    <div className="mb-2 flex gap-2">
+                      <div className="flex-1 truncate rounded-md border border-ink/14 bg-cream px-3 py-2.5 text-[12.5px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
+                        {loading ? "Loading…" : url || "—"}
+                      </div>
+                      <Button
+                        variant="primary"
+                        disabled={!url}
+                        onClick={() => handleCopy(role)}
+                        className="!px-4 !py-2.5 text-[13px] whitespace-nowrap"
+                      >
+                        Copy
+                      </Button>
+                      {canShare && (
+                        <button
+                          type="button"
+                          disabled={!url}
+                          onClick={() => handleShareVia(role)}
+                          aria-label={`Share ${ROLE_COPY[role].label.toLowerCase()} link via…`}
+                          className="rounded-md border border-ink/16 bg-white px-3 text-ink disabled:opacity-50 sm:hidden dark:border-white/16 dark:bg-dark-card dark:text-dark-text"
+                        >
+                          ↗
+                        </button>
+                      )}
+                    </div>
+
+                    <p
+                      className={cn(
+                        "mb-1.5 flex items-center gap-1.5 text-xs font-bold text-emerald transition-opacity dark:text-mint",
+                        copied ? "opacity-100" : "pointer-events-none h-0 opacity-0",
+                      )}
+                      aria-hidden={!copied}
+                    >
+                      ✓ Copied to clipboard
+                    </p>
+
+                    <p className="text-[12px] leading-relaxed text-muted dark:text-dark-muted">
+                      {ROLE_COPY[role].description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-
-            <p
-              className={cn(
-                "mb-3 flex items-center gap-1.5 text-xs font-bold text-emerald transition-opacity",
-                copied ? "opacity-100" : "pointer-events-none opacity-0",
-              )}
-              aria-hidden={!copied}
-            >
-              ✓ Copied to clipboard
-            </p>
-
-            {canShare && (
-              <button
-                type="button"
-                onClick={handleShareVia}
-                disabled={!url}
-                className="mb-4 w-full rounded-md border border-ink/16 bg-white py-3 text-center text-[13.5px] font-bold text-ink hover:bg-cream disabled:opacity-60 sm:hidden dark:border-white/16 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
-              >
-                Share via…
-              </button>
-            )}
-
-            <p className="mb-2 text-xs font-bold text-muted-2">Link permissions</p>
-            <div className="mb-2.5 flex w-fit rounded-md bg-app-bg p-1 dark:bg-dark-bg">
-              <button
-                type="button"
-                onClick={() => handleRoleChange("editor")}
-                className={cn(
-                  "rounded-[10px] px-4.5 py-2 text-[13px] font-bold",
-                  role === "editor"
-                    ? "bg-forest text-cream dark:bg-dark-forest"
-                    : "text-muted dark:text-dark-muted",
-                )}
-              >
-                Can edit
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRoleChange("viewer")}
-                className={cn(
-                  "rounded-[10px] px-4.5 py-2 text-[13px] font-bold",
-                  role === "viewer"
-                    ? "bg-forest text-cream dark:bg-dark-forest"
-                    : "text-muted dark:text-dark-muted",
-                )}
-              >
-                View only
-              </button>
-            </div>
-            <p className="mb-5 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
-              {role === "editor"
-                ? "Can edit — anyone with this link can add, change, and settle bills."
-                : "View only — anyone with this link can see bills and balances but can't change anything."}
-            </p>
 
             <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5 dark:bg-sky/12">
               <span className="text-sm">🔗</span>
               <p className="text-[11.5px] leading-relaxed text-sky-text dark:text-dark-text/80">
-                <strong>Heads up</strong> — this link doesn&apos;t need a password. Anyone who has
-                it can view this group&apos;s bills, and edit them unless you switch to View only.
+                <strong>Heads up</strong> — neither link needs a password. Send the edit link only
+                to people you trust with changes; use the view-only link for anyone who should
+                just be able to check balances.
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setConfirmRegenerate(true)}
-                className="text-[13px] font-bold text-gold hover:opacity-80"
-              >
-                Regenerate link
-              </button>
+            <div className="flex justify-end">
               <Button variant="primary" onClick={onClose} className="!px-6 !py-3">
                 Done
               </Button>

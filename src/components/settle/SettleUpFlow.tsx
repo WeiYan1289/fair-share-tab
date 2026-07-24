@@ -202,7 +202,16 @@ export function SettleUpFlow({
 
   return (
     <div className="relative min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
-      <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
+      <div className="mx-auto mb-4 flex max-w-[900px] items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setStep("select")}
+          className="text-[13px] font-bold text-link dark:text-mint"
+        >
+          ← Back
+        </button>
+        <ThemeToggle />
+      </div>
       <div className="mx-auto flex max-w-[900px] flex-col items-center">
         <h1 className="num mb-1.5 text-center text-2xl text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
