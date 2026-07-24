@@ -1,6 +1,6 @@
 // No avatar-color assignment rule is specified in the docs (data-model.md
 // §3.3 only says "assigned on creation"), but the mockups consistently use
-// this set for member/group identity badges (P0-05, P1-02, P7 sample data)
+// this set for member/group identity badges (P0-05, P7 sample data)
 // -- mint and coral are reserved there for balance sign (owed to you / you
 // owe), so this pool deliberately excludes both.
 const AVATAR_COLOR_PALETTE = [

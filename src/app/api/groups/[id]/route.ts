@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 
-// GET: group name plus active members, for screens that need to render an
-// identity picker (P2-04 join) or header (P3-01 switcher, P4-01 dashboard)
-// without loading a full events list. Any valid session (editor or viewer)
-// can read.
+// GET: group name plus active members, for screens that need a lightweight
+// group header without loading a full events list. Any valid session
+// (editor or viewer) can read. No current caller in src/ — pre-existing
+// dead code from before the link-access refactor, kept as-is (out of scope
+// here).
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: groupId } = await params;
 

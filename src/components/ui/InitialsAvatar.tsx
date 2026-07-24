@@ -8,7 +8,7 @@ interface InitialsAvatarProps {
   colorSeed?: string;
   /** Explicit color, e.g. a member's persisted `avatarColor`. Wins over `colorSeed`. */
   color?: string;
-  /** Members render as circles; groups render as rounded squares (P0-05, P1-02). */
+  /** Members render as circles; groups render as rounded squares (P0-05). */
   shape?: "circle" | "square";
   className?: string;
 }
