@@ -3,16 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { saveDeviceIdentity } from "@/lib/device-identity";
 
 interface CreateGroupModalProps {
   onClose: () => void;
 }
 
-// Screen Spec P2-01 / P3-01 (the create-group modal is designed alongside
-// the switcher that opens it, but the landing page's "Create a group" CTA
-// opens the same modal — both exit to the new group's events list the same
-// way). Full page reload on success, not a router push: the server just set
+// Screen Spec P2-01. Opened from the landing page's "Create a group" CTA.
+// Full page reload on success, not a router push: the server just set
 // a fresh session cookie for the new group and the events page needs it.
 export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState("");
@@ -41,16 +38,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
       if (!res.ok) throw new Error("create failed");
       const data = await res.json();
 
-      saveDeviceIdentity({
-        groupId: data.group.id,
-        groupName: data.group.name,
-        memberId: data.creatorMemberId,
-        memberName: yourName.trim(),
-        memberAvatarColor: data.creatorAvatarColor,
-        token: data.shareLink.token,
-        memberCount: 1,
-      });
-      window.location.href = `/g/${data.group.id}/events`;
+      window.location.href = `/g/${data.group.id}/events?savelink=${data.shareLink.token}`;
     } catch {
       setError("Couldn't create the group — check your connection and try again.");
       setSubmitting(false);

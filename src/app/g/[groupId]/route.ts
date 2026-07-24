@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 
 // This route matches GET /g/{token} (system-design.md §3.2) — the segment
 // holds a raw share token here, not a group id, even though the folder is
-// named [groupId] to match every nested page under it (/g/[groupId]/join,
-// /g/[groupId]/events, ...). Next.js requires one dynamic segment name per
-// route-tree position, so this top-level handler and its siblings share the
-// folder; only this handler's value is actually a token.
+// named [groupId] to match every nested page under it (/g/[groupId]/events,
+// ...). Next.js requires one dynamic segment name per route-tree position,
+// so this top-level handler and its siblings share the folder; only this
+// handler's value is actually a token.
 export async function GET(request: Request, { params }: { params: Promise<{ groupId: string }> }) {
   const { groupId: token } = await params;
 
@@ -34,12 +34,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ grou
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, session, SESSION_COOKIE_OPTIONS);
 
-  // Clean redirect so the raw token never sits in the address bar
-  // (system-design.md §3.3). Always lands on the join screen — whether this
-  // device can skip straight to the events list (already claimed a member
-  // here before) is a client-side decision the join page makes by reading
-  // its own local storage (Screen Spec P2-04 notes), not something the
-  // server can know from the session alone.
-  const destination = new URL(`/g/${link.groupId}/join`, request.url);
+  // Access is granted purely by the cookie above — there's no separate
+  // identity step to land on first. `savelink` carries the token forward
+  // exactly one hop so the events list can offer a one-time "save this
+  // link" reminder; it reads the param and strips it from the URL in the
+  // same render pass (CLAUDE.md rule 8 — the token must never sit
+  // persistently in the address bar).
+  const destination = new URL(`/g/${link.groupId}/events?savelink=${token}`, request.url);
   return NextResponse.redirect(destination, { status: 303 });
 }

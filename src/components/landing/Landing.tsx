@@ -14,11 +14,12 @@ const HERO_PEOPLE = [
   { initials: "SM", color: "#3E7C86", top: "85%", amount: "RM 95" },
 ];
 
-// Screen Spec P1-01. Shown when this device has no stored group identity at
-// all (Screen Spec P1-02 covers the returning-device case). Kept to a
-// single, uncluttered hero moment -- the step-by-step explainer and the
-// no-password disclosure live on /tutorial instead, one quiet link away.
-export function ColdVisitorLanding() {
+// Screen Spec P1-01. The only landing view — shown to every visitor
+// regardless of device history, since access is granted purely by opening a
+// group's link. Kept to a single, uncluttered hero moment -- the
+// step-by-step explainer and the no-password disclosure live on /tutorial
+// instead, one quiet link away.
+export function Landing() {
   const [showPasteLink, setShowPasteLink] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
