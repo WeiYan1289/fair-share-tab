@@ -65,7 +65,7 @@ export function EventsListView({ groupId, groupName, viewerRole, events }: Event
         )}
       </div>
 
-      {canEdit && (
+      {canEdit && events.length > 0 && (
         <button
           type="button"
           onClick={() => setShowCreateEvent(true)}
