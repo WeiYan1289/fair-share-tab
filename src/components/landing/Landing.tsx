@@ -6,13 +6,27 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
-import { PasteLinkPanel } from "./PasteLinkPanel";
 import { Check } from "lucide-react";
 
-const HERO_PEOPLE = [
-  { initials: "PS", color: "#B5654A", top: "15%", amount: "RM 355" },
-  { initials: "JI", color: "#7A5C9E", top: "50%", amount: "RM 160" },
-  { initials: "SM", color: "#3E7C86", top: "85%", amount: "RM 95" },
+// Five payers settling up with three receivers in just five transfers —
+// deliberately more people than the old 3-payer mock, to show the
+// settlement engine collapsing a genuinely tangled bill history down to a
+// handful of transfers. Amounts are hand-picked so a greedy max-debtor/
+// max-creditor match (the real algorithm, see docs/system-design.md §4.4)
+// produces exactly this set: AR->PS 500, KM->JI 250, HZ->SM 100,
+// DV->JI 100, NF->SM 50 — each side sums to 1000.
+const PAYERS = [
+  { initials: "AR", color: "#B5654A", top: "8%", amount: "RM 500" },
+  { initials: "KM", color: "#7A5C9E", top: "26%", amount: "RM 250" },
+  { initials: "HZ", color: "#3E7C86", top: "44%", amount: "RM 100" },
+  { initials: "DV", color: "#B98A2E", top: "62%", amount: "RM 100" },
+  { initials: "NF", color: "#6B7280", top: "80%", amount: "RM 50" },
+];
+
+const RECEIVERS = [
+  { initials: "PS", color: "#2F7FB8", top: "15%" },
+  { initials: "JI", color: "#1F9E68", top: "50%" },
+  { initials: "SM", color: "#B54A6A", top: "85%" },
 ];
 
 // Screen Spec P1-01. The only landing view — shown to every visitor
@@ -21,7 +35,6 @@ const HERO_PEOPLE = [
 // step-by-step explainer and the no-password disclosure live on /tutorial
 // instead, one quiet link away.
 export function Landing() {
-  const [showPasteLink, setShowPasteLink] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   return (
@@ -49,19 +62,9 @@ export function Landing() {
                 No account or sign-up — just a name.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowPasteLink((v) => !v)}
-              className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
-            >
-              I have an invite link →
-            </button>
-
-            {showPasteLink && <PasteLinkPanel className="mt-4" />}
-
             <Link
               href="/tutorial"
-              className="mt-10 block w-fit text-[12.5px] text-muted-2 underline decoration-dotted underline-offset-4 hover:text-muted dark:hover:text-dark-muted"
+              className="mt-3 block w-fit text-[12.5px] text-muted-2 underline decoration-dotted underline-offset-4 hover:text-muted dark:hover:text-dark-muted"
             >
               See how it works →
             </Link>
@@ -72,9 +75,9 @@ export function Landing() {
               <p className="mb-2 text-[11px] font-extrabold tracking-wide text-muted-2 uppercase">
                 Settle up — the signature moment
               </p>
-              <div className="relative aspect-[420/230]">
+              <div className="relative aspect-[420/300]">
                 <svg
-                  viewBox="0 0 420 230"
+                  viewBox="0 0 420 300"
                   className="absolute inset-0 h-full w-full overflow-visible"
                 >
                   <defs>
@@ -93,24 +96,45 @@ export function Landing() {
                       />
                     </marker>
                   </defs>
+                  {/* AR -> PS */}
                   <path
-                    d="M78,44 Q210,20 350,80"
+                    d="M80,24 Q212,10 345,45"
                     fill="none"
                     className="stroke-ink dark:stroke-dark-text"
                     strokeOpacity="0.16"
                     strokeWidth="2.5"
                     markerEnd="url(#heroArrow)"
                   />
+                  {/* KM -> JI */}
                   <path
-                    d="M78,115 Q210,105 350,100"
+                    d="M80,78 Q212,70 345,150"
                     fill="none"
                     className="stroke-ink dark:stroke-dark-text"
                     strokeOpacity="0.16"
                     strokeWidth="2.5"
                     markerEnd="url(#heroArrow)"
                   />
+                  {/* HZ -> SM */}
                   <path
-                    d="M78,186 Q210,164 350,120"
+                    d="M80,132 Q212,150 345,255"
+                    fill="none"
+                    className="stroke-ink dark:stroke-dark-text"
+                    strokeOpacity="0.16"
+                    strokeWidth="2.5"
+                    markerEnd="url(#heroArrow)"
+                  />
+                  {/* DV -> JI */}
+                  <path
+                    d="M80,186 Q212,200 345,150"
+                    fill="none"
+                    className="stroke-ink dark:stroke-dark-text"
+                    strokeOpacity="0.16"
+                    strokeWidth="2.5"
+                    markerEnd="url(#heroArrow)"
+                  />
+                  {/* NF -> SM */}
+                  <path
+                    d="M80,240 Q212,260 345,255"
                     fill="none"
                     className="stroke-ink dark:stroke-dark-text"
                     strokeOpacity="0.16"
@@ -119,22 +143,27 @@ export function Landing() {
                   />
                 </svg>
 
-                {HERO_PEOPLE.map((person) => (
+                {PAYERS.map((person) => (
                   <div
                     key={person.initials}
-                    className="absolute left-[8%] flex h-[22%] w-[12%] min-h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-full text-sm font-bold text-white"
+                    className="absolute left-[8%] flex aspect-square w-[9%] min-w-9 -translate-y-1/2 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ top: person.top, backgroundColor: person.color }}
                   >
                     {person.initials}
                   </div>
                 ))}
-                <div
-                  className="absolute top-1/2 right-[6%] flex h-[24%] w-[13%] min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-sky text-[15px] font-bold text-white ring-4 ring-mint-tint dark:ring-mint/18"
-                >
-                  YO
-                </div>
 
-                {HERO_PEOPLE.map((person) => (
+                {RECEIVERS.map((person) => (
+                  <div
+                    key={person.initials}
+                    className="absolute right-[6%] flex aspect-square w-[13%] min-w-11 -translate-y-1/2 items-center justify-center rounded-full text-[15px] font-bold text-white ring-4 ring-mint-tint dark:ring-mint/18"
+                    style={{ top: person.top, backgroundColor: person.color }}
+                  >
+                    {person.initials}
+                  </div>
+                ))}
+
+                {PAYERS.map((person) => (
                   <div
                     key={`${person.initials}-amount`}
                     className="num absolute left-[41%] -translate-y-1/2 rounded-full border border-ink/10 bg-white px-2.5 py-1 text-xs text-ink shadow-[0_6px_14px_-6px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-bg dark:text-dark-text"
@@ -147,7 +176,7 @@ export function Landing() {
               <div className="mt-1.5 flex items-center gap-1.5 rounded-[11px] bg-mint-tint px-3.5 py-2.5 dark:bg-mint/16">
                 <Check className="h-3.5 w-3.5 text-emerald dark:text-mint" aria-hidden="true" />
                 <span className="text-[12.5px] font-bold text-emerald dark:text-mint">
-                  3 transfers settle everyone
+                  5 transfers settle everyone
                 </span>
               </div>
             </div>

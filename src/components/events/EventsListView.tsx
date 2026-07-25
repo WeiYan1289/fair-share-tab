@@ -72,7 +72,7 @@ export function EventsListView({
                   Your events
                 </h1>
                 <p className="mt-1.5 text-[13px] text-muted sm:text-[13.5px] dark:text-dark-muted">
-                  {events.length} trip{events.length === 1 ? "" : "s"} together
+                  {events.length} event{events.length === 1 ? "" : "s"}
                 </p>
               </div>
               {canEdit && (
@@ -127,7 +127,7 @@ function EmptyState({ canEdit, onCreate }: { canEdit: boolean; onCreate: () => v
       </h1>
       <p className="mb-6 max-w-[380px] text-[14px] leading-relaxed text-muted sm:text-[14.5px] dark:text-dark-muted">
         {canEdit
-          ? "Create an event for your next trip to start splitting bills with friends and family."
+          ? "Create an event to start splitting bills with friends and family."
           : "Nothing here yet — check back once whoever shared this link creates the first event."}
       </p>
       {canEdit && (
