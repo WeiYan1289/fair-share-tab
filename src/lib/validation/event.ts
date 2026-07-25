@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { CURRENCY_CODES, DEFAULT_CURRENCY } from "@/lib/currency";
 
-function datesInOrder(data: { startDate?: string | null; endDate?: string | null }): boolean {
+export function datesInOrder(data: {
+  startDate?: string | null;
+  endDate?: string | null;
+}): boolean {
   if (!data.startDate || !data.endDate) return true;
   return data.startDate <= data.endDate;
 }

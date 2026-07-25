@@ -75,7 +75,9 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
         <div className="mb-5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Dates</label>
           <EventDateRangeField value={dateRange} onChange={setDateRange} />
-          <p className="mt-1.5 text-[11px] text-muted-2">Optional — for your own reference.</p>
+          <p className="mt-1.5 text-[11px] text-muted-2">
+            Optional — pick both a start and end date, or leave both blank.
+          </p>
         </div>
 
         <p className="mb-5 text-[11.5px] leading-relaxed text-muted-2">

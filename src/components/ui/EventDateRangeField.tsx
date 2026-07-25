@@ -34,6 +34,10 @@ export function EventDateRangeField({ value, onChange }: EventDateRangeFieldProp
           onChange(null);
           return;
         }
+        // DateInput segments (typed via keyboard) are a separate state machine from
+        // RangeCalendar's click-based selection and don't self-normalize order, so
+        // this swap is the single point that guarantees start <= end regardless of
+        // input method.
         const [start, end] =
           range.start.compare(range.end) > 0
             ? [range.end, range.start]

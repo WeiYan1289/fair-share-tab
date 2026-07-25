@@ -24,7 +24,7 @@ export function CurrencySelect({ value, onChange }: CurrencySelectProps) {
         <span className="truncate text-muted-2">{selected.label}</span>
         <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-muted-2" aria-hidden="true" />
       </Button>
-      <Popover className="w-[--trigger-width] rounded-md border border-ink/14 bg-white shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] dark:border-white/14 dark:bg-dark-card">
+      <Popover className="w-(--trigger-width) rounded-md border border-ink/14 bg-white shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] dark:border-white/14 dark:bg-dark-card">
         <ListBox className="max-h-72 overflow-auto py-1 outline-none">
           {CURRENCIES.map((c) => (
             <ListBoxItem
