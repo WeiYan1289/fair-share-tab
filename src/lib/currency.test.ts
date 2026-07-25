@@ -14,6 +14,12 @@ describe("currency metadata", () => {
     }
   });
 
+  it("has a lowercase two-letter country code for every currency (used for flag icons)", () => {
+    for (const c of CURRENCIES) {
+      expect(c.country).toMatch(/^[a-z]{2}$/);
+    }
+  });
+
   it("has exactly one zero-decimal currency (JPY)", () => {
     const zeroDecimal = CURRENCIES.filter((c) => c.minorUnit === 0);
     expect(zeroDecimal).toEqual([expect.objectContaining({ code: "JPY" })]);
