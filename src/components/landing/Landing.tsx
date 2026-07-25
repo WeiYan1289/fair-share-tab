@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { PasteLinkPanel } from "./PasteLinkPanel";
+import { Check } from "lucide-react";
 
 const HERO_PEOPLE = [
   { initials: "PS", color: "#B5654A", top: "15%", amount: "RM 355" },
@@ -144,7 +145,7 @@ export function Landing() {
                 ))}
               </div>
               <div className="mt-1.5 flex items-center gap-1.5 rounded-[11px] bg-mint-tint px-3.5 py-2.5 dark:bg-mint/16">
-                <span className="text-[13px] text-emerald dark:text-mint">✓</span>
+                <Check className="h-3.5 w-3.5 text-emerald dark:text-mint" aria-hidden="true" />
                 <span className="text-[12.5px] font-bold text-emerald dark:text-mint">
                   3 transfers settle everyone
                 </span>

@@ -5,6 +5,7 @@ import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
+import { Pencil } from "lucide-react";
 
 export interface ChipMember {
   id: string;
@@ -193,7 +194,7 @@ export function MemberChip({
               className="flex items-center gap-1.5 text-left text-[13.5px] font-bold text-ink dark:text-dark-text"
             >
               {member.name}
-              {canEdit && <span className="text-[11px] text-muted-2">✎</span>}
+              {canEdit && <Pencil className="h-3 w-3 text-muted-2" aria-hidden="true" />}
             </button>
           )}
           <p className={cn("num text-[15px]", balanceColor)}>{balanceText}</p>
