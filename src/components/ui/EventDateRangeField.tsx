@@ -34,7 +34,11 @@ export function EventDateRangeField({ value, onChange }: EventDateRangeFieldProp
           onChange(null);
           return;
         }
-        onChange({ start: range.start.toString(), end: range.end.toString() });
+        const [start, end] =
+          range.start.compare(range.end) > 0
+            ? [range.end, range.start]
+            : [range.start, range.end];
+        onChange({ start: start.toString(), end: end.toString() });
       }}
       aria-label="Event dates"
     >
