@@ -62,7 +62,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ski Trip 2026"
+            placeholder="Day 1 — Groceries"
             className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
