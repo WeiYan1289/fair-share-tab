@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "flag-icons/css/flag-icons.min.css";
 @config "../../tailwind.config.ts";
 
 /* Dark mode is an explicit choice via the .dark class on <html> (see

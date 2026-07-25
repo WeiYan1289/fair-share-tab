@@ -11,6 +11,7 @@ import { MemberChip } from "@/components/members/MemberChip";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
+import { Link as LinkIcon, Lock, Pencil, Receipt, Trash2 } from "lucide-react";
 
 interface EventMemberView {
   id: string;
@@ -94,7 +95,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
               onClick={() => setShowShare(true)}
               className="flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-dark-text"
             >
-              🔗 Share
+              <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" /> Share
             </button>
           )}
         </div>
@@ -252,8 +253,8 @@ function EmptyBillsState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-md bg-white px-6 py-11 text-center dark:bg-dark-card">
-      <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-2xl dark:bg-mint/16">
-        🧾
+      <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint">
+        <Receipt className="h-6 w-6" aria-hidden="true" />
       </div>
       <p className="mb-1.5 text-[15px] font-bold text-ink dark:text-dark-text">No bills yet</p>
       <p className="mb-4 max-w-[320px] text-[13px] text-muted dark:text-dark-muted">
@@ -314,11 +315,15 @@ function BillRow({
               href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
               title={settled ? "Settled — view only" : "Edit bill"}
             >
-              {settled ? "🔒" : "✎"}
+              {settled ? (
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+              )}
             </Link>
             {!settled && (
               <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
-                🗑
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>

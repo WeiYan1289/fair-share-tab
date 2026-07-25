@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currency";
+import { CurrencySelect } from "@/components/ui/CurrencySelect";
+import { EventDateRangeField } from "@/components/ui/EventDateRangeField";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
 
 interface CreateEventModalProps {
   groupId: string;
@@ -17,8 +19,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,8 +37,8 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
         body: JSON.stringify({
           name: name.trim(),
           currency,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
+          startDate: dateRange?.start,
+          endDate: dateRange?.end,
         }),
       });
       if (!res.ok) throw new Error("create failed");
@@ -68,38 +69,15 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
 
         <div className="mb-3.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Currency</label>
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} — {c.label}
-              </option>
-            ))}
-          </select>
+          <CurrencySelect value={currency} onChange={setCurrency} />
         </div>
 
-        <div className="mb-5 flex gap-2.5">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-xs font-bold text-muted-2">Start date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text [color-scheme:light] dark:[color-scheme:dark]"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-xs font-bold text-muted-2">End date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-md border border-ink/14 bg-cream px-3 py-3 text-[13px] text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text [color-scheme:light] dark:[color-scheme:dark]"
-            />
-          </div>
+        <div className="mb-5">
+          <label className="mb-1.5 block text-xs font-bold text-muted-2">Dates</label>
+          <EventDateRangeField value={dateRange} onChange={setDateRange} />
+          <p className="mt-1.5 text-[11px] text-muted-2">
+            Optional — pick both a start and end date, or leave both blank.
+          </p>
         </div>
 
         <p className="mb-5 text-[11.5px] leading-relaxed text-muted-2">

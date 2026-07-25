@@ -5,6 +5,7 @@ import type { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import type { shareLinkRoleSchema } from "@/lib/validation/group";
+import { Check, Link } from "lucide-react";
 
 type LinkRole = z.infer<typeof shareLinkRoleSchema>;
 
@@ -238,7 +239,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                       )}
                       aria-hidden={!copied}
                     >
-                      ✓ Copied to clipboard
+                      <Check className="h-3 w-3" aria-hidden="true" /> Copied to clipboard
                     </p>
 
                     <p className="text-[12px] leading-relaxed text-muted dark:text-dark-muted">
@@ -250,7 +251,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
             </div>
 
             <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5 dark:bg-sky/12">
-              <span className="text-sm">🔗</span>
+              <Link className="h-4 w-4 shrink-0 text-sky-text dark:text-dark-text/80" aria-hidden="true" />
               <p className="text-[11.5px] leading-relaxed text-sky-text dark:text-dark-text/80">
                 <strong>Heads up</strong> — neither link needs a password. Send the edit link only
                 to people you trust with changes; use the view-only link for anyone who should

@@ -22,6 +22,41 @@ describe("createEventSchema", () => {
   it("rejects a blank name", () => {
     expect(createEventSchema.safeParse({ name: "  " }).success).toBe(false);
   });
+
+  it("rejects a start date after the end date", () => {
+    const result = createEventSchema.safeParse({
+      name: "Tokyo Trip",
+      startDate: "2026-08-10",
+      endDate: "2026-08-05",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a start date on or before the end date", () => {
+    expect(
+      createEventSchema.safeParse({
+        name: "Tokyo Trip",
+        startDate: "2026-08-05",
+        endDate: "2026-08-05",
+      }).success,
+    ).toBe(true);
+    expect(
+      createEventSchema.safeParse({
+        name: "Tokyo Trip",
+        startDate: "2026-08-05",
+        endDate: "2026-08-10",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts when only one date is set", () => {
+    expect(
+      createEventSchema.safeParse({ name: "Tokyo Trip", startDate: "2026-08-05" }).success,
+    ).toBe(true);
+    expect(
+      createEventSchema.safeParse({ name: "Tokyo Trip", endDate: "2026-08-05" }).success,
+    ).toBe(true);
+  });
 });
 
 describe("updateEventSchema", () => {
@@ -33,5 +68,19 @@ describe("updateEventSchema", () => {
 
   it("still requires at least one field", () => {
     expect(updateEventSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects a start date after the end date", () => {
+    const result = updateEventSchema.safeParse({
+      startDate: "2026-08-10",
+      endDate: "2026-08-05",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a start date on or before the end date", () => {
+    expect(
+      updateEventSchema.safeParse({ startDate: "2026-08-05", endDate: "2026-08-10" }).success,
+    ).toBe(true);
   });
 });

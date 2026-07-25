@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { formatMoney } from "@/lib/format";
 import { TransferGraph } from "./TransferGraph";
+import { Check } from "lucide-react";
 
 export interface SettleMember {
   id: string;
@@ -150,11 +151,11 @@ export function SettleUpFlow({
                       <span
                         className={
                           checked
-                            ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-forest text-[13px] text-cream dark:bg-dark-forest"
+                            ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-forest text-cream dark:bg-dark-forest"
                             : "h-5 w-5 shrink-0 rounded-md border-2 border-ink/16 dark:border-white/20"
                         }
                       >
-                        {checked && "✓"}
+                        {checked && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
                       </span>
                       <div className="flex-1">
                         <p className="text-[14.5px] font-bold text-ink dark:text-dark-text">
@@ -223,7 +224,8 @@ export function SettleUpFlow({
         />
 
         <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-mint-tint px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">
-          ✓ {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone
+          <Check className="h-4 w-4" aria-hidden="true" />
+          {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone
         </div>
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}
