@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currency";
+import { CurrencySelect } from "@/components/ui/CurrencySelect";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
 
 interface CreateEventModalProps {
   groupId: string;
@@ -68,17 +69,7 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
 
         <div className="mb-3.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Currency</label>
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} — {c.label}
-              </option>
-            ))}
-          </select>
+          <CurrencySelect value={currency} onChange={setCurrency} />
         </div>
 
         <div className="mb-5 flex gap-2.5">
