@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
 import { computeEqualSplit } from "@/lib/settlement";
+import { Check, Lock, TriangleAlert } from "lucide-react";
 
 interface FormMember {
   id: string;
@@ -335,11 +336,18 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             <div className="my-2 h-px bg-ink/7 dark:bg-white/10" />
             <div
               className={cn(
-                "flex items-center gap-2 text-[13px] font-bold",
+                "flex items-center gap-1.5 text-[13px] font-bold",
                 equalShares ? "text-emerald dark:text-mint" : "text-muted-2",
               )}
             >
-              {equalShares ? `✓ Adds up to ${formatMoney(totalAmountSen, currency)}` : "Enter an amount above"}
+              {equalShares ? (
+                <>
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  {`Adds up to ${formatMoney(totalAmountSen, currency)}`}
+                </>
+              ) : (
+                "Enter an amount above"
+              )}
             </div>
           </div>
         ) : (
@@ -387,10 +395,13 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             </div>
             {!customReconciled && (
               <div className="flex items-center gap-2 rounded-md border border-coral-tint-border bg-coral-tint px-4 py-3 text-[13px] font-bold text-coral dark:border-coral/30 dark:bg-coral/10">
-                ⚠ Amounts don&apos;t add up —{" "}
-                {formatMoney(Math.abs(totalAmountSen - customRunningTotal), currency)}
-                {customRunningTotal < totalAmountSen ? " short of " : " over "}
-                {formatMoney(totalAmountSen, currency)}
+                <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  Amounts don&apos;t add up —{" "}
+                  {formatMoney(Math.abs(totalAmountSen - customRunningTotal), currency)}
+                  {customRunningTotal < totalAmountSen ? " short of " : " over "}
+                  {formatMoney(totalAmountSen, currency)}
+                </span>
               </div>
             )}
           </div>
@@ -456,11 +467,11 @@ function LockedBillView({
       <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
       <div className="w-full max-w-[520px] rounded-lg bg-white p-7 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-8 dark:bg-dark-card">
         <div className="mb-4 flex items-center gap-2.5">
-          <span className="text-xl">🔒</span>
+          <Lock className="h-5 w-5 text-ink dark:text-dark-text" aria-hidden="true" />
           <h1 className="num text-[22px] text-ink dark:text-dark-text">{bill.title}</h1>
         </div>
         <div className="mb-4.5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
-          <span className="text-[15px]">🔒</span>
+          <Lock className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
           <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
             This bill is{" "}
             <strong className="text-ink dark:text-dark-text">settled and locked</strong>. Unmark
