@@ -32,8 +32,10 @@ const RECEIVERS = [
 // Screen Spec P1-01. The only landing view — shown to every visitor
 // regardless of device history, since access is granted purely by opening a
 // group's link. Kept to a single, uncluttered hero moment -- the
-// step-by-step explainer and the no-password disclosure live on /tutorial
-// instead, one quiet link away.
+// step-by-step explainer, the no-password disclosure, and the fuller
+// visitor-vs-member comparison live on /tutorial instead, one quiet link
+// away. "Log in" in the header is the only nod here that an account is
+// optional — everything else stays exactly as focused as before.
 export function Landing() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -42,7 +44,15 @@ export function Landing() {
       <div className="mx-auto max-w-[1160px] px-6 py-10 sm:px-10 sm:py-12">
         <div className="mb-12 flex items-center justify-between sm:mb-16">
           <Logo size={26} wordmarkClassName="text-lg" />
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
+            >
+              Log in
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
@@ -58,8 +68,12 @@ export function Landing() {
               <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
                 Create a group
               </Button>
-              <p className="max-w-[150px] text-xs leading-snug text-muted dark:text-dark-muted">
-                No account or sign-up — just a name.
+              <p className="max-w-[170px] text-xs leading-snug text-muted dark:text-dark-muted">
+                No account or sign-up — just a name, or{" "}
+                <Link href="/register" className="underline decoration-dotted underline-offset-2 hover:text-ink dark:hover:text-dark-text">
+                  create a free account
+                </Link>
+                .
               </p>
             </div>
             <Link

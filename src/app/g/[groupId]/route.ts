@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ grou
     });
   }
 
-  const session = signSession({ groupId: link.groupId, role: link.role, shareLinkId: link.id });
+  const session = signSession({ kind: "link", groupId: link.groupId, role: link.role, shareLinkId: link.id });
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, session, SESSION_COOKIE_OPTIONS);

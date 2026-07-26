@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { z } from "zod";
+import NextLink from "next/link";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import type { shareLinkRoleSchema } from "@/lib/validation/group";
@@ -18,6 +19,7 @@ interface LinkInfo {
 interface ShareDialogProps {
   groupId: string;
   groupName: string;
+  actorType: "member" | "visitor";
   onClose: () => void;
 }
 
@@ -33,12 +35,24 @@ const ROLE_COPY: Record<LinkRole, { label: string; description: string }> = {
 };
 
 // Screen Spec P2-02/P2-03. Editor-only (GET /api/groups/{id}/links rejects
-// viewer sessions). Both links are shown side by side rather than behind a
-// role toggle over a single URL field -- the toggle made it easy to copy
-// the wrong link without noticing it had switched underneath you, and made
-// "Regenerate link" ambiguous about which link it touched. Modal on
-// desktop, bottom sheet on mobile via responsive classes on one markup.
-export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
+// viewer sessions) — so actorType here only ever distinguishes an
+// anonymous editor-role visitor from a registered editor-role member, never
+// a viewer of either kind (a viewer-role session never reaches this
+// dialog). A member sees both links, view-only suggested first; a visitor
+// only ever sees the editable one — they can't copy a view-only link at
+// all (member-auth design decision). Both links are shown side by side
+// rather than behind a role toggle over a single URL field -- the toggle
+// made it easy to copy the wrong link without noticing it had switched
+// underneath you, and made "Regenerate link" ambiguous about which link it
+// touched. Modal on desktop, bottom sheet on mobile via responsive classes
+// on one markup.
+export function ShareDialog({ groupId, groupName, actorType, onClose }: ShareDialogProps) {
+  const isMember = actorType === "member";
+  // A visitor (anonymous, editor-role — this dialog is already editor-only,
+  // see the file comment) can only ever copy the editable link, never the
+  // view-only one; a registered member gets both, with the view-only link
+  // suggested first. See docs/superpowers/specs member-auth design notes.
+  const roles = isMember ? (["viewer", "editor"] as const) : (["editor"] as const);
   const [links, setLinks] = useState<Partial<Record<LinkRole, LinkInfo>>>({});
   const [loading, setLoading] = useState(true);
   const [copiedRole, setCopiedRole] = useState<LinkRole | null>(null);
@@ -69,8 +83,10 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
       // The viewer-role link isn't created at group-creation time (only the
       // editor link is — system-design.md §5). Create it up front here so
       // both links are ready to show side by side, instead of lazily
-      // creating it the first time someone toggled to "View only".
-      if (!byRole.viewer) {
+      // creating it the first time someone toggled to "View only". Skipped
+      // entirely for a visitor, who isn't shown the viewer link at all —
+      // no reason to provision a link they can't see.
+      if (isMember && !byRole.viewer) {
         const createRes = await fetch(`/api/groups/${groupId}/links/regenerate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -92,7 +108,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
     return () => {
       cancelled = true;
     };
-  }, [groupId]);
+  }, [groupId, isMember]);
 
   function urlFor(link: LinkInfo | undefined): string {
     if (!link || typeof window === "undefined") return "";
@@ -172,31 +188,40 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
               Share {groupName}
             </h2>
             <p className="mb-5 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-              Two separate links, no account needed for either — pick the one that fits who
-              you&apos;re sending it to.
+              {isMember
+                ? "Two separate links, no account needed for either — pick the one that fits who you're sending it to."
+                : "Anyone with this link can view and edit — send it only to people you trust."}
             </p>
 
             <div className="mb-5 flex flex-col gap-3">
-              {(["editor", "viewer"] as const).map((role) => {
+              {roles.map((role) => {
                 const link = links[role];
                 const url = urlFor(link);
                 const copied = copiedRole === role;
+                const suggested = isMember && role === "viewer";
                 return (
                   <div
                     key={role}
                     className="rounded-md border border-ink/10 p-3.5 dark:border-white/10"
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-1 text-[11px] font-bold",
-                          role === "editor"
-                            ? "bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint"
-                            : "bg-sky-tint text-sky dark:bg-sky/16",
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                            role === "editor"
+                              ? "bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint"
+                              : "bg-sky-tint text-sky dark:bg-sky/16",
+                          )}
+                        >
+                          {ROLE_COPY[role].label}
+                        </span>
+                        {suggested && (
+                          <span className="rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-bold text-gold dark:bg-gold/16">
+                            Suggested
+                          </span>
                         )}
-                      >
-                        {ROLE_COPY[role].label}
-                      </span>
+                      </div>
                       <button
                         type="button"
                         disabled={loading || !link}
@@ -212,7 +237,7 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
                         {loading ? "Loading…" : url || "—"}
                       </div>
                       <Button
-                        variant="primary"
+                        variant={!isMember || suggested ? "primary" : "secondary"}
                         disabled={!url}
                         onClick={() => handleCopy(role)}
                         className="!px-4 !py-2.5 text-[13px] whitespace-nowrap"
@@ -250,12 +275,23 @@ export function ShareDialog({ groupId, groupName, onClose }: ShareDialogProps) {
               })}
             </div>
 
+            {!isMember && (
+              <p className="mb-5 text-[12px] leading-relaxed text-muted dark:text-dark-muted">
+                Registered members can also share a view-only link —{" "}
+                <NextLink href="/register" className="font-bold text-link dark:text-mint">
+                  create an account
+                </NextLink>
+                .
+              </p>
+            )}
+
             <div className="mb-6 flex gap-2.5 rounded-md bg-sky-tint px-4 py-3.5 dark:bg-sky/12">
               <Link className="h-4 w-4 shrink-0 text-sky-text dark:text-dark-text/80" aria-hidden="true" />
               <p className="text-[11.5px] leading-relaxed text-sky-text dark:text-dark-text/80">
-                <strong>Heads up</strong> — neither link needs a password. Send the edit link only
-                to people you trust with changes; use the view-only link for anyone who should
-                just be able to check balances.
+                <strong>Heads up</strong> — neither link needs a password.{" "}
+                {isMember
+                  ? "Send the edit link only to people you trust with changes; use the view-only link for anyone who should just be able to check balances."
+                  : "Whoever opens this link can add and edit bills — only share it with people you trust."}
               </p>
             </div>
 

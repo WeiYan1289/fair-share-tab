@@ -40,9 +40,10 @@ model Group {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  shareLinks GroupShareLink[]
-  members    Member[]
-  events     Event[]
+  shareLinks  GroupShareLink[]
+  members     Member[]
+  events      Event[]
+  memberships GroupMembership[]
 
   @@map("group")
 }
@@ -71,6 +72,7 @@ model Member {
   createdAt   DateTime @default(now()) @map("created_at")
 
   group        Group          @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   eventMembers EventMember[]
   billsPaid    Bill[]         @relation("BillPayer")
   splits       Split[]
@@ -79,7 +81,43 @@ model Member {
 
   @@index([groupId])
   @@index([groupId, isActive])
+  @@index([userId])
   @@map("member")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  members     Member[]
+  memberships GroupMembership[]
+
+  @@map("user")
+}
+
+// Grants a registered user standing access to a group, parallel to (and
+// independent of) the anonymous GroupShareLink model — see data-model.md §9.
+// role reuses ShareLinkRole for symmetry with share links; v1 only ever
+// creates "editor" memberships (a group's registered creator/owner). The
+// field exists so a future co-owner-invite feature doesn't need a schema
+// change, not because anything in v1 creates a "viewer" membership.
+model GroupMembership {
+  id        String        @id @default(uuid()) @db.Uuid
+  groupId   String        @map("group_id") @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  role      ShareLinkRole
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId])
+  @@map("group_membership")
 }
 
 model Event {

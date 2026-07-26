@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
@@ -17,6 +18,10 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
   const [nameTouched, setNameTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when POST /api/groups rejects an anonymous caller's second group
+  // (system-design.md §3.3) — distinct from a generic error so the message
+  // can point at registration instead of "try again."
+  const [capBlocked, setCapBlocked] = useState(false);
 
   const nameMissing = nameTouched && yourName.trim().length === 0;
   const canSubmit = groupName.trim().length > 0 && yourName.trim().length > 0 && !submitting;
@@ -25,6 +30,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
+    setCapBlocked(false);
 
     try {
       const res = await fetch("/api/groups", {
@@ -35,7 +41,14 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
           creatorName: yourName.trim(),
         }),
       });
-      if (!res.ok) throw new Error("create failed");
+      if (!res.ok) {
+        if (res.status === 403) {
+          setCapBlocked(true);
+          setSubmitting(false);
+          return;
+        }
+        throw new Error("create failed");
+      }
       const data = await res.json();
 
       window.location.href = `/g/${data.group.id}/events?savelink=${data.shareLink.token}`;
@@ -90,6 +103,15 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
         </div>
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}
+        {capBlocked && (
+          <p className="mb-3 rounded-md bg-coral-tint px-3 py-2.5 text-xs leading-relaxed text-coral dark:bg-coral/10">
+            You&apos;ve already created one group as a guest. Create a free account to make more —{" "}
+            <Link href="/register" className="font-bold underline">
+              register
+            </Link>
+            .
+          </p>
+        )}
 
         <div className="flex gap-2.5">
           <Button variant="secondary" className="flex-1 text-center" onClick={onClose}>
