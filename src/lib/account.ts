@@ -22,3 +22,17 @@ export async function listUserGroups(userId: string) {
     eventCount: membership.group._count.events,
   }));
 }
+
+// Used to prefill "Your name" when a logged-in member creates another group
+// (CreateGroupModal) — Member.name stays per-group and independently
+// editable (CLAUDE.md rule 6), this is only a UI default, never a synced
+// field. Most-recently-created member row, on the assumption that's the
+// name most likely to reflect how they currently want to be shown.
+export async function getSuggestedMemberName(userId: string): Promise<string | null> {
+  const member = await prisma.member.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { name: true },
+  });
+  return member?.name ?? null;
+}

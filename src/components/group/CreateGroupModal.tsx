@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -9,19 +9,45 @@ interface CreateGroupModalProps {
   onClose: () => void;
 }
 
-// Screen Spec P2-01. Opened from the landing page's "Create a group" CTA.
-// Full page reload on success, not a router push: the server just set
-// a fresh session cookie for the new group and the events page needs it.
+// Screen Spec P2-01. Opened from the landing page's "Create a group" CTA
+// (also from GroupSwitcher for a logged-in member creating an additional
+// group). Full page reload on success, not a router push: the server just
+// set a fresh session cookie for the new group and the events page needs it.
 export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState("");
   const [yourName, setYourName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
+  const [namePrefilled, setNamePrefilled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Set when POST /api/groups rejects an anonymous caller's second group
   // (system-design.md §3.3) — distinct from a generic error so the message
   // can point at registration instead of "try again."
   const [capBlocked, setCapBlocked] = useState(false);
+
+  // Prefills "Your name" for a logged-in member from their most recent
+  // group, so creating a second/third group doesn't ask a question the
+  // account already effectively knows the answer to (CR-2.md #3). Stays
+  // editable rather than auto-submitted — Member.name is deliberately
+  // per-group (CLAUDE.md rule 6), so silently reusing it without letting
+  // someone see/change it would trade one confusion for another. A visitor
+  // gets a 401 from /api/auth/me and the field just stays blank, as today.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSuggestedName() {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok || cancelled) return;
+      const data: { user: { suggestedName: string | null } } = await res.json();
+      if (data.user.suggestedName) {
+        setYourName(data.user.suggestedName);
+        setNamePrefilled(true);
+      }
+    }
+    loadSuggestedName();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const nameMissing = nameTouched && yourName.trim().length === 0;
   const canSubmit = groupName.trim().length > 0 && yourName.trim().length > 0 && !submitting;
@@ -80,7 +106,10 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
           <input
             type="text"
             value={yourName}
-            onChange={(e) => setYourName(e.target.value)}
+            onChange={(e) => {
+              setYourName(e.target.value);
+              setNamePrefilled(false);
+            }}
             onBlur={() => setNameTouched(true)}
             placeholder="Your name"
             className={cn(
@@ -98,7 +127,9 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
           >
             {nameMissing
               ? "Required — this is how the group will see you in bills and balances."
-              : "This is how the group will see you in bills and balances."}
+              : namePrefilled
+                ? "Filled in from your account — change it if this group should show something different."
+                : "This is how the group will see you in bills and balances."}
           </p>
         </div>
 

@@ -81,7 +81,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupName={groupName} />
+        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
 
         <div className="mb-3 flex items-center justify-between">
           <Link

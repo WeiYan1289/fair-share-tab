@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/require-user-session";
+import { getSuggestedMemberName } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
 
 // Convenience endpoint for client-side auth-state checks (e.g. nav "Log in"
-// vs account menu). Returns 401 rather than null on the happy-empty path so
-// callers can't confuse "not logged in" with a slow/failed request.
+// vs account menu, CreateGroupModal's name-prefill). Returns 401 rather
+// than null on the happy-empty path so callers can't confuse "not logged
+// in" with a slow/failed request.
 export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -16,5 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  return NextResponse.json({ user });
+  const suggestedName = await getSuggestedMemberName(userId);
+
+  return NextResponse.json({ user: { ...user, suggestedName } });
 }
