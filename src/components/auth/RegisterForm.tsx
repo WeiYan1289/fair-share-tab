@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { AuthTabs } from "./AuthTabs";
 
 // Full page reload on success, not a router push — same reasoning as
 // CreateGroupModal: the server just set fresh session cookies and the
@@ -49,6 +49,8 @@ export function RegisterForm() {
 
   return (
     <div className="rounded-lg bg-white p-7 shadow-[0_24px_48px_-20px_rgba(19,46,40,0.22)] sm:p-8 dark:bg-dark-card">
+      <AuthTabs active="register" />
+
       <h1 className="num mb-1.5 text-[22px] text-ink dark:text-dark-text">Create an account</h1>
       <p className="mb-6 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
         Unlocks unlimited groups and a &ldquo;My groups&rdquo; dashboard. If you still hold the
@@ -83,13 +85,6 @@ export function RegisterForm() {
       <Button variant="primary" disabled={!canSubmit} onClick={handleSubmit} className="mt-5 w-full text-center">
         Create account
       </Button>
-
-      <p className="mt-5 text-center text-[12.5px] text-muted dark:text-dark-muted">
-        Already have an account?{" "}
-        <Link href="/login" className="font-bold text-link hover:opacity-80 dark:text-mint">
-          Log in
-        </Link>
-      </p>
     </div>
   );
 }

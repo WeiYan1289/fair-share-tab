@@ -82,12 +82,18 @@ export function TutorialView() {
           <Link href="/">
             <Logo size={24} wordmarkClassName="text-base" />
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
             <Link
               href="/"
               className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
             >
               ← Back home
+            </Link>
+            <Link
+              href="/login"
+              className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
+            >
+              Log in
             </Link>
             <ThemeToggle />
           </div>

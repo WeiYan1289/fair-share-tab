@@ -44,10 +44,10 @@ export function Landing() {
       <div className="mx-auto max-w-[1160px] px-6 py-10 sm:px-10 sm:py-12">
         <div className="mb-12 flex items-center justify-between sm:mb-16">
           <Logo size={26} wordmarkClassName="text-lg" />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
+              className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
             >
               Log in
             </Link>

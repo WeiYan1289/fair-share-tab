@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { AuthTabs } from "./AuthTabs";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -39,6 +39,8 @@ export function LoginForm() {
 
   return (
     <div className="rounded-lg bg-white p-7 shadow-[0_24px_48px_-20px_rgba(19,46,40,0.22)] sm:p-8 dark:bg-dark-card">
+      <AuthTabs active="login" />
+
       <h1 className="num mb-1.5 text-[22px] text-ink dark:text-dark-text">Log in</h1>
       <p className="mb-6 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
         For registered members only — a group link never needs this.
@@ -71,13 +73,6 @@ export function LoginForm() {
       <Button variant="primary" disabled={!canSubmit} onClick={handleSubmit} className="mt-5 w-full text-center">
         Log in
       </Button>
-
-      <p className="mt-5 text-center text-[12.5px] text-muted dark:text-dark-muted">
-        New here?{" "}
-        <Link href="/register" className="font-bold text-link hover:opacity-80 dark:text-mint">
-          Create an account
-        </Link>
-      </p>
     </div>
   );
 }
