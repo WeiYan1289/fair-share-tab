@@ -21,6 +21,7 @@ interface EventsListViewProps {
   groupId: string;
   groupName: string;
   viewerRole: "editor" | "viewer";
+  actorType: "member" | "visitor";
   saveLinkToken: string | null;
   events: EventSummary[];
 }
@@ -30,6 +31,7 @@ export function EventsListView({
   groupId,
   groupName,
   viewerRole,
+  actorType,
   saveLinkToken,
   events,
 }: EventsListViewProps) {
@@ -56,7 +58,7 @@ export function EventsListView({
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupName={groupName} />
+        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
 
         {showSaveLinkBanner && savedToken && (
           <SaveLinkBanner token={savedToken} onDismiss={() => setShowSaveLinkBanner(false)} />

@@ -62,19 +62,35 @@ balances in and returns transfers out. Build and test it first.
 
 ### 3.1 The model
 
-Access is granted by a **capability link** scoped to a whole group. There are no
-accounts or passwords. Anyone holding a valid link token can act within that group at
-its role level (`editor` or `viewer`).
+Access is granted by a **capability link** scoped to a whole group, **or** by an
+authenticated **member session** for a registered user — both coexist permanently.
+Anyone holding a valid link token can act within that group at its role level
+(`editor` or `viewer`); a registered user with a `group_membership` row can act in
+that group at their membership's role, without a link at all. Registration is
+optional — the anonymous flow is unaffected either way (data-model.md §9).
 
 ### 3.2 Request flow
 
+**Anonymous (link) entry:**
 1. A visitor opens `/g/{token}`.
 2. The server looks up `group_share_link` by token. Reject if missing or
    `revoked_at IS NOT NULL` → render the invalid-link screen.
 3. **Exchange the token for a session cookie** (`httpOnly`, `Secure`, `SameSite=Lax`)
-   containing `{ group_id, role }`, then redirect to a clean URL such as
-   `/g/{groupId}/events`.
+   containing `{ kind: "link", group_id, role, share_link_id }`, then redirect to a
+   clean URL such as `/g/{groupId}/events`.
 4. Every subsequent request reads the cookie. No token in the address bar.
+
+**Authenticated (member) entry:**
+1. A registered user logs in at `/login` — a separate, group-independent
+   `fst_user_session` cookie (`{ user_id }`) is set, distinct from the group-context
+   cookie above (a browser can be logged in as a user *and* separately hold a
+   share-link session for an unrelated group at the same time).
+2. From `/account/groups`, entering a specific group looks up that user's
+   `group_membership` for it and mints a `{ kind: "member", group_id, role, user_id,
+   membership_id }` session cookie, then redirects to `/g/{groupId}/events` — the same
+   destination as the anonymous flow.
+3. Every subsequent request within that group reads the same group-context cookie as
+   the anonymous flow does; the revocation check just branches on `kind` (§3.3).
 
 ### 3.3 Non-negotiable rules
 
@@ -89,6 +105,15 @@ its role level (`editor` or `viewer`).
   buttons in the UI is not access control.
 - Be honest in the UI: the share dialog states plainly that anyone with the link can
   view and edit.
+- Passwords are hashed with Argon2id, never stored or logged in plaintext, and
+  `password_hash` never appears in an API response (data-model.md §6 invariant 12).
+- An anonymous visitor may create at most one group, enforced by a signed, long-lived
+  `fst_visitor_created_group` cookie set on their first `POST /api/groups` — soft/
+  best-effort by design (clearing cookies resets it), not a security boundary. A
+  registered user has no such cap.
+- `login` and `register` are rate-limited the same way token lookups are (§3.3 above);
+  `login` returns a generic "Invalid email or password" for both a nonexistent email
+  and a wrong password, to avoid user enumeration.
 
 ---
 
@@ -185,7 +210,21 @@ Every route below is server-side and performs the §3 access check first.
 | `GET` | `/g/{token}` | Validate token → set session cookie → redirect to the events list. Invalid/revoked → error screen. |
 
 `creatorName` is **required** — it's the name that appears on the group's first
-bills and balances, same as any other member.
+bills and balances, same as any other member. If the caller is authenticated
+(`fst_user_session` present), the transaction also creates a `group_membership` and
+links the creator `member.user_id` — no visitor cap applies. If not, the anonymous
+one-group cap (§3.3) is enforced instead.
+
+### Auth / account (optional — anonymous flow is unaffected)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/auth/register` | Body `{ email, password }`. Creates a `user`. If the request carries a valid `fst_visitor_created_group` cookie, claims that group into the new account in the same transaction (data-model.md §9). Sets `fst_user_session`. |
+| `POST` | `/api/auth/login` | Body `{ email, password }`. Sets `fst_user_session`. Generic error on bad credentials (§3.3). |
+| `POST` | `/api/auth/logout` | Clears `fst_user_session`. |
+| `GET` | `/api/auth/me` | Returns the current user (or 401), for client-side auth-state checks. |
+| `GET` | `/api/account/groups` | Lists every group with a `group_membership` for the logged-in user. Requires `fst_user_session`. |
+| `GET` | `/api/account/groups/{groupId}/enter` | Mints a `{ kind: "member" }` group-context session cookie from the caller's `group_membership`, redirects to `/g/{groupId}/events`. A plain GET (like `GET /g/{token}` above) so it's a normal link, not a fetch. |
 
 ### Share links
 
@@ -274,6 +313,15 @@ Open `/g/{token}` → validate → session cookie → clean redirect straight to
 list. No identity step — access and role (editor/viewer) come entirely from which link
 was opened. A one-time "save this link" banner offers a copy-link button on first
 landing, since there's no other way back in without the original link.
+
+### 6.2b Register, optionally claiming a visitor's group
+
+From the tutorial/landing "Create an account" CTA or the nudge inside the share
+dialog → `{ email, password }` → server creates the `user`; if the browser still
+holds the `fst_visitor_created_group` cookie from a group it created as a visitor,
+that group's creator `member` is linked to the new account and a `group_membership`
+is created, in the same transaction → `/account/groups` shows that group immediately,
+no re-entry step needed.
 
 ### 6.3 Add a bill
 

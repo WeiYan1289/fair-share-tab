@@ -34,6 +34,7 @@ export default async function EventDashboardPage({
       groupId={groupId}
       groupName={group.name}
       viewerRole={session.role}
+      actorType={session.actorType}
       event={{
         ...event,
         startDate: event.startDate?.toISOString() ?? null,

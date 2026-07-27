@@ -46,6 +46,29 @@ const GOOD_TO_KNOW = [
   },
 ];
 
+const ACCESS_MODES = [
+  {
+    title: "Visiting with a link",
+    tint: "bg-sky-tint dark:bg-sky/16",
+    color: "text-sky",
+    items: [
+      "No email, no password — just a name",
+      "One group per browser",
+      "Sharing the group forward only offers the full-edit link",
+    ],
+  },
+  {
+    title: "Registered member",
+    tint: "bg-gold-tint dark:bg-gold/16",
+    color: "text-gold",
+    items: [
+      "Create as many groups as you like",
+      "A \"My groups\" dashboard to jump back into any of them",
+      "Sharing suggests the view-only link first, with edit access still one tap away",
+    ],
+  },
+];
+
 // Standalone marketing/help page — not part of the Screen Spec, added
 // so the landing page (P1-01) can stay a single clean hero moment and
 // point here for anyone who wants the fuller explanation.
@@ -59,12 +82,18 @@ export function TutorialView() {
           <Link href="/">
             <Logo size={24} wordmarkClassName="text-base" />
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
             <Link
               href="/"
               className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
             >
               ← Back home
+            </Link>
+            <Link
+              href="/login"
+              className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
+            >
+              Log in
             </Link>
             <ThemeToggle />
           </div>
@@ -119,6 +148,37 @@ export function TutorialView() {
           </div>
         </div>
 
+        <div className="mb-16 border-t border-ink/8 pt-12 dark:border-white/10">
+          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
+            Two ways in
+          </p>
+          <p className="mb-7 max-w-[540px] text-[14px] leading-relaxed text-muted dark:text-dark-muted">
+            An account is entirely optional — a link is still all it takes to visit a group.
+            Registering just unlocks a couple of things a link alone can&apos;t.
+          </p>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {ACCESS_MODES.map((mode) => (
+              <div key={mode.title} className="rounded-lg bg-white p-5 sm:p-6 dark:bg-dark-card">
+                <span
+                  className={`mb-3 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${mode.tint} ${mode.color}`}
+                >
+                  {mode.title}
+                </span>
+                <ul className="flex flex-col gap-2">
+                  {mode.items.map((item) => (
+                    <li
+                      key={item}
+                      className="text-[13.5px] leading-relaxed text-muted dark:text-dark-muted"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col items-start gap-4 border-t border-ink/8 pt-12 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
           <div>
             <p className="mb-1 text-[17px] font-bold text-ink dark:text-dark-text">
@@ -128,9 +188,14 @@ export function TutorialView() {
               Takes about ten seconds — just a name.
             </p>
           </div>
-          <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
-            Create a group
-          </Button>
+          <div className="flex flex-wrap gap-2.5">
+            <Link href="/register">
+              <Button variant="secondary">Create an account</Button>
+            </Link>
+            <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
+              Create a group
+            </Button>
+          </div>
         </div>
       </div>
 

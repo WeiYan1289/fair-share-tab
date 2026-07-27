@@ -36,6 +36,7 @@ export default async function EventsPage({
       groupId={groupId}
       groupName={group.name}
       viewerRole={session.role}
+      actorType={session.actorType}
       saveLinkToken={savelink ?? null}
       events={events.map((event) => ({
         id: event.id,

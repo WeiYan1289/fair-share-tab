@@ -49,13 +49,14 @@ interface EventDashboardProps {
   groupId: string;
   groupName: string;
   viewerRole: "editor" | "viewer";
+  actorType: "member" | "visitor";
   event: EventView;
 }
 
 // Screen Spec P4-01 (light) / P4-02 (dark, via Tailwind's automatic
 // prefers-color-scheme `dark:` variant) / P4-03 (empty states) / P7-01
 // (read-only for viewer-role sessions).
-export function EventDashboard({ groupId, groupName, viewerRole, event }: EventDashboardProps) {
+export function EventDashboard({ groupId, groupName, viewerRole, actorType, event }: EventDashboardProps) {
   const router = useRouter();
   const canEdit = viewerRole === "editor";
   const [showShare, setShowShare] = useState(false);
@@ -80,7 +81,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
       <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupName={groupName} />
+        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
 
         <div className="mb-3 flex items-center justify-between">
           <Link
@@ -202,7 +203,12 @@ export function EventDashboard({ groupId, groupName, viewerRole, event }: EventD
       </div>
 
       {showShare && (
-        <ShareDialog groupId={groupId} groupName={groupName} onClose={() => setShowShare(false)} />
+        <ShareDialog
+          groupId={groupId}
+          groupName={groupName}
+          actorType={actorType}
+          onClose={() => setShowShare(false)}
+        />
       )}
       {showAddMember && (
         <AddMemberModal
