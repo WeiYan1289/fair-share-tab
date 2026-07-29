@@ -12,6 +12,14 @@ const AVATAR_COLOR_PALETTE = [
   "#2E8562", // pine
 ];
 
+// A member's name shows up in tight spaces throughout the app -- chip
+// labels, bill "Paid by" lines, settle-up transfer rows -- on the smallest
+// phone screens the app supports. 10 characters keeps a name (first name,
+// or a short nickname -- what people actually type on a shared trip) from
+// ever breaking a card's layout, at the cost of a longer legal name not
+// fitting in full.
+export const MAX_MEMBER_NAME_LENGTH = 10;
+
 export function assignAvatarColor(): string {
   return AVATAR_COLOR_PALETTE[Math.floor(Math.random() * AVATAR_COLOR_PALETTE.length)];
 }

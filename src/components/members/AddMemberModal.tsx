@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
 interface NewMember {
   id: string;
@@ -65,6 +66,7 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Emma Torres"
+            maxLength={MAX_MEMBER_NAME_LENGTH}
             className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
