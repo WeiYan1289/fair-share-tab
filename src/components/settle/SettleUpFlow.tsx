@@ -3,10 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MemberAccountControls } from "@/components/group/MemberAccountControls";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { TutorialButton } from "@/components/ui/TutorialButton";
+import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { TransferGraph } from "./TransferGraph";
+import { TransferList } from "./TransferList";
 import { Check } from "lucide-react";
+
+// Above this many transfers the node-and-arrow graph needs scrolling to
+// stay legible, so the list becomes the default view -- the user can still
+// switch back with the toggle.
+const GRAPH_TO_LIST_THRESHOLD = 12;
 
 export interface SettleMember {
   id: string;
@@ -34,18 +43,23 @@ interface SettleUpFlowProps {
   eventName: string;
   currency: string;
   viewerRole: "editor" | "viewer";
+  actorType: "member" | "visitor";
   members: SettleMember[];
   bills: SettleBill[];
 }
 
 // Screen Spec P6-01 (select) -> P6-02/P6-04 (graph, light/dark) -> P6-03
-// (confirm, a modal over the graph rather than a separate route).
+// (confirm, a modal over the graph rather than a separate route). This
+// screen has its own minimal full-bleed header rather than GroupHeader --
+// but a member's signed-in state should still be visible here, not just on
+// pages that happen to render the shared header.
 export function SettleUpFlow({
   groupId,
   eventId,
   eventName,
   currency,
   viewerRole,
+  actorType,
   members,
   bills,
 }: SettleUpFlowProps) {
@@ -56,6 +70,7 @@ export function SettleUpFlow({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(bills.map((b) => b.id)));
   const [step, setStep] = useState<"select" | "graph">("select");
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [view, setView] = useState<"graph" | "list">("graph");
   const [calculating, setCalculating] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -86,6 +101,7 @@ export function SettleUpFlow({
       if (!res.ok) throw new Error("preview failed");
       const data: { transfers: Transfer[] } = await res.json();
       setTransfers(data.transfers);
+      setView(data.transfers.length > GRAPH_TO_LIST_THRESHOLD ? "list" : "graph");
       setStep("graph");
     } catch {
       setError("Couldn't calculate the settlement — check your connection and try again.");
@@ -123,12 +139,16 @@ export function SettleUpFlow({
             >
               ← {eventName}
             </Link>
-            <ThemeToggle />
+            <div className="flex items-center gap-3">
+              {actorType === "member" && <MemberAccountControls />}
+              <TutorialButton />
+              <ThemeToggle />
+            </div>
           </div>
-          <h1 className="num mb-1.5 text-2xl text-ink sm:text-[28px] dark:text-dark-text">
+          <h1 className="num mb-1.5 text-[19px] leading-snug text-ink sm:text-[28px] dark:text-dark-text">
             Settle up — {eventName}
           </h1>
-          <p className="mb-6 text-[13.5px] text-muted sm:text-sm dark:text-dark-muted">
+          <p className="mb-5 text-[13px] text-muted sm:mb-6 sm:text-sm dark:text-dark-muted">
             Select which unsettled bills to include.
           </p>
 
@@ -157,15 +177,21 @@ export function SettleUpFlow({
                       >
                         {checked && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
                       </span>
-                      <div className="flex-1">
-                        <p className="text-[14.5px] font-bold text-ink dark:text-dark-text">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14.5px] font-bold text-ink dark:text-dark-text">
                           {bill.title}
                         </p>
-                        <p className="mt-0.5 text-[12.5px] text-muted-2">
-                          Paid by {bill.payerName} · {bill.splitCount}-way split
+                        {/* Own line each, rather than one truncating "Paid
+                            by X · N-way split" string -- a long payer name
+                            used to force the whole line to wrap mid-word. */}
+                        <p className="mt-0.5 truncate text-[10.5px] leading-tight text-muted-2">
+                          Paid by {bill.payerName}
+                        </p>
+                        <p className="text-[10.5px] leading-tight text-muted-2">
+                          {bill.splitCount}-way split
                         </p>
                       </div>
-                      <p className="num text-[17px] text-ink dark:text-dark-text">
+                      <p className="num shrink-0 text-[17px] text-ink dark:text-dark-text">
                         {formatMoney(bill.totalAmount, currency)}
                       </p>
                     </button>
@@ -175,8 +201,8 @@ export function SettleUpFlow({
 
               {error && <p className="mb-3 text-xs text-coral">{error}</p>}
 
-              <div className="flex items-center justify-between rounded-md bg-mint-tint px-5.5 py-4.5 dark:bg-mint/16">
-                <p className="text-sm font-bold text-emerald dark:text-mint">
+              <div className="flex flex-col gap-3 rounded-md bg-mint-tint px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5.5 sm:py-4.5 dark:bg-mint/16">
+                <p className="text-[13px] leading-snug font-bold text-emerald sm:text-sm dark:text-mint">
                   {selectedIds.size} bill{selectedIds.size === 1 ? "" : "s"} selected ·{" "}
                   {formatMoney(selectedTotal, currency)} total
                 </p>
@@ -184,7 +210,7 @@ export function SettleUpFlow({
                   type="button"
                   disabled={selectedIds.size === 0 || calculating}
                   onClick={handleCalculate}
-                  className="rounded-md bg-forest px-6 py-3 text-sm font-bold text-cream disabled:cursor-not-allowed disabled:opacity-60 dark:bg-dark-forest"
+                  className="w-full shrink-0 rounded-md bg-forest px-6 py-3 text-sm font-bold whitespace-nowrap text-cream disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:bg-dark-forest"
                 >
                   Calculate →
                 </button>
@@ -206,22 +232,55 @@ export function SettleUpFlow({
         >
           ← Back
         </button>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          {actorType === "member" && <MemberAccountControls />}
+          <TutorialButton />
+          <ThemeToggle />
+        </div>
       </div>
       <div className="mx-auto flex max-w-[900px] flex-col items-center">
-        <h1 className="num mb-1.5 text-center text-2xl text-ink sm:text-[30px] dark:text-dark-text">
+        <h1 className="num mb-1.5 text-center text-[18px] leading-snug text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
         </h1>
-        <p className="mb-7 text-center text-[13.5px] text-muted sm:text-[14.5px] dark:text-dark-muted">
+        <p className="mb-5 text-center text-[13px] text-muted sm:text-[14.5px] dark:text-dark-muted">
           {transfers.length} transfer{transfers.length === 1 ? "" : "s"} settle everyone — down
           from {selectedBills.length} bill{selectedBills.length === 1 ? "" : "s"}.
         </p>
 
-        <TransferGraph
-          transfers={transfers}
-          members={members}
-          currency={currency}
-        />
+        {/* The graph has no mobile shape of its own (Screen Spec: two
+            different shapes at the two breakpoints, not one scaled
+            version) -- mobile always gets the list, and the toggle below
+            is a desktop-only concept. */}
+        <div className="mb-6 hidden gap-1 rounded-md bg-app-bg p-1 sm:flex dark:bg-dark-bg" role="tablist">
+          {(["graph", "list"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={cn(
+                "rounded-[10px] px-6 py-2 text-[13px] font-bold capitalize transition-colors",
+                view === v
+                  ? "bg-forest text-cream dark:bg-dark-forest"
+                  : "text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+              )}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-full sm:hidden">
+          <TransferList transfers={transfers} members={members} currency={currency} />
+        </div>
+        <div className="hidden w-full sm:block">
+          {view === "graph" ? (
+            <TransferGraph transfers={transfers} members={members} currency={currency} />
+          ) : (
+            <TransferList transfers={transfers} members={members} currency={currency} />
+          )}
+        </div>
 
         <div className="mt-6 mb-4.5 flex items-center gap-2 rounded-md bg-mint-tint px-5 py-3.5 text-sm font-bold text-emerald dark:bg-mint/16 dark:text-mint">
           <Check className="h-4 w-4" aria-hidden="true" />
