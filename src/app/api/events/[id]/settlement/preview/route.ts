@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 import { computeSettlementPreview, SettlementValidationError } from "@/lib/settlement-service";
@@ -13,9 +14,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let session;
   try {
+    assertSameOrigin(request);
     session = await requireSession();
   } catch (error) {
-    if (error instanceof SessionError) {
+    if (error instanceof CsrfError || error instanceof SessionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     throw error;

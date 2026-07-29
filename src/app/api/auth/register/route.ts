@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
+import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { claimVisitorGroup } from "@/lib/auth/claim";
 import { hashPassword } from "@/lib/auth/password";
 import { getClientIp, isRateLimited } from "@/lib/auth/rate-limit";
@@ -22,6 +23,15 @@ import { registerSchema } from "@/lib/validation/auth";
 // — "claim on register" (data-model.md §9). A missing/invalid/already-used
 // cookie is not an error: registration just proceeds with zero groups.
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    if (error instanceof CsrfError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+
   const ip = getClientIp(request);
   if (isRateLimited(`auth-register:${ip}`)) {
     return new NextResponse("Too many attempts. Please try again in a minute.", { status: 429 });

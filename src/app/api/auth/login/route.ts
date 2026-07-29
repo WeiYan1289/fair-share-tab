@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { getDummyHash, verifyPassword } from "@/lib/auth/password";
 import { getClientIp, isRateLimited } from "@/lib/auth/rate-limit";
 import { USER_SESSION_COOKIE_NAME, USER_SESSION_COOKIE_OPTIONS, signUserSession } from "@/lib/auth/session";
@@ -11,6 +12,15 @@ import { loginSchema } from "@/lib/validation/auth";
 // the nonexistent-email path — both to avoid a user-enumeration timing side
 // channel (system-design.md §3.3).
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    if (error instanceof CsrfError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+
   const ip = getClientIp(request);
   if (isRateLimited(`auth-login:${ip}`)) {
     return new NextResponse("Too many attempts. Please try again in a minute.", { status: 429 });
