@@ -224,7 +224,7 @@ one-group cap (§3.3) is enforced instead.
 | `POST` | `/api/auth/logout` | Clears `fst_user_session`. |
 | `GET` | `/api/auth/me` | Returns the current user (or 401), for client-side auth-state checks. |
 | `GET` | `/api/account/groups` | Lists every group with a `group_membership` for the logged-in user. Requires `fst_user_session`. |
-| `GET` | `/api/account/groups/{groupId}/enter` | Mints a `{ kind: "member" }` group-context session cookie from the caller's `group_membership`, redirects to `/g/{groupId}/events`. A plain GET (like `GET /g/{token}` above) so it's a normal link, not a fetch. |
+| `POST` | `/api/account/groups/{groupId}/enter` | Mints a `{ kind: "member" }` group-context session cookie from the caller's `group_membership`, redirects to `/g/{groupId}/events`. POST (not GET, since it's state-changing) submitted via a `<form>` so it's still a normal full-page navigation, not a client-side fetch. |
 
 ### Share links
 

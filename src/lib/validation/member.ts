@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
 // Treats "" and null the same as an omitted email — clients that always
 // send the field shouldn't have to special-case an empty value.
@@ -7,8 +8,14 @@ const optionalEmail = z.preprocess(
   z.string().trim().toLowerCase().email("Invalid email").optional(),
 );
 
+const memberNameLength = z
+  .string()
+  .trim()
+  .min(1, "Member name is required")
+  .max(MAX_MEMBER_NAME_LENGTH, `Name must be ${MAX_MEMBER_NAME_LENGTH} characters or less`);
+
 export const createMemberSchema = z.object({
-  name: z.string().trim().min(1, "Member name is required"),
+  name: memberNameLength,
   email: optionalEmail,
 });
 
@@ -16,7 +23,7 @@ export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 
 export const updateMemberSchema = z
   .object({
-    name: z.string().trim().min(1, "Member name is required").optional(),
+    name: memberNameLength.optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => data.name !== undefined || data.isActive !== undefined, {

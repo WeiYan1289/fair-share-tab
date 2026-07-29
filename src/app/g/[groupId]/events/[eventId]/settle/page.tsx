@@ -42,6 +42,7 @@ export default async function SettleUpPage({
       eventName={event.name}
       currency={event.currency}
       viewerRole={session.role}
+      actorType={session.actorType}
       members={event.eventMembers.map(({ member }) => ({
         id: member.id,
         name: member.name,

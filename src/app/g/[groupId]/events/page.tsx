@@ -42,9 +42,11 @@ export default async function EventsPage({
         id: event.id,
         name: event.name,
         currency: event.currency,
+        status: event.status,
         memberCount: event.memberCount,
         totalSpend: event.totalSpend,
         unsettledAmount: event.unsettledAmount,
+        settlementState: event.settlementState,
       }))}
     />
   );

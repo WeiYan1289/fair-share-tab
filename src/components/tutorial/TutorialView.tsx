@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -74,55 +75,80 @@ const ACCESS_MODES = [
 // point here for anyone who wants the fuller explanation.
 export function TutorialView() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const router = useRouter();
+  const embedded = useSearchParams().get("embedded") === "1";
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
       <div className="mx-auto max-w-[720px] px-6 py-10 sm:px-10 sm:py-14">
-        <div className="mb-14 flex items-center justify-between">
-          <Link href="/">
+        <div className="mb-5 flex items-center justify-between sm:mb-6">
+          {embedded ? (
             <Logo size={24} wordmarkClassName="text-base" />
-          </Link>
+          ) : (
+            <Link href="/">
+              <Logo size={24} wordmarkClassName="text-base" />
+            </Link>
+          )}
           <div className="flex items-center gap-3.5">
+            {!embedded && (
+              <Link
+                href="/login"
+                className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
+              >
+                Log in
+              </Link>
+            )}
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {/* Own row, like every other "back to where you were" link in the
+            app (EventDashboard's "← All events", MemberExpenseView's
+            "← Back"), instead of crammed into the logo/controls row above --
+            that's what made this wrap into "← Back / home" on narrow phones. */}
+        <div className="mb-8 sm:mb-14">
+          {embedded ? (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
+            >
+              ← Back
+            </button>
+          ) : (
             <Link
               href="/"
               className="text-[13px] font-bold text-link hover:text-forest dark:text-mint dark:hover:opacity-80"
             >
               ← Back home
             </Link>
-            <Link
-              href="/login"
-              className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
-            >
-              Log in
-            </Link>
-            <ThemeToggle />
-          </div>
+          )}
         </div>
 
         <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
           How it works
         </p>
-        <h1 className="num mb-4 text-[30px] leading-[1.2] text-ink sm:text-[36px] dark:text-dark-text">
+        <h1 className="num mb-3 text-[24px] leading-[1.25] text-ink sm:mb-4 sm:text-[36px] sm:leading-[1.2] dark:text-dark-text">
           Three steps from &ldquo;who paid for this?&rdquo; to everyone settled.
         </h1>
-        <p className="mb-14 max-w-[520px] text-[15px] leading-relaxed text-muted dark:text-dark-muted">
+        <p className="mb-8 max-w-[520px] text-[14px] leading-relaxed text-muted sm:mb-14 sm:text-[15px] dark:text-dark-muted">
           No spreadsheets, no math in a group chat. Here&apos;s the whole flow, and what
           makes it safe to use with people you trust.
         </p>
 
-        <div className="mb-16 flex flex-col gap-10 sm:gap-12">
+        <div className="mb-10 flex flex-col gap-6 sm:mb-16 sm:gap-12">
           {STEPS.map((step) => (
-            <div key={step.label} className="flex gap-5 sm:gap-6">
+            <div key={step.label} className="flex gap-4 sm:gap-6">
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] text-base font-extrabold ${step.tint} ${step.color}`}
               >
                 {step.label}
               </div>
               <div>
-                <p className="mb-1.5 text-[17px] font-bold text-ink dark:text-dark-text">
+                <p className="mb-1 text-[16px] font-bold text-ink sm:mb-1.5 sm:text-[17px] dark:text-dark-text">
                   {step.title}
                 </p>
-                <p className="max-w-[480px] text-[14px] leading-relaxed text-muted dark:text-dark-muted">
+                <p className="max-w-[480px] text-[13px] leading-relaxed text-muted sm:text-[14px] dark:text-dark-muted">
                   {step.body}
                 </p>
               </div>
@@ -130,17 +156,17 @@ export function TutorialView() {
           ))}
         </div>
 
-        <div className="mb-16 border-t border-ink/8 pt-12 dark:border-white/10">
-          <p className="mb-7 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
+        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
+          <p className="mb-4 text-[12px] font-bold tracking-wide text-muted-2 uppercase sm:mb-7">
             Good to know
           </p>
-          <div className="flex flex-col gap-7">
+          <div className="flex flex-col gap-4 sm:gap-7">
             {GOOD_TO_KNOW.map((item) => (
-              <div key={item.title} className="rounded-lg bg-white p-5 sm:p-6 dark:bg-dark-card">
-                <p className="mb-1.5 text-[14.5px] font-bold text-ink dark:text-dark-text">
+              <div key={item.title} className="rounded-lg bg-white p-4 sm:p-6 dark:bg-dark-card">
+                <p className="mb-1 text-[14px] font-bold text-ink sm:mb-1.5 sm:text-[14.5px] dark:text-dark-text">
                   {item.title}
                 </p>
-                <p className="max-w-[540px] text-[13.5px] leading-relaxed text-muted dark:text-dark-muted">
+                <p className="max-w-[540px] text-[13px] leading-relaxed text-muted sm:text-[13.5px] dark:text-dark-muted">
                   {item.body}
                 </p>
               </div>
@@ -148,17 +174,17 @@ export function TutorialView() {
           </div>
         </div>
 
-        <div className="mb-16 border-t border-ink/8 pt-12 dark:border-white/10">
+        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
           <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
             Two ways in
           </p>
-          <p className="mb-7 max-w-[540px] text-[14px] leading-relaxed text-muted dark:text-dark-muted">
+          <p className="mb-4 max-w-[540px] text-[13px] leading-relaxed text-muted sm:mb-7 sm:text-[14px] dark:text-dark-muted">
             An account is entirely optional — a link is still all it takes to visit a group.
             Registering just unlocks a couple of things a link alone can&apos;t.
           </p>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
             {ACCESS_MODES.map((mode) => (
-              <div key={mode.title} className="rounded-lg bg-white p-5 sm:p-6 dark:bg-dark-card">
+              <div key={mode.title} className="rounded-lg bg-white p-4 sm:p-6 dark:bg-dark-card">
                 <span
                   className={`mb-3 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${mode.tint} ${mode.color}`}
                 >
@@ -168,7 +194,7 @@ export function TutorialView() {
                   {mode.items.map((item) => (
                     <li
                       key={item}
-                      className="text-[13.5px] leading-relaxed text-muted dark:text-dark-muted"
+                      className="text-[13px] leading-relaxed text-muted sm:text-[13.5px] dark:text-dark-muted"
                     >
                       {item}
                     </li>
@@ -179,27 +205,31 @@ export function TutorialView() {
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-4 border-t border-ink/8 pt-12 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
-          <div>
-            <p className="mb-1 text-[17px] font-bold text-ink dark:text-dark-text">
-              Ready to split your first bill?
-            </p>
-            <p className="text-[13px] text-muted dark:text-dark-muted">
-              Takes about ten seconds — just a name.
-            </p>
+        {!embedded && (
+          <div className="flex flex-col items-start gap-4 border-t border-ink/8 pt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-12 dark:border-white/10">
+            <div>
+              <p className="mb-1 text-[17px] font-bold text-ink dark:text-dark-text">
+                Ready to split your first bill?
+              </p>
+              <p className="text-[13px] text-muted dark:text-dark-muted">
+                Takes about ten seconds — just a name.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <Link href="/register">
+                <Button variant="secondary">Create an account</Button>
+              </Link>
+              <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
+                Create a group
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2.5">
-            <Link href="/register">
-              <Button variant="secondary">Create an account</Button>
-            </Link>
-            <Button variant="primary" onClick={() => setShowCreateGroup(true)}>
-              Create a group
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
+      {!embedded && showCreateGroup && (
+        <CreateGroupModal onClose={() => setShowCreateGroup(false)} />
+      )}
     </div>
   );
 }

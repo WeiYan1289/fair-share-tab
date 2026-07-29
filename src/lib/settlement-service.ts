@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { computeNetBalances, simplifyDebts, type Transfer } from "@/lib/settlement";
 
@@ -15,14 +16,20 @@ export interface NetBalanceView {
  * a settlement always covers bills from exactly one event, which guarantees
  * a single currency by construction. Only unsettled bills belonging to this
  * event are ever eligible (system-design.md §7).
+ *
+ * Accepts an optional transaction client so the confirm route can run the
+ * preview and the write inside one transaction -- otherwise a bill can be
+ * edited, deleted, or settled by a second request in the gap between this
+ * read and the write that follows it.
  */
 export async function computeSettlementPreview(
   billIds: string[],
   eventId: string,
+  client: Prisma.TransactionClient = prisma,
 ): Promise<{ netBalances: NetBalanceView[]; transfers: Transfer[]; billIds: string[] }> {
   const uniqueBillIds = [...new Set(billIds)];
 
-  const bills = await prisma.bill.findMany({
+  const bills = await client.bill.findMany({
     where: { id: { in: uniqueBillIds }, status: "unsettled", eventId },
     include: { splits: true },
   });
@@ -46,7 +53,7 @@ export async function computeSettlementPreview(
 
   const transfers = simplifyDebts(nets);
 
-  const members = await prisma.member.findMany({
+  const members = await client.member.findMany({
     where: { id: { in: [...nets.keys()] } },
     select: { id: true, name: true },
   });

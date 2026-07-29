@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { formatMoney } from "@/lib/format";
+import { layoutTransferGraph } from "@/lib/settlement/graph-layout";
 import type { SettleMember, Transfer } from "./SettleUpFlow";
 
 interface TransferGraphProps {
@@ -11,230 +12,112 @@ interface TransferGraphProps {
   currency: string;
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-const NODE_SIZE = 56;
-const ROW_HEIGHT = 92;
+const NODE_RADIUS = 20;
+// Past this the graph scrolls in its own box rather than pushing the
+// confirm button off-screen -- SettleUpFlow defaults to the TransferList
+// view well before a graph gets anywhere near needing this.
+const MAX_GRAPH_HEIGHT = 420;
 
 // Screen Spec P6-02/P6-04 -- "the signature moment": debtors on the left,
-// creditors on the right, arrows connecting who pays whom. Node-and-arrow
-// graph on sm+ (desktop mockup), a simpler stacked transfer-card list below
-// that (mobile mockup) -- these aren't just two sizes of the same layout in
-// the designs, they're different shapes, so both are implemented rather
-// than one being a scaled-down version of the other.
+// creditors on the right, arrows connecting who pays whom. Desktop-only --
+// the graph has no mobile shape of its own; TransferList is the mobile
+// (and toggle-selected) view, not a scaled-down version of this one.
+//
+// All positions come from layoutTransferGraph, a pure function of
+// `transfers` -- no DOM measurement, no resize listener, and no two amount
+// pills can ever land on the same spot.
 export function TransferGraph({ transfers, members, currency }: TransferGraphProps) {
-  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const layout = layoutTransferGraph(transfers, { nodeRadius: NODE_RADIUS });
 
-  const debtorIds = useMemo(() => {
-    const seen = new Set<string>();
-    const order: string[] = [];
-    for (const t of transfers) {
-      if (!seen.has(t.fromMemberId)) {
-        seen.add(t.fromMemberId);
-        order.push(t.fromMemberId);
-      }
-    }
-    return order;
-  }, [transfers]);
-
-  const creditorIds = useMemo(() => {
-    const seen = new Set<string>();
-    const order: string[] = [];
-    for (const t of transfers) {
-      if (!seen.has(t.toMemberId)) {
-        seen.add(t.toMemberId);
-        order.push(t.toMemberId);
-      }
-    }
-    return order;
-  }, [transfers]);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [positions, setPositions] = useState<Record<string, Point>>({});
   const [revealed, setRevealed] = useState(false);
-
-  useLayoutEffect(() => {
-    function measure() {
-      const container = containerRef.current;
-      if (!container) return;
-      const containerRect = container.getBoundingClientRect();
-      const next: Record<string, Point> = {};
-      for (const [id, el] of nodeRefs.current) {
-        const rect = el.getBoundingClientRect();
-        next[id] = {
-          x: rect.left - containerRect.left + rect.width / 2,
-          y: rect.top - containerRect.top + rect.height / 2,
-        };
-      }
-      setPositions(next);
-    }
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [debtorIds, creditorIds]);
-
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 30);
     return () => clearTimeout(id);
   }, []);
 
-  const height = Math.max(debtorIds.length, creditorIds.length, 1) * ROW_HEIGHT + 20;
-
   return (
-    <>
-      <div
-        ref={containerRef}
-        className="relative hidden w-full sm:block"
-        style={{ height }}
-      >
-        <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-          <defs>
-            <marker
-              id="settle-arrowhead"
-              markerWidth="9"
-              markerHeight="9"
-              refX="7"
-              refY="4.5"
-              orient="auto"
-            >
-              <path d="M0,0 L9,4.5 L0,9 Z" className="fill-ink/50 dark:fill-white/45" />
-            </marker>
-          </defs>
-          {transfers.map((t, i) => {
-            const from = positions[t.fromMemberId];
-            const to = positions[t.toMemberId];
-            if (!from || !to) return null;
-            const midX = (from.x + to.x) / 2;
-            const controlY = Math.min(from.y, to.y) - 40;
-            return (
+    <div className="flex w-full justify-center overflow-auto" style={{ maxHeight: MAX_GRAPH_HEIGHT }}>
+      <div className="shrink-0" style={{ width: layout.width }}>
+        {/* A row in normal flow, not absolutely positioned over the graph --
+            with only one row of nodes, layoutTransferGraph's topPadding is
+            sized for node/lane spacing, not for a label sitting above it, so
+            overlaying this at y=0 could collide with the first node. */}
+        <div className="mb-2 flex items-center justify-between text-[10.5px] font-extrabold tracking-wide uppercase">
+          <span className="text-coral">Debtors</span>
+          <span className="text-emerald">Creditors</span>
+        </div>
+
+        <div className="relative" style={{ width: layout.width, height: layout.height }}>
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            viewBox={`0 0 ${layout.width} ${layout.height}`}
+          >
+            <defs>
+              <marker id="settle-arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 Z" className="fill-ink/50 dark:fill-white/45" />
+              </marker>
+            </defs>
+            {layout.edges.map((edge, i) => (
               <path
-                key={i}
-                d={`M${from.x},${from.y} Q${midX},${controlY} ${to.x},${to.y}`}
+                key={edge.transferIndex}
+                d={edge.path}
                 fill="none"
                 strokeWidth={2.5}
                 markerEnd="url(#settle-arrowhead)"
                 className="stroke-ink/20 dark:stroke-white/18"
                 style={{
                   opacity: revealed ? 1 : 0,
-                  transition: `opacity 400ms ease-out`,
+                  transition: "opacity 400ms ease-out",
                   transitionDelay: `${i * 150}ms`,
                 }}
               />
-            );
-          })}
-        </svg>
+            ))}
+          </svg>
 
-        {transfers.map((t, i) => {
-          const from = positions[t.fromMemberId];
-          const to = positions[t.toMemberId];
-          if (!from || !to) return null;
-          const midX = (from.x + to.x) / 2;
-          const midY = (from.y + to.y) / 2 - 20;
-          return (
+          {layout.edges.map((edge, i) => (
             <div
-              key={i}
-              className="num absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-ink/10 bg-white px-3.5 py-1.5 text-[15px] text-ink shadow-[0_8px_18px_-8px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-card dark:text-dark-text"
+              key={edge.transferIndex}
+              className="num absolute z-10 rounded-full border border-ink/10 bg-white px-3.5 py-1.5 text-[15px] whitespace-nowrap text-ink shadow-[0_8px_18px_-8px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-card dark:text-dark-text"
               style={{
-                left: midX,
-                top: midY,
+                left: edge.amountX,
+                top: edge.amountY,
+                transform: "translate(-100%, -50%)",
                 opacity: revealed ? 1 : 0,
-                transition: `opacity 400ms ease-out`,
+                transition: "opacity 400ms ease-out",
                 transitionDelay: `${i * 150}ms`,
               }}
             >
-              {formatMoney(t.amount, currency)}
+              {formatMoney(transfers[edge.transferIndex].amount, currency)}
             </div>
-          );
-        })}
-
-        <div className="absolute top-0 left-0 text-[10.5px] font-extrabold tracking-wide text-coral uppercase">
-          Debtors
-        </div>
-        <div className="absolute top-0 right-0 text-[10.5px] font-extrabold tracking-wide text-emerald uppercase">
-          Creditors
-        </div>
-
-        <div className="absolute top-6 left-0 flex flex-col items-center gap-8">
-          {debtorIds.map((id) => (
-            <GraphNode
-              key={id}
-              member={memberById.get(id)}
-              setRef={(el) => {
-                if (el) nodeRefs.current.set(id, el);
-              }}
-            />
           ))}
-        </div>
-        <div className="absolute top-6 right-0 flex flex-col items-center gap-8">
-          {creditorIds.map((id) => (
-            <GraphNode
-              key={id}
-              member={memberById.get(id)}
-              setRef={(el) => {
-                if (el) nodeRefs.current.set(id, el);
-              }}
-            />
-          ))}
-        </div>
-      </div>
 
-      <div className="flex w-full flex-col gap-3 sm:hidden">
-        {transfers.map((t, i) => {
-          const from = memberById.get(t.fromMemberId);
-          const to = memberById.get(t.toMemberId);
-          return (
-            <div key={i} className="rounded-lg border border-ink/8 bg-white p-3.5">
-              <div className="flex items-center justify-between">
-                <TransferEndpoint member={from} />
-                <div className="flex flex-1 flex-col items-center gap-1 px-1">
-                  <span className="num rounded-full border border-ink/10 bg-white px-2.5 py-1 text-[13px] text-ink">
-                    {formatMoney(t.amount, currency)}
-                  </span>
-                  <div className="h-0.5 w-full bg-ink/18" />
-                </div>
-                <TransferEndpoint member={to} />
+          {layout.nodes.map((node) => {
+            const member = memberById.get(node.memberId);
+            if (!member) return null;
+            return (
+              <div
+                key={node.memberId}
+                className="absolute flex flex-col items-center gap-1.5"
+                style={{ left: node.cx, top: node.cy, width: 104, transform: "translate(-50%, -50%)" }}
+              >
+                <InitialsAvatar
+                  name={member.name}
+                  color={member.avatarColor}
+                  size={NODE_RADIUS * 2}
+                  className="text-[19px] shadow-[0_10px_22px_-8px_rgba(19,46,40,0.35)]"
+                />
+                <p
+                  className="w-full truncate text-center text-[13px] font-bold text-ink dark:text-dark-text"
+                  title={member.name}
+                >
+                  {member.name}
+                </p>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </>
-  );
-}
-
-function GraphNode({
-  member,
-  setRef,
-}: {
-  member: SettleMember | undefined;
-  setRef: (el: HTMLDivElement | null) => void;
-}) {
-  if (!member) return null;
-  return (
-    <div ref={setRef} className="flex flex-col items-center gap-1.5" style={{ width: 130 }}>
-      <InitialsAvatar
-        name={member.name}
-        color={member.avatarColor}
-        size={NODE_SIZE}
-        className="text-[19px] shadow-[0_10px_22px_-8px_rgba(19,46,40,0.35)]"
-      />
-      <p className="text-center text-[13px] font-bold text-ink dark:text-dark-text">
-        {member.name}
-      </p>
-    </div>
-  );
-}
-
-function TransferEndpoint({ member }: { member: SettleMember | undefined }) {
-  if (!member) return null;
-  return (
-    <div className="flex w-[66px] flex-col items-center gap-1.5">
-      <InitialsAvatar name={member.name} color={member.avatarColor} size={34} />
-      <p className="text-center text-[10.5px] font-bold text-ink">{member.name}</p>
     </div>
   );
 }

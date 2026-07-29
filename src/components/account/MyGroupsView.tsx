@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
+import { TutorialButton } from "@/components/ui/TutorialButton";
 import { colorForSeed } from "@/lib/constants";
+import { LogOut } from "lucide-react";
 
 interface GroupSummary {
   groupId: string;
@@ -34,15 +36,27 @@ export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
       <div className="mx-auto max-w-[1160px]">
         <div className="mb-8 flex items-center justify-between sm:mb-10">
           <Logo size={26} wordmarkClassName="text-base sm:text-lg" />
-          <div className="flex items-center gap-4">
-            <span className="hidden text-[12.5px] text-muted sm:inline dark:text-dark-muted">{email}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="hidden max-w-[160px] truncate text-[12.5px] text-muted sm:inline dark:text-dark-muted">
+              {email}
+            </span>
             <button
               type="button"
               onClick={handleLogout}
-              className="text-[12.5px] font-bold text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text"
+              aria-label="Log out"
+              title="Log out"
+              className="flex h-7 w-7 items-center justify-center text-muted hover:text-ink sm:hidden dark:text-dark-muted dark:hover:text-dark-text"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden text-[12.5px] font-bold text-muted hover:text-ink sm:inline dark:text-dark-muted dark:hover:text-dark-text"
             >
               Log out
             </button>
+            <TutorialButton />
             <ThemeToggle />
           </div>
         </div>
@@ -87,7 +101,9 @@ export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
         </button>
       )}
 
-      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
+      {showCreateGroup && (
+        <CreateGroupModal onClose={() => setShowCreateGroup(false)} asMember />
+      )}
     </div>
   );
 }
@@ -122,23 +138,32 @@ function GroupCard({ group }: { group: GroupSummary }) {
   const letter = group.name.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <a
-      href={`/api/account/groups/${group.groupId}/enter`}
-      className="block rounded-lg border border-ink/7 bg-white p-5 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
-    >
-      <div className="mb-4 flex items-center gap-3">
-        <div
-          className="flex h-[42px] w-[42px] items-center justify-center rounded-md text-[15px] font-extrabold"
-          style={{ backgroundColor: `${color}1A`, color }}
-        >
-          {letter}
+    <form method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
+      <button
+        type="submit"
+        className="block w-full rounded-lg border border-ink/7 bg-white p-4 text-left shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
+      >
+        {/* Member/event count sits under the name in the same column,
+            instead of its own full-width line below the icon row -- that
+            used to leave the icon's row height as dead space above it. */}
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold sm:h-[42px] sm:w-[42px] sm:text-[15px]"
+            style={{ backgroundColor: `${color}1A`, color }}
+          >
+            {letter}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
+              {group.name}
+            </p>
+            <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
+              {group.memberCount} member{group.memberCount === 1 ? "" : "s"} · {group.eventCount} event
+              {group.eventCount === 1 ? "" : "s"}
+            </p>
+          </div>
         </div>
-        <div className="text-[17px] font-bold text-ink dark:text-dark-text">{group.name}</div>
-      </div>
-      <p className="text-[13px] text-muted dark:text-dark-muted">
-        {group.memberCount} member{group.memberCount === 1 ? "" : "s"} · {group.eventCount} event
-        {group.eventCount === 1 ? "" : "s"}
-      </p>
-    </a>
+      </button>
+    </form>
   );
 }

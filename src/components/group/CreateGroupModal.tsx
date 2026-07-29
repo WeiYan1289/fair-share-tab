@@ -4,16 +4,28 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
 interface CreateGroupModalProps {
   onClose: () => void;
+  /**
+   * Set by callers that already know the caller is a logged-in member
+   * (GroupSwitcher, MyGroupsView) — routes to POST /api/account/groups
+   * instead of the anonymous POST /api/groups, so the new group is
+   * deliberately tied to the account rather than inferred from whatever
+   * fst_user_session cookie the browser happens to be holding. Also skips
+   * the "save this link" banner, which is meaningless once you have an
+   * account to get back in with.
+   */
+  asMember?: boolean;
 }
 
 // Screen Spec P2-01. Opened from the landing page's "Create a group" CTA
-// (also from GroupSwitcher for a logged-in member creating an additional
-// group). Full page reload on success, not a router push: the server just
-// set a fresh session cookie for the new group and the events page needs it.
-export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
+// (anonymous), or from GroupSwitcher/MyGroupsView for a logged-in member
+// creating an additional group (asMember). Full page reload on success, not
+// a router push: the server just set a fresh session cookie for the new
+// group and the events page needs it.
+export function CreateGroupModal({ onClose, asMember = false }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState("");
   const [yourName, setYourName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
@@ -59,7 +71,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
     setCapBlocked(false);
 
     try {
-      const res = await fetch("/api/groups", {
+      const res = await fetch(asMember ? "/api/account/groups" : "/api/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -77,7 +89,9 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
       }
       const data = await res.json();
 
-      window.location.href = `/g/${data.group.id}/events?savelink=${data.shareLink.token}`;
+      window.location.href = asMember
+        ? `/g/${data.group.id}/events`
+        : `/g/${data.group.id}/events?savelink=${data.shareLink.token}`;
     } catch {
       setError("Couldn't create the group — check your connection and try again.");
       setSubmitting(false);
@@ -112,6 +126,7 @@ export function CreateGroupModal({ onClose }: CreateGroupModalProps) {
             }}
             onBlur={() => setNameTouched(true)}
             placeholder="Your name"
+            maxLength={MAX_MEMBER_NAME_LENGTH}
             className={cn(
               "w-full rounded-md border-[1.5px] bg-cream px-3.5 py-3 text-sm text-ink outline-none dark:bg-dark-bg dark:text-dark-text",
               nameMissing

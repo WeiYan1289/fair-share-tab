@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
 import { CreateGroupModal } from "./CreateGroupModal";
 import { ChevronDown, Plus } from "lucide-react";
 
@@ -13,6 +14,8 @@ interface GroupSummary {
 interface GroupSwitcherProps {
   groupId: string;
   groupName: string;
+  /** e.g. "justify-self-center" when used inside GroupHeader's desktop grid. */
+  className?: string;
 }
 
 // Replaces GroupHeader's plain group-name text for a logged-in member
@@ -20,7 +23,7 @@ interface GroupSwitcherProps {
 // group they're in, plus a quick "+ Create new group" — instead of only
 // reachable via the standalone /account/groups page. Not shown for a
 // visitor, who has nothing to switch to (still exactly today's design).
-export function GroupSwitcher({ groupId, groupName }: GroupSwitcherProps) {
+export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [groups, setGroups] = useState<GroupSummary[] | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -51,7 +54,7 @@ export function GroupSwitcher({ groupId, groupName }: GroupSwitcherProps) {
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative min-w-0 justify-self-center">
+    <div ref={containerRef} className={cn("relative min-w-0", className)}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -80,13 +83,14 @@ export function GroupSwitcher({ groupId, groupName }: GroupSwitcherProps) {
                     {group.name}
                   </span>
                 ) : (
-                  <a
-                    key={group.groupId}
-                    href={`/api/account/groups/${group.groupId}/enter`}
-                    className="truncate rounded px-2.5 py-2 text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"
-                  >
-                    {group.name}
-                  </a>
+                  <form key={group.groupId} method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
+                    <button
+                      type="submit"
+                      className="block w-full truncate rounded px-2.5 py-2 text-left text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"
+                    >
+                      {group.name}
+                    </button>
+                  </form>
                 );
               })}
             </div>
@@ -114,7 +118,9 @@ export function GroupSwitcher({ groupId, groupName }: GroupSwitcherProps) {
         </div>
       )}
 
-      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
+      {showCreateGroup && (
+        <CreateGroupModal onClose={() => setShowCreateGroup(false)} asMember />
+      )}
     </div>
   );
 }

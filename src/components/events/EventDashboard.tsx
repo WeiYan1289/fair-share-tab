@@ -59,12 +59,12 @@ interface EventDashboardProps {
 export function EventDashboard({ groupId, groupName, viewerRole, actorType, event }: EventDashboardProps) {
   const router = useRouter();
   const canEdit = viewerRole === "editor";
-  const [showShare, setShowShare] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
+  const [showShare, setShowShare] = useState(false);
   const totalSpend = useCountUp(event.totalSpend);
 
   async function handleRename(memberId: string, name: string) {
@@ -94,6 +94,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
             <button
               type="button"
               onClick={() => setShowShare(true)}
+              title="Copy or send this group's link — the only way back in without an account"
               className="flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-dark-text"
             >
               <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" /> Share
@@ -101,22 +102,22 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
           )}
         </div>
 
-        <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="num text-[28px] text-ink sm:text-[36px] dark:text-dark-text">
+        <div className="mb-7 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="num truncate text-[20px] text-ink sm:text-[36px] dark:text-dark-text">
               {event.name}
             </h1>
             {dateRange && (
-              <p className="mt-1 text-[13px] text-muted dark:text-dark-muted">
+              <p className="mt-1 text-[12px] text-muted sm:text-[13px] dark:text-dark-muted">
                 {dateRange} · {event.members.length} member{event.members.length === 1 ? "" : "s"}
               </p>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-[11.5px] tracking-wide text-muted-2 uppercase dark:text-dark-muted">
+          <div className="shrink-0 text-right">
+            <p className="text-[10.5px] tracking-wide text-muted-2 uppercase sm:text-[11.5px] dark:text-dark-muted">
               Total spend
             </p>
-            <p className="num text-[30px] text-ink sm:text-[38px] dark:text-dark-text">
+            <p className="num text-[20px] text-ink sm:text-[38px] dark:text-dark-text">
               {formatMoney(totalSpend, event.currency)}
             </p>
           </div>
@@ -131,6 +132,8 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
               key={member.id}
               member={member}
               currency={event.currency}
+              groupId={groupId}
+              eventId={event.id}
               canEdit={canEdit}
               onRenamed={handleRename}
               onRequestDeactivate={(id, name) => setDeactivateTarget({ id, name })}
@@ -202,14 +205,6 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
         )}
       </div>
 
-      {showShare && (
-        <ShareDialog
-          groupId={groupId}
-          groupName={groupName}
-          actorType={actorType}
-          onClose={() => setShowShare(false)}
-        />
-      )}
       {showAddMember && (
         <AddMemberModal
           eventId={event.id}
@@ -242,6 +237,14 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
             setDeleteTarget(null);
             router.refresh();
           }}
+        />
+      )}
+      {showShare && (
+        <ShareDialog
+          groupId={groupId}
+          groupName={groupName}
+          actorType={actorType}
+          onClose={() => setShowShare(false)}
         />
       )}
     </div>
@@ -295,45 +298,61 @@ function BillRow({
 }) {
   const settled = bill.status === "settled";
   return (
-    <div className="flex items-center justify-between rounded-md border border-ink/7 bg-white px-4.5 py-3.5 dark:border-white/7 dark:bg-dark-card">
-      <div>
-        <p className="text-[15px] font-bold text-ink dark:text-dark-text">{bill.title}</p>
-        <p className="mt-0.5 text-[12.5px] text-muted-2 dark:text-dark-muted">
-          Paid by {bill.payerName} · split {bill.splitCount} ways
+    <div className="rounded-md border border-ink/7 bg-white px-4 py-3 sm:px-4.5 sm:py-3.5 dark:border-white/7 dark:bg-dark-card">
+      {/* Row 1: title + amount. Row 2: payer/split meta + status + actions.
+          Both rows truncate their own left side and never fight the
+          right-side elements for space -- a long payer name used to wrap
+          and land on top of the amount and action icons. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 flex-1 truncate text-[14px] font-bold text-ink sm:text-[15px] dark:text-dark-text">
+          {bill.title}
         </p>
-      </div>
-      <div className="flex items-center gap-4">
-        <p className="num text-[18px] text-ink dark:text-dark-text">
+        <p className="num shrink-0 text-[16px] text-ink sm:text-[18px] dark:text-dark-text">
           {formatMoney(bill.totalAmount, currency)}
         </p>
-        <span
-          className={
-            settled
-              ? "rounded-full bg-mint-tint px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-emerald dark:bg-mint/16 dark:text-mint"
-              : "rounded-full bg-cream px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-muted dark:bg-dark-bg dark:text-dark-muted"
-          }
-        >
-          {settled ? "Settled" : "Unsettled"}
-        </span>
-        {canEdit && (
-          <div className="flex items-center gap-2.5 text-sm text-muted-2">
-            <Link
-              href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-              title={settled ? "Settled — view only" : "Edit bill"}
-            >
-              {settled ? (
-                <Lock className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <Pencil className="h-4 w-4" aria-hidden="true" />
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        {/* Own line each, rather than one truncating "Paid by X · split N
+            ways" string -- a long payer name used to force the whole line
+            to wrap mid-word. */}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10.5px] leading-tight text-muted-2 sm:text-[12.5px] dark:text-dark-muted">
+            Paid by {bill.payerName}
+          </p>
+          <p className="text-[10.5px] leading-tight text-muted-2 sm:text-[12.5px] dark:text-dark-muted">
+            split {bill.splitCount} ways
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <span
+            className={
+              settled
+                ? "rounded-full bg-mint-tint px-2.5 py-1 text-[10.5px] font-bold whitespace-nowrap text-emerald sm:px-3 sm:text-[11.5px] dark:bg-mint/16 dark:text-mint"
+                : "rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-bold whitespace-nowrap text-muted sm:px-3 sm:text-[11.5px] dark:bg-dark-bg dark:text-dark-muted"
+            }
+          >
+            {settled ? "Settled" : "Unsettled"}
+          </span>
+          {canEdit && (
+            <div className="flex items-center gap-2 text-sm text-muted-2 sm:gap-2.5">
+              <Link
+                href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
+                title={settled ? "Settled — view only" : "Edit bill"}
+              >
+                {settled ? (
+                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                ) : (
+                  <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                )}
+              </Link>
+              {!settled && (
+                <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                </button>
               )}
-            </Link>
-            {!settled && (
-              <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
