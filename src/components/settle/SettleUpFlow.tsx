@@ -239,7 +239,7 @@ export function SettleUpFlow({
         </div>
       </div>
       <div className="mx-auto flex max-w-[900px] flex-col items-center">
-        <h1 className="num mb-1.5 text-center text-[18px] leading-snug text-ink sm:text-[30px] dark:text-dark-text">
+        <h1 className="num mb-1.5 text-center text-[20px] leading-snug text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
         </h1>
         <p className="mb-5 text-center text-[13px] text-muted sm:text-[14.5px] dark:text-dark-muted">

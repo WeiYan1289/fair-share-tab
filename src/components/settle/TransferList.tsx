@@ -25,20 +25,22 @@ export function TransferList({ transfers, members, currency }: TransferListProps
         return (
           <div key={i} className="flex items-center justify-between gap-2 py-3">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
-              {/* Each name gets up to two lines (member names are capped at
+              {/* Only mobile is actually tight on width -- there, each name
+                  gets up to two lines (member names are capped at
                   MAX_MEMBER_NAME_LENGTH, so two short lines almost always
-                  fit) -- only a name that would still need a third line
-                  falls back to an ellipsis, via line-clamp rather than a
-                  single-line truncate. */}
+                  fit; only a name that would still need a third line falls
+                  back to an ellipsis). Desktop has plenty of room, so the
+                  name is a single line there instead of wrapping for no
+                  reason. */}
               <InitialsAvatar name={from?.name ?? ""} color={from?.avatarColor} size={24} className="shrink-0 text-[10px]" />
-              <span className="line-clamp-2 min-w-0 max-w-[64px] text-[11px] leading-tight font-bold text-ink dark:text-dark-text">
+              <span className="line-clamp-2 min-w-0 max-w-[64px] text-[11px] leading-tight font-bold text-ink sm:line-clamp-1 sm:max-w-none sm:text-[13.5px] dark:text-dark-text">
                 {from?.name}
               </span>
               <span className="shrink-0 text-[13px] text-muted-2" aria-hidden="true">
                 →
               </span>
               <InitialsAvatar name={to?.name ?? ""} color={to?.avatarColor} size={24} className="shrink-0 text-[10px]" />
-              <span className="line-clamp-2 min-w-0 max-w-[64px] text-[11px] leading-tight font-bold text-ink dark:text-dark-text">
+              <span className="line-clamp-2 min-w-0 max-w-[64px] text-[11px] leading-tight font-bold text-ink sm:line-clamp-1 sm:max-w-none sm:text-[13.5px] dark:text-dark-text">
                 {to?.name}
               </span>
             </div>
