@@ -57,10 +57,10 @@ export function Landing() {
 
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
           <div className="lg:max-w-[440px] lg:flex-1">
-            <h1 className="num mb-4 text-[34px] leading-[1.15] text-ink sm:text-[42px] dark:text-dark-text">
+            <h1 className="num mb-4 text-[28px] leading-[1.15] text-ink sm:text-[42px] dark:text-dark-text">
               Split trip costs fairly. Settle up in one step.
             </h1>
-            <p className="mb-7 text-[15px] leading-relaxed text-muted dark:text-dark-muted">
+            <p className="mb-7 text-[14px] leading-relaxed text-muted sm:text-[15px] dark:text-dark-muted">
               Log bills as you go — FairShareTab works out who owes who, then shows the
               fewest transfers to close it out.
             </p>

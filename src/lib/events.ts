@@ -14,19 +14,31 @@ export async function listGroupEvents(groupId: string) {
     },
   });
 
-  return events.map((event) => ({
-    id: event.id,
-    name: event.name,
-    currency: event.currency,
-    startDate: event.startDate,
-    endDate: event.endDate,
-    status: event.status,
-    memberCount: event._count.eventMembers,
-    totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
-    unsettledAmount: event.bills
+  return events.map((event) => {
+    const unsettledAmount = event.bills
       .filter((bill) => bill.status === "unsettled")
-      .reduce((sum, bill) => sum + bill.totalAmount, 0),
-  }));
+      .reduce((sum, bill) => sum + bill.totalAmount, 0);
+
+    // Drives the event card's status label (Screen Spec P3-02): an event
+    // with no bills yet is not "settled", it just hasn't started, and the
+    // label text must move with this state so it can never read
+    // "Unsettled" above a value of "Settled".
+    const settlementState: "empty" | "settled" | "unsettled" =
+      event.bills.length === 0 ? "empty" : unsettledAmount === 0 ? "settled" : "unsettled";
+
+    return {
+      id: event.id,
+      name: event.name,
+      currency: event.currency,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      status: event.status,
+      memberCount: event._count.eventMembers,
+      totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
+      unsettledAmount,
+      settlementState,
+    };
+  });
 }
 
 // Shared by the event-detail API route and the event-dashboard Server
