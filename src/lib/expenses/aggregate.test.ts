@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeMemberEventExpense, type ExpenseBill } from "./aggregate";
+import { computeMemberEventBalance, computeMemberEventExpense, type ExpenseBill } from "./aggregate";
 
 const ALICE = "alice";
 const BOB = "bob";
@@ -131,5 +131,60 @@ describe("computeMemberEventExpense", () => {
     const result = computeMemberEventExpense(ALICE, []);
 
     expect(result).toEqual({ share: 0, paid: 0, lines: [] });
+  });
+});
+
+describe("computeMemberEventBalance", () => {
+  it("returns zero net and no transfers when nothing is unsettled", () => {
+    const result = computeMemberEventBalance(ALICE, []);
+    expect(result).toEqual({ net: 0, transfers: [] });
+  });
+
+  it("returns zero net and no transfers for a member whose net is exactly zero", () => {
+    // Alice paid 1000 split evenly 500/500 with Bob and also owes Bob a
+    // separate 500 -- nets to exactly zero for Alice.
+    const bills = [
+      { payerId: ALICE, totalAmount: 1000, splits: [{ memberId: ALICE, shareAmount: 500 }, { memberId: BOB, shareAmount: 500 }] },
+      { payerId: BOB, totalAmount: 500, splits: [{ memberId: ALICE, shareAmount: 500 }] },
+    ];
+    const result = computeMemberEventBalance(ALICE, bills);
+    expect(result).toEqual({ net: 0, transfers: [] });
+  });
+
+  it("computes a simple 1-to-1 debt as a single transfer", () => {
+    const bills = [
+      { payerId: ALICE, totalAmount: 1000, splits: [{ memberId: ALICE, shareAmount: 500 }, { memberId: BOB, shareAmount: 500 }] },
+    ];
+    const result = computeMemberEventBalance(BOB, bills);
+    expect(result.net).toBe(-500);
+    expect(result.transfers).toEqual([{ otherMemberId: ALICE, direction: "pays", amount: 500 }]);
+  });
+
+  it("labels the other side as 'receives' when this member is the creditor", () => {
+    const bills = [
+      { payerId: ALICE, totalAmount: 1000, splits: [{ memberId: ALICE, shareAmount: 500 }, { memberId: BOB, shareAmount: 500 }] },
+    ];
+    const result = computeMemberEventBalance(ALICE, bills);
+    expect(result.net).toBe(500);
+    expect(result.transfers).toEqual([{ otherMemberId: BOB, direction: "receives", amount: 500 }]);
+  });
+
+  it("filters simplified transfers down to only the ones touching this member", () => {
+    // Carol pays for everyone; both Alice and Bob owe Carol. Asking for
+    // Alice's balance must not include the Bob->Carol transfer.
+    const bills = [
+      {
+        payerId: CAROL,
+        totalAmount: 900,
+        splits: [
+          { memberId: ALICE, shareAmount: 300 },
+          { memberId: BOB, shareAmount: 300 },
+          { memberId: CAROL, shareAmount: 300 },
+        ],
+      },
+    ];
+    const result = computeMemberEventBalance(ALICE, bills);
+    expect(result.net).toBe(-300);
+    expect(result.transfers).toEqual([{ otherMemberId: CAROL, direction: "pays", amount: 300 }]);
   });
 });

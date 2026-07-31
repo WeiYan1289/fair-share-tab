@@ -1,7 +1,11 @@
 import { DEFAULT_CURRENCY } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
-import { computeNetBalances, simplifyDebts } from "@/lib/settlement";
-import { computeMemberEventExpense, type MemberBillLine } from "./aggregate";
+import {
+  computeMemberEventBalance,
+  computeMemberEventExpense,
+  type MemberBillLine,
+  type MemberEventBalanceTransfer,
+} from "./aggregate";
 
 export interface MemberExpenseBillLine extends MemberBillLine {
   payerName: string;
@@ -150,31 +154,23 @@ export async function getMemberBalance(memberId: string, groupId: string): Promi
   for (const event of events) {
     if (event.bills.length === 0) continue;
 
-    const nets = computeNetBalances(
+    const { net, transfers } = computeMemberEventBalance(
+      memberId,
       event.bills.map((bill) => ({
         payerId: bill.payerId,
         totalAmount: bill.totalAmount,
         splits: bill.splits.map((split) => ({ memberId: split.memberId, shareAmount: split.shareAmount })),
       })),
     );
-    const net = nets.get(memberId) ?? 0;
     if (net === 0) continue;
 
     const nameById = new Map(event.eventMembers.map(({ member: m }) => [m.id, m.name]));
-    const transfers = simplifyDebts(nets)
-      .filter((t) => t.fromMemberId === memberId || t.toMemberId === memberId)
-      .map((t): MemberBalanceTransfer => {
-        const isPayer = t.fromMemberId === memberId;
-        const otherMemberId = isPayer ? t.toMemberId : t.fromMemberId;
-        return {
-          otherMemberId,
-          otherName: nameById.get(otherMemberId) ?? "",
-          direction: isPayer ? "pays" : "receives",
-          amount: t.amount,
-        };
-      });
+    const namedTransfers: MemberBalanceTransfer[] = transfers.map((t) => ({
+      ...t,
+      otherName: nameById.get(t.otherMemberId) ?? "",
+    }));
 
-    results.push({ id: event.id, name: event.name, currency: event.currency, net, transfers });
+    results.push({ id: event.id, name: event.name, currency: event.currency, net, transfers: namedTransfers });
   }
 
   return { events: results };
