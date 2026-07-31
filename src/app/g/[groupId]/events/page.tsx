@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
 import { listGroupEvents } from "@/lib/events";
+import { listGroupMembers } from "@/lib/members";
 import { prisma } from "@/lib/prisma";
 import { EventsListView } from "@/components/events/EventsListView";
 
@@ -29,7 +30,7 @@ export default async function EventsPage({
   const group = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
   if (!group) redirect("/");
 
-  const events = await listGroupEvents(groupId);
+  const [events, members] = await Promise.all([listGroupEvents(groupId), listGroupMembers(groupId)]);
 
   return (
     <EventsListView
@@ -48,6 +49,7 @@ export default async function EventsPage({
         unsettledAmount: event.unsettledAmount,
         settlementState: event.settlementState,
       }))}
+      members={members}
     />
   );
 }
