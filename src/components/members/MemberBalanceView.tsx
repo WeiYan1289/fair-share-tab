@@ -4,6 +4,7 @@ import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { MemberTabs } from "./MemberTabs";
+import { MemberTransferRow } from "./MemberTransferRow";
 
 interface MemberBalanceTransferView {
   otherMemberId: string;
@@ -114,27 +115,14 @@ function EventBalanceSection({ event, memberName }: { event: MemberBalanceEventV
 
       <div className="mt-4 divide-y divide-ink/8 border-t border-ink/8 dark:divide-white/8 dark:border-white/8">
         {event.transfers.map((t) => (
-          <div key={t.otherMemberId} className="flex items-center justify-between gap-3 py-3">
-            <p className="text-[13.5px] text-ink dark:text-dark-text">
-              {t.direction === "pays" ? (
-                <>
-                  <span className="font-bold">{memberName}</span> pays {t.otherName}
-                </>
-              ) : (
-                <>
-                  <span className="font-bold">{t.otherName}</span> pays {memberName}
-                </>
-              )}
-            </p>
-            <p
-              className={cn(
-                "num text-[14.5px]",
-                t.direction === "pays" ? "text-coral" : "text-emerald dark:text-mint",
-              )}
-            >
-              {formatMoney(t.amount, event.currency)}
-            </p>
-          </div>
+          <MemberTransferRow
+            key={t.otherMemberId}
+            memberName={memberName}
+            otherName={t.otherName}
+            direction={t.direction}
+            amount={t.amount}
+            currency={event.currency}
+          />
         ))}
       </div>
     </div>
