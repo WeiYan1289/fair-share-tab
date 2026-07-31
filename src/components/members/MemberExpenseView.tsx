@@ -38,7 +38,6 @@ interface MemberExpenseViewProps {
   member: { id: string; name: string; avatarColor: string; isActive: boolean };
   currencies: string[];
   events: MemberExpenseEventView[];
-  initialEventId: string | null;
   initialCurrency: string | null;
 }
 
@@ -55,13 +54,12 @@ export function MemberExpenseView({
   member,
   currencies,
   events,
-  initialEventId,
   initialCurrency,
 }: MemberExpenseViewProps) {
   const [selectedCurrency, setSelectedCurrency] = useState(
     initialCurrency && currencies.includes(initialCurrency) ? initialCurrency : (currencies[0] ?? null),
   );
-  const [expandedId, setExpandedId] = useState<string | null>(initialEventId);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const eventsInCurrency = useMemo(
     () => events.filter((e) => e.currency === selectedCurrency),
@@ -76,7 +74,7 @@ export function MemberExpenseView({
     [eventsInCurrency],
   );
 
-  const backHref = initialEventId ? `/g/${groupId}/events/${initialEventId}` : `/g/${groupId}/events`;
+  const backHref = `/g/${groupId}/events`;
 
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
@@ -95,7 +93,7 @@ export function MemberExpenseView({
                 {member.name}&rsquo;s expenses
               </h1>
               <p className="mt-0.5 text-[12.5px] text-muted sm:text-[13px] dark:text-dark-muted">
-                {member.name}&rsquo;s share of every bill they appear on across {groupName}
+                {member.name}&rsquo;s share of every bill across every event in {groupName}
                 {events.length > 0 ? " — including trips that are already settled." : "."}
               </p>
             </div>

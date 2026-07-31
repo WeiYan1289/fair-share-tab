@@ -4,6 +4,7 @@ import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { MemberTabs } from "./MemberTabs";
+import { MemberTransferRow } from "./MemberTransferRow";
 
 interface MemberBalanceTransferView {
   otherMemberId: string;
@@ -26,7 +27,6 @@ interface MemberBalanceViewProps {
   actorType: "member" | "visitor";
   member: { id: string; name: string; avatarColor: string; isActive: boolean };
   events: MemberBalanceEventView[];
-  initialEventId: string | null;
 }
 
 // Screen Spec P4-07, sibling to the Expenses tab (P4-06). Only unsettled
@@ -39,9 +39,8 @@ export function MemberBalanceView({
   actorType,
   member,
   events,
-  initialEventId,
 }: MemberBalanceViewProps) {
-  const backHref = initialEventId ? `/g/${groupId}/events/${initialEventId}` : `/g/${groupId}/events`;
+  const backHref = `/g/${groupId}/events`;
 
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
@@ -60,8 +59,8 @@ export function MemberBalanceView({
                 {member.name}&rsquo;s balance
               </h1>
               <p className="mt-0.5 text-[12.5px] text-muted sm:text-[13px] dark:text-dark-muted">
-                What&rsquo;s still outstanding for {member.name}, event by event. Settled trips
-                don&rsquo;t appear here.
+                What&rsquo;s still outstanding for {member.name} across every event in {groupName}.
+                Settled trips don&rsquo;t appear here.
               </p>
             </div>
           </div>
@@ -116,27 +115,14 @@ function EventBalanceSection({ event, memberName }: { event: MemberBalanceEventV
 
       <div className="mt-4 divide-y divide-ink/8 border-t border-ink/8 dark:divide-white/8 dark:border-white/8">
         {event.transfers.map((t) => (
-          <div key={t.otherMemberId} className="flex items-center justify-between gap-3 py-3">
-            <p className="text-[13.5px] text-ink dark:text-dark-text">
-              {t.direction === "pays" ? (
-                <>
-                  <span className="font-bold">{memberName}</span> pays {t.otherName}
-                </>
-              ) : (
-                <>
-                  <span className="font-bold">{t.otherName}</span> pays {memberName}
-                </>
-              )}
-            </p>
-            <p
-              className={cn(
-                "num text-[14.5px]",
-                t.direction === "pays" ? "text-coral" : "text-emerald dark:text-mint",
-              )}
-            >
-              {formatMoney(t.amount, event.currency)}
-            </p>
-          </div>
+          <MemberTransferRow
+            key={t.otherMemberId}
+            memberName={memberName}
+            otherName={t.otherName}
+            direction={t.direction}
+            amount={t.amount}
+            currency={event.currency}
+          />
         ))}
       </div>
     </div>

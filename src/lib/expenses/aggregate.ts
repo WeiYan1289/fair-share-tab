@@ -1,4 +1,5 @@
-import type { SplitShare } from "@/lib/settlement/types";
+import { computeNetBalances, simplifyDebts } from "@/lib/settlement";
+import type { BillForNetting, SplitShare } from "@/lib/settlement/types";
 
 export interface ExpenseBill {
   billId: string;
@@ -67,4 +68,42 @@ export function computeMemberEventExpense(memberId: string, bills: ExpenseBill[]
   lines.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return { share, paid, lines };
+}
+
+export interface MemberEventBalanceTransfer {
+  otherMemberId: string;
+  direction: "pays" | "receives";
+  amount: number;
+}
+
+export interface MemberEventBalance {
+  net: number;
+  transfers: MemberEventBalanceTransfer[];
+}
+
+/**
+ * Nets and simplifies one event's *unsettled* bills (the caller filters by
+ * status -- this function has no notion of it, same convention as
+ * computeMemberEventExpense), then keeps only the transfers that touch
+ * `memberId`. Shared by getMemberBalance (loops this over every unsettled
+ * event a member is in) and getMemberEventActivity (calls it once, for a
+ * single event) so the two screens can never silently disagree on the math.
+ */
+export function computeMemberEventBalance(memberId: string, unsettledBills: BillForNetting[]): MemberEventBalance {
+  const nets = computeNetBalances(unsettledBills);
+  const net = nets.get(memberId) ?? 0;
+  if (net === 0) return { net: 0, transfers: [] };
+
+  const transfers = simplifyDebts(nets)
+    .filter((t) => t.fromMemberId === memberId || t.toMemberId === memberId)
+    .map((t): MemberEventBalanceTransfer => {
+      const isPayer = t.fromMemberId === memberId;
+      return {
+        otherMemberId: isPayer ? t.toMemberId : t.fromMemberId,
+        direction: isPayer ? "pays" : "receives",
+        amount: t.amount,
+      };
+    });
+
+  return { net, transfers };
 }

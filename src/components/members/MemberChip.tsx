@@ -11,7 +11,7 @@ import { Button, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-ar
 import { MoreVertical, Pencil, Receipt, UserMinus, type LucideIcon } from "lucide-react";
 
 interface ActionMenuItem {
-  id: "expenses" | "rename" | "deactivate" | "reactivate";
+  id: "activity" | "rename" | "deactivate" | "reactivate";
   label: string;
   icon?: LucideIcon;
   danger?: boolean;
@@ -22,14 +22,23 @@ export interface ChipMember {
   name: string;
   avatarColor: string;
   isActive: boolean;
-  balance: number;
+  /** Net balance for one event. Omitted in group-wide contexts (the /events
+   * member list) where there's no single event to net over -- the card
+   * just doesn't show a balance line rather than showing a misleading 0. */
+  balance?: number;
 }
 
 interface MemberChipProps {
   member: ChipMember;
-  currency: string;
+  currency?: string;
   groupId: string;
-  eventId: string;
+  /** Present when rendered from an event dashboard -- shows the balance
+   * line and labels the menu action "View activity" (opens the
+   * single-event screen). Absent when rendered from the group's /events
+   * list -- no balance line, action labeled "View expenses" (opens the
+   * cross-event screen). Both modes share the same menu, rename modal, and
+   * deactivate/reactivate actions -- those aren't event-specific. */
+  eventId?: string;
   canEdit: boolean;
   onRenamed: (id: string, name: string) => void;
   onRequestDeactivate: (id: string, name: string) => void;
@@ -43,9 +52,10 @@ interface MemberChipProps {
 // Previously, tapping the name started a rename and a 600ms press-hold
 // deactivated -- neither gesture had any visible affordance, so nothing on
 // the chip suggested either existed. Both are replaced by one labelled
-// overflow menu (View expenses / Rename / Deactivate), with the menu
-// itself shortened to just "View expenses" for a viewer session, since
-// Rename and Deactivate are already editor-only server-side.
+// overflow menu (View activity or View expenses, depending on whether an
+// event context is present / Rename / Deactivate), with the menu itself
+// shortened to just that view action for a viewer session, since Rename
+// and Deactivate are already editor-only server-side.
 //
 // Renders two layouts sharing the same menu: a compact vertical card in a
 // single horizontally-scrolling row on mobile (members never wrap to a
@@ -64,9 +74,12 @@ export function MemberChip({
   const router = useRouter();
   const [renaming, setRenaming] = useState(false);
   const [reactivating, setReactivating] = useState(false);
-  const balance = useCountUp(member.balance);
+  const balance = useCountUp(member.balance ?? 0);
 
-  const expensesHref = `/g/${groupId}/members/${member.id}/expenses?event=${eventId}`;
+  const activityHref = eventId
+    ? `/g/${groupId}/events/${eventId}/members/${member.id}`
+    : `/g/${groupId}/members/${member.id}/expenses`;
+  const activityLabel = eventId ? "View activity" : "View expenses";
 
   async function handleReactivate() {
     setReactivating(true);
@@ -83,21 +96,21 @@ export function MemberChip({
   }
 
   function handleAction(key: Key) {
-    if (key === "expenses") router.push(expensesHref);
+    if (key === "activity") router.push(activityHref);
     if (key === "rename") setRenaming(true);
     if (key === "deactivate") onRequestDeactivate(member.id, member.name);
   }
 
-  const viewExpenses: ActionMenuItem = { id: "expenses", label: "View expenses", icon: Receipt };
+  const viewActivity: ActionMenuItem = { id: "activity", label: activityLabel, icon: Receipt };
   const menuItems: ActionMenuItem[] = !canEdit
-    ? [viewExpenses]
+    ? [viewActivity]
     : member.isActive
       ? [
-          viewExpenses,
+          viewActivity,
           { id: "rename", label: "Rename", icon: Pencil },
           { id: "deactivate", label: "Deactivate", icon: UserMinus, danger: true },
         ]
-      : [viewExpenses, { id: "reactivate", label: "Reactivate" }];
+      : [viewActivity, { id: "reactivate", label: "Reactivate" }];
 
   function renderActionsMenu(compact: boolean) {
     return (
@@ -106,7 +119,7 @@ export function MemberChip({
           aria-label={`Actions for ${member.name}`}
           className={cn(
             "flex shrink-0 items-center justify-center rounded-md text-muted-2 outline-none hover:bg-ink/6 data-[pressed]:bg-ink/10 dark:hover:bg-white/8",
-            compact ? "h-6 w-6 bg-white/70 dark:bg-dark-card/70" : "h-7 w-7",
+            compact ? "h-6 w-6" : "h-7 w-7",
           )}
         >
           <MoreVertical className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden="true" />
@@ -182,14 +195,16 @@ export function MemberChip({
     );
   }
 
-  const balanceText =
-    member.balance === 0
+  const hasBalance = member.balance !== undefined && currency !== undefined;
+  const balanceText = !hasBalance
+    ? null
+    : member.balance === 0
       ? "Settled up"
-      : `${member.balance > 0 ? "+" : "-"}${formatMoney(Math.abs(balance), currency)}`;
+      : `${member.balance! > 0 ? "+" : "-"}${formatMoney(Math.abs(balance), currency!)}`;
   const balanceColor = cn(
-    member.balance > 0 && "text-emerald dark:text-mint",
-    member.balance < 0 && "text-coral",
-    member.balance === 0 && "text-muted dark:text-dark-muted",
+    hasBalance && member.balance! > 0 && "text-emerald dark:text-mint",
+    hasBalance && member.balance! < 0 && "text-coral",
+    hasBalance && member.balance === 0 && "text-muted dark:text-dark-muted",
   );
 
   return (
@@ -203,7 +218,7 @@ export function MemberChip({
         <p className="max-w-[74px] truncate text-[10.5px] font-semibold text-ink dark:text-dark-text">
           {member.name}
         </p>
-        <p className={cn("num text-[12px]", balanceColor)}>{balanceText}</p>
+        {balanceText && <p className={cn("num text-[12px]", balanceColor)}>{balanceText}</p>}
       </div>
 
       {/* Desktop: wide horizontal chip, wraps */}
@@ -211,7 +226,7 @@ export function MemberChip({
         <InitialsAvatar name={member.name} color={member.avatarColor} size={38} />
         <div className="flex-1">
           <p className="text-[13.5px] font-bold text-ink dark:text-dark-text">{member.name}</p>
-          <p className={cn("num text-[15px]", balanceColor)}>{balanceText}</p>
+          {balanceText && <p className={cn("num text-[15px]", balanceColor)}>{balanceText}</p>}
         </div>
         {actionsMenu}
       </div>

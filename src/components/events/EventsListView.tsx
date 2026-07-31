@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GroupHeader } from "@/components/group/GroupHeader";
 import { ShareDialog } from "@/components/group/ShareDialog";
+import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmModal";
+import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
 import { colorForSeed } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
 import { CreateEventModal } from "./CreateEventModal";
@@ -28,6 +30,7 @@ interface EventsListViewProps {
   actorType: "member" | "visitor";
   saveLinkToken: string | null;
   events: EventSummary[];
+  members: ChipMember[];
 }
 
 // Screen Spec P3-02 (populated) / P3-03 (empty state).
@@ -38,11 +41,22 @@ export function EventsListView({
   actorType,
   saveLinkToken,
   events,
+  members,
 }: EventsListViewProps) {
   const router = useRouter();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const canEdit = viewerRole === "editor";
+
+  async function handleRename(memberId: string, name: string) {
+    await fetch(`/api/members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    router.refresh();
+  }
 
   // The token arrives as a one-time query param from the /g/{token} redirect
   // (CLAUDE.md rule 8: never let it sit persistently in the address bar) —
@@ -79,6 +93,27 @@ export function EventsListView({
               </button>
             )}
           </div>
+        )}
+
+        {members.length > 0 && (
+          <>
+            <p className="mb-3 text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
+              Members
+            </p>
+            <div className="mb-6 flex gap-3 overflow-x-auto pb-1 sm:mb-8 sm:flex-wrap sm:overflow-visible sm:pb-0">
+              {members.map((member) => (
+                <MemberChip
+                  key={member.id}
+                  member={member}
+                  groupId={groupId}
+                  canEdit={canEdit}
+                  onRenamed={handleRename}
+                  onRequestDeactivate={(id, name) => setDeactivateTarget({ id, name })}
+                  onReactivated={() => router.refresh()}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         {events.length === 0 ? (
@@ -127,6 +162,17 @@ export function EventsListView({
 
       {showCreateEvent && (
         <CreateEventModal groupId={groupId} onClose={() => setShowCreateEvent(false)} />
+      )}
+      {deactivateTarget && (
+        <DeactivateConfirmModal
+          memberId={deactivateTarget.id}
+          memberName={deactivateTarget.name}
+          onClose={() => setDeactivateTarget(null)}
+          onDeactivated={() => {
+            setDeactivateTarget(null);
+            router.refresh();
+          }}
+        />
       )}
       {showShare && (
         <ShareDialog

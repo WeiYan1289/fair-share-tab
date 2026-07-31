@@ -8,13 +8,10 @@ import { MemberBalanceView } from "@/components/members/MemberBalanceView";
 // role requirement -- viewers see this too.
 export default async function MemberBalancePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ groupId: string; memberId: string }>;
-  searchParams: Promise<{ event?: string }>;
 }) {
   const { groupId, memberId } = await params;
-  const { event } = await searchParams;
 
   let session;
   try {
@@ -43,7 +40,6 @@ export default async function MemberBalancePage({
       actorType={session.actorType}
       member={memberRow}
       events={balance.events}
-      initialEventId={event ?? null}
     />
   );
 }
