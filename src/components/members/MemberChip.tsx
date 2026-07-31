@@ -119,7 +119,7 @@ export function MemberChip({
           aria-label={`Actions for ${member.name}`}
           className={cn(
             "flex shrink-0 items-center justify-center rounded-md text-muted-2 outline-none hover:bg-ink/6 data-[pressed]:bg-ink/10 dark:hover:bg-white/8",
-            compact ? "h-6 w-6 bg-white/70 dark:bg-dark-card/70" : "h-7 w-7",
+            compact ? "h-6 w-6" : "h-7 w-7",
           )}
         >
           <MoreVertical className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden="true" />
