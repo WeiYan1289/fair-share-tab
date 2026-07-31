@@ -26,7 +26,6 @@ interface MemberBalanceViewProps {
   actorType: "member" | "visitor";
   member: { id: string; name: string; avatarColor: string; isActive: boolean };
   events: MemberBalanceEventView[];
-  initialEventId: string | null;
 }
 
 // Screen Spec P4-07, sibling to the Expenses tab (P4-06). Only unsettled
@@ -39,9 +38,8 @@ export function MemberBalanceView({
   actorType,
   member,
   events,
-  initialEventId,
 }: MemberBalanceViewProps) {
-  const backHref = initialEventId ? `/g/${groupId}/events/${initialEventId}` : `/g/${groupId}/events`;
+  const backHref = `/g/${groupId}/events`;
 
   return (
     <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
@@ -60,8 +58,8 @@ export function MemberBalanceView({
                 {member.name}&rsquo;s balance
               </h1>
               <p className="mt-0.5 text-[12.5px] text-muted sm:text-[13px] dark:text-dark-muted">
-                What&rsquo;s still outstanding for {member.name}, event by event. Settled trips
-                don&rsquo;t appear here.
+                What&rsquo;s still outstanding for {member.name} across every event in {groupName}.
+                Settled trips don&rsquo;t appear here.
               </p>
             </div>
           </div>

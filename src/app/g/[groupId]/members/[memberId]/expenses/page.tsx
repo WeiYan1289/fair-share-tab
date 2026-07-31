@@ -11,10 +11,10 @@ export default async function MemberExpensesPage({
   searchParams,
 }: {
   params: Promise<{ groupId: string; memberId: string }>;
-  searchParams: Promise<{ event?: string; currency?: string }>;
+  searchParams: Promise<{ currency?: string }>;
 }) {
   const { groupId, memberId } = await params;
-  const { event, currency } = await searchParams;
+  const { currency } = await searchParams;
 
   let session;
   try {
@@ -45,7 +45,6 @@ export default async function MemberExpensesPage({
         endDate: e.endDate?.toISOString() ?? null,
         lines: e.lines.map((line) => ({ ...line, createdAt: line.createdAt.toISOString() })),
       }))}
-      initialEventId={event ?? null}
       initialCurrency={currency ?? null}
     />
   );
