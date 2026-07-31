@@ -175,3 +175,67 @@ export async function getMemberBalance(memberId: string, groupId: string): Promi
 
   return { events: results };
 }
+
+export interface MemberEventActivity {
+  member: { id: string; name: string; avatarColor: string; isActive: boolean };
+  event: { id: string; name: string; currency: string };
+  share: number;
+  paid: number;
+  net: number;
+  lines: MemberExpenseBillLine[];
+  transfers: (MemberEventBalanceTransfer & { otherName: string })[];
+}
+
+/**
+ * Everything about one member's involvement in exactly one event -- their
+ * bills, their share/paid totals (all bills, settled and unsettled, same
+ * spend-history semantics as computeMemberEventExpense), and their net
+ * balance and settlement transfers for this event only (unsettled bills
+ * only, same as getMemberBalance). This is the destination for the event
+ * dashboard's member chip, deliberately scoped to one event so it never
+ * shows anything from the member's other trips -- that's what
+ * getMemberExpenses/getMemberBalance are for.
+ */
+export async function getMemberEventActivity(
+  memberId: string,
+  eventId: string,
+  groupId: string,
+): Promise<MemberEventActivity | null> {
+  const member = await loadMember(memberId, groupId);
+  if (!member) return null;
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      bills: { include: { splits: true, payer: { select: { name: true } } } },
+      eventMembers: { include: { member: { select: { id: true, name: true } } } },
+    },
+  });
+  if (!event || event.groupId !== groupId) return null;
+
+  const toExpenseBill = (bill: (typeof event.bills)[number]) => ({
+    billId: bill.id,
+    title: bill.title,
+    totalAmount: bill.totalAmount,
+    payerId: bill.payerId,
+    createdAt: bill.createdAt,
+    splits: bill.splits.map((s) => ({ memberId: s.memberId, shareAmount: s.shareAmount })),
+  });
+
+  const expense = computeMemberEventExpense(memberId, event.bills.map(toExpenseBill));
+  const payerNameByBillId = new Map(event.bills.map((b) => [b.id, b.payer.name]));
+
+  const unsettledBills = event.bills.filter((b) => b.status === "unsettled").map(toExpenseBill);
+  const { net, transfers } = computeMemberEventBalance(memberId, unsettledBills);
+  const nameById = new Map(event.eventMembers.map(({ member: m }) => [m.id, m.name]));
+
+  return {
+    member,
+    event: { id: event.id, name: event.name, currency: event.currency },
+    share: expense.share,
+    paid: expense.paid,
+    net,
+    lines: expense.lines.map((line) => ({ ...line, payerName: payerNameByBillId.get(line.billId) ?? "" })),
+    transfers: transfers.map((t) => ({ ...t, otherName: nameById.get(t.otherMemberId) ?? "" })),
+  };
+}
