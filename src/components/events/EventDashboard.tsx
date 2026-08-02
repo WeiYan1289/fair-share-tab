@@ -207,7 +207,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
 
       {showAddMember && (
         <AddMemberModal
-          eventId={event.id}
+          scope={{ type: "event", eventId: event.id }}
           onClose={() => setShowAddMember(false)}
           onAdded={() => {
             setShowAddMember(false);

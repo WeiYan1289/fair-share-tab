@@ -53,7 +53,7 @@ How a group comes to exist and how someone gets into it via a share link.
 - **Data read:** None — blank form
 - **Actions → writes:** Create group → writes a new Group{name} and its first Member{creatorName}, plus an editor share link. Cancel → discards, no write.
 - **States:** Default only
-- **Notes:** See P1-01 for the actual mockup; not duplicated here.
+- **Notes:** See P1-01 for the actual mockup; not duplicated here. Also shown: a one-line reminder of what "owned" means for this group — path-specific copy (asMember vs. anonymous), see the create-group modal in the app for exact wording.
 
 ### P2-02 — Share dialog
 - **Route:** Modal (desktop) / bottom sheet (mobile) over /g/:groupId, no dedicated path
@@ -62,7 +62,7 @@ How a group comes to exist and how someone gets into it via a share link.
 - **Data read:** Group.shareLink, Group.linkPermission (edit | view)
 - **Actions → writes:** Copy link → copies Group.shareLink, shows a transient Copied state. Toggle Can edit / View only → writes Group.linkPermission. Regenerate link → opens P2-03. Share via… (mobile) → native share sheet.
 - **States:** Default / copied-confirmation (~2s, transient)
-- **Notes:** No password or account — the link itself is the credential. The permissions warning stays visible as body copy, never a tooltip. ↳ old link stops resolving immediately — anyone still on it lands on the Invalid link screen (6.5) until you reshare the new one.
+- **Notes:** No password or account — the link itself is the credential. The permissions warning stays visible as body copy, never a tooltip. ↳ old link stops resolving immediately — anyone still on it lands on the Invalid link screen (6.5) until you reshare the new one. A visitor only ever sees Regenerate for a link role that doesn't exist yet (lazy creation, not destructive); once a link exists, a visitor sees either an "Own & regenerate" link to /register (only the group's own creator, on the device they created it from) or nothing. A registered member always sees Regenerate on both links — the group they're a member of always has an owner.
 
 ### P2-03 — Regenerate link — confirm
 - **Route:** Confirmation dialog over P2-02, no dedicated path
@@ -71,6 +71,14 @@ How a group comes to exist and how someone gets into it via a share link.
 - **Actions → writes:** Regenerate link → invalidates Group.shareLink and issues a new token.
 - **States:** Single state
 - **Notes:** Old link stops resolving immediately, no grace period — anyone still on it lands on P2-05.
+
+### P2-04 — Exit group — confirm
+- **Route:** Confirmation dialog over any in-group screen, no dedicated path
+- **Entered from:** the "Exit group" control in the header (visitor sessions only — the member-session equivalent slot is "Log out").
+- **Data read:** None
+- **Actions → writes:** Exit group → clears the group-context session cookie only. Cancel → closes, no write.
+- **States:** Single state
+- **Notes:** Deliberately blunt copy — exiting is unrecoverable from the app's side, since the token was stripped from the address bar on arrival (rule 8). Redirects to "/" on confirm, which is the landing page once the session is gone.
 
 ### P2-05 — Invalid / revoked link
 - **Route:** Shown for any /g/:token that no longer resolves to a group
@@ -88,17 +96,17 @@ Once inside a group: the events list and creating an event.
 - **Entered from:** opening a share link (direct or pasted at P1-01), or creating a new group (P2-01).
 - **Exits to:** P4-01 Event dashboard on selecting an event.
 - **Data read:** Group.events[] (name, member count, total spent, unsettled amount)
-- **Actions → writes:** Select an event card → opens its dashboard. + Create event → opens P3-04.
+- **Actions → writes:** Select an event card → opens its dashboard. + Create event → opens P3-04. + Add member (editor only) → creates a new group Member with no event attachment (does not open P4-04).
 - **States:** Populated (this) / empty (P3-03)
-- **Notes:** —
+- **Notes:** Owner badge ("Owned by \<name\>") shown under the group name/switcher whenever the group has a registered owner; nothing shown for an unowned group.
 
 ### P3-03 — Events list — empty state
 - **Route:** /g/:groupId/events, zero events
 - **Entered from:** Same entry points as P3-02.
 - **Data read:** Group.events.length === 0
-- **Actions → writes:** + Create your first event → opens P3-04.
+- **Actions → writes:** + Create your first event → opens P3-04. + Add member (editor only) → creates a new group Member with no event attachment (does not open P4-04).
 - **States:** This is the empty-state variant of P3-02
-- **Notes:** —
+- **Notes:** Owner badge ("Owned by \<name\>") shown under the group name/switcher whenever the group has a registered owner; nothing shown for an unowned group.
 
 ### P3-04 — Create event — modal
 - **Route:** Modal, no dedicated path — opened from the events list (P3-02) + Create event button

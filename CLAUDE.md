@@ -97,6 +97,14 @@ the address bar. Validate `revoked_at` on every request, not just at exchange.
 - Wrap multi-row writes (bill + splits, settlement + transfers + bill status) in a
   transaction.
 - Reference screens by their Screen Spec ID in commits and comments.
+- **Vitest covers pure/isolable logic only** — crypto/signing helpers, Zod schemas,
+  the settlement engine, and small decision predicates (e.g. `src/lib/auth/
+  share-link-access.ts`). There is no route-handler or component test harness.
+  A function that must touch Prisma to be meaningful (e.g. `getGroupOwner` in
+  `src/lib/account.ts`) takes its client as an injectable parameter, defaulting to
+  the real `prisma` import, so a test can pass a minimal fake instead — the same
+  pattern `claimVisitorGroup` (`src/lib/auth/claim.ts`) established. Route wiring and
+  UI are verified by hand against a running dev server, not with a new test style.
 
 ## Build order
 

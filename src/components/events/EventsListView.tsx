@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GroupHeader } from "@/components/group/GroupHeader";
 import { ShareDialog } from "@/components/group/ShareDialog";
+import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmModal";
 import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
 import { colorForSeed } from "@/lib/constants";
@@ -47,6 +48,7 @@ export function EventsListView({
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showAddMember, setShowAddMember] = useState(false);
   const canEdit = viewerRole === "editor";
 
   async function handleRename(memberId: string, name: string) {
@@ -112,6 +114,26 @@ export function EventsListView({
                   onReactivated={() => router.refresh()}
                 />
               ))}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddMember(true)}
+                  aria-label="Add member"
+                  className="flex min-w-[64px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-ink/18 bg-app-bg px-3 py-2.5 text-muted sm:hidden dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  <span className="text-[9.5px] font-bold">Add</span>
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddMember(true)}
+                  className="hidden min-w-[150px] items-center gap-2 rounded-md border border-dashed border-ink/18 bg-app-bg px-4.5 py-3 text-[13px] font-bold text-muted sm:flex dark:border-white/18 dark:bg-dark-card dark:text-dark-muted"
+                >
+                  + Add member
+                </button>
+              )}
             </div>
           </>
         )}
@@ -180,6 +202,16 @@ export function EventsListView({
           groupName={groupName}
           actorType={actorType}
           onClose={() => setShowShare(false)}
+        />
+      )}
+      {showAddMember && (
+        <AddMemberModal
+          scope={{ type: "group", groupId }}
+          onClose={() => setShowAddMember(false)}
+          onAdded={() => {
+            setShowAddMember(false);
+            router.refresh();
+          }}
         />
       )}
     </div>

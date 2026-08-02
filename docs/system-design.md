@@ -92,6 +92,26 @@ optional — the anonymous flow is unaffected either way (data-model.md §9).
 3. Every subsequent request within that group reads the same group-context cookie as
    the anonymous flow does; the revocation check just branches on `kind` (§3.3).
 
+**Landing page ("/"):** a logged-in user (`fst_user_session` present) is redirected to
+`/account/groups` regardless of whether a group-context session is also present — the
+account is the durable identity, and a held group session survives the redirect
+untouched. Otherwise, a valid `fst_session` redirects straight to that group's events
+list. Only someone holding neither, or an invalid/revoked one, sees the marketing
+landing page.
+
+**`/login` and `/register`** apply the same "don't show a page that has nothing to
+offer someone in this state" logic, but not identically:
+
+- `/login` redirects on either signal, same precedence as `/` — logged in wins, then a
+  valid group session, then the form renders.
+- `/register` redirects only when logged in. A valid group session is deliberately
+  **not** redirected away here — `ShareDialog`'s claim nudge (§3.3) and
+  `CreateGroupModal`'s guest-cap message both link to `/register` precisely while the
+  visitor holds a valid group session, since registering *is* how a guest claims the
+  group they're standing in. Gating `/register` on a group session the same way `/`
+  does would send that visitor straight back into the group before they ever saw the
+  form.
+
 ### 3.3 Non-negotiable rules
 
 - Generate tokens with a CSPRNG, ≥128 bits, base62 (~22 chars). Never sequential IDs.
@@ -99,7 +119,10 @@ optional — the anonymous flow is unaffected either way (data-model.md §9).
   screenshots, referrer headers, and shared screens.
 - Send `X-Robots-Tag: noindex` on all group routes.
 - Support **regenerate**: set `revoked_at` on the current link, issue a new row. The
-  old link stops working immediately.
+  old link stops working immediately. **Revoking an existing link is a
+  registered-member action only** — an anonymous editor-link holder must never be able
+  to lock a registered owner out of their own group. Creating a link for a role that
+  currently has none is not destructive and stays open to any editor.
 - Rate-limit token lookups (e.g. 10/min/IP) to blunt brute force.
 - `viewer` role must be enforced **server-side** on every mutating endpoint. Hiding
   buttons in the UI is not access control.
@@ -208,6 +231,7 @@ Every route below is server-side and performs the §3 access check first.
 |---|---|---|
 | `POST` | `/api/groups` | Create a group. Body: `{ name, creatorName }`. Creates the group, its first member (`creatorName`), and an `editor` share link in one transaction. Returns the group and link. |
 | `GET` | `/g/{token}` | Validate token → set session cookie → redirect to the events list. Invalid/revoked → error screen. |
+| `POST` | `/api/session/exit` | Clears the group-context session cookie. Used by a visitor's "Exit group" control; requires no valid session, since it must work from a revoked one too. |
 
 `creatorName` is **required** — it's the name that appears on the group's first
 bills and balances, same as any other member. If the caller is authenticated
@@ -221,7 +245,7 @@ one-group cap (§3.3) is enforced instead.
 |---|---|---|
 | `POST` | `/api/auth/register` | Body `{ email, password }`. Creates a `user`. If the request carries a valid `fst_visitor_created_group` cookie, claims that group into the new account in the same transaction (data-model.md §9). Sets `fst_user_session`. |
 | `POST` | `/api/auth/login` | Body `{ email, password }`. Sets `fst_user_session`. Generic error on bad credentials (§3.3). |
-| `POST` | `/api/auth/logout` | Clears `fst_user_session`. |
+| `POST` | `/api/auth/logout` | Clears `fst_user_session`. Also clears `fst_session` if it's currently a `kind: "member"` session (that kind only ever means "acting in this group as this account," so it has no meaning post-logout) — but never a `kind: "link"` session, which is an anonymous capability unrelated to any account. |
 | `GET` | `/api/auth/me` | Returns the current user (or 401), for client-side auth-state checks. |
 | `GET` | `/api/account/groups` | Lists every group with a `group_membership` for the logged-in user. Requires `fst_user_session`. |
 | `POST` | `/api/account/groups/{groupId}/enter` | Mints a `{ kind: "member" }` group-context session cookie from the caller's `group_membership`, redirects to `/g/{groupId}/events`. POST (not GET, since it's state-changing) submitted via a `<form>` so it's still a normal full-page navigation, not a client-side fetch. |
@@ -231,7 +255,8 @@ one-group cap (§3.3) is enforced instead.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/groups/{id}/links` | List active links (editor + viewer). |
-| `POST` | `/api/groups/{id}/links/regenerate` | Revoke current link of a role, issue a new one. |
+| `POST` | `/api/groups/{id}/links/regenerate` | Revoke current link of a role, issue a new one. **Revoking an existing link requires a registered-member session** — an anonymous editor-link holder may only create a link for a role that has none yet, never replace one. |
+| `GET` | `/api/groups/{id}/context` | Whether the group has an owner, the owner's member name if so, and whether the caller specifically can claim it (session-persistence-and-ownership design). |
 
 ### Members
 
@@ -376,6 +401,9 @@ Client-side validation is UX. Server-side validation is correctness. Do both.
   shared it must resend it (or an editor can regenerate/reshare from the Share dialog).
 - **Revoked link mid-session** — session cookies must be validated against
   `revoked_at` on each request, not just at exchange time.
+- **A visitor wants to leave a group** — `fst_session` is otherwise only ever
+  replaced, never cleared; `POST /api/session/exit` gives a visitor an explicit way
+  out, back to the landing page.
 - **Concurrent edits** — last write wins is acceptable in v1; wrap each mutation in a
   transaction so splits and bills never diverge.
 

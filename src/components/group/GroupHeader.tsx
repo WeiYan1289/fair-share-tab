@@ -5,6 +5,8 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
 import { GroupSwitcher } from "./GroupSwitcher";
 import { MemberAccountControls } from "./MemberAccountControls";
+import { ExitGroupButton } from "./ExitGroupButton";
+import { GroupOwnerBadge } from "./GroupOwnerBadge";
 
 interface GroupHeaderProps {
   groupId: string;
@@ -42,9 +44,12 @@ export function GroupHeader({ groupId, groupName, actorType }: GroupHeaderProps)
               {groupName}
             </span>
           )}
+          <div className="px-1">
+            <GroupOwnerBadge groupId={groupId} />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {actorType === "member" && <MemberAccountControls />}
+          {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
           <TutorialButton />
           <ThemeToggle />
         </div>
@@ -53,15 +58,18 @@ export function GroupHeader({ groupId, groupName, actorType }: GroupHeaderProps)
       {/* Desktop: logo + centered switcher/name + full controls */}
       <div className="mb-[26px] hidden grid-cols-3 items-center sm:grid">
         <Logo size={26} wordmarkClassName="text-[17px]" className="justify-self-start" />
-        {actorType === "member" ? (
-          <GroupSwitcher groupId={groupId} groupName={groupName} className="justify-self-center" />
-        ) : (
-          <span className="min-w-0 truncate px-2 text-center text-[13.5px] font-bold text-ink dark:text-dark-text">
-            {groupName}
-          </span>
-        )}
+        <div className="min-w-0 justify-self-center text-center">
+          {actorType === "member" ? (
+            <GroupSwitcher groupId={groupId} groupName={groupName} />
+          ) : (
+            <span className="block min-w-0 truncate px-2 text-center text-[13.5px] font-bold text-ink dark:text-dark-text">
+              {groupName}
+            </span>
+          )}
+          <GroupOwnerBadge groupId={groupId} />
+        </div>
         <div className="flex items-center justify-self-end gap-3">
-          {actorType === "member" && <MemberAccountControls />}
+          {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
           <TutorialButton />
           <ThemeToggle />
         </div>

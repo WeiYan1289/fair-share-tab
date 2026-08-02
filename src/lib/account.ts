@@ -36,3 +36,57 @@ export async function getSuggestedMemberName(userId: string): Promise<string | n
   });
   return member?.name ?? null;
 }
+
+// Minimal shape of the two Prisma delegates getGroupOwner calls — narrower
+// than PrismaClient so a fake object can stand in for it in tests, mirroring
+// claim.ts's Prisma.TransactionClient parameter. The real `prisma` import
+// satisfies this structurally; cast below because Prisma's generated
+// findFirst overloads are far richer than this minimal shape and TS's
+// bivariant method-parameter check doesn't always paper over that.
+export interface GroupOwnerClient {
+  groupMembership: {
+    findFirst(args: {
+      where: { groupId: string; role: "editor" };
+      orderBy: { createdAt: "asc" };
+      select: { userId: true };
+    }): Promise<{ userId: string } | null>;
+  };
+  member: {
+    findFirst(args: {
+      where: { groupId: string; userId: string };
+      select: { name: true };
+    }): Promise<{ name: string } | null>;
+  };
+}
+
+export interface GroupOwner {
+  userId: string;
+  memberName: string | null;
+}
+
+// The owner-badge / canClaim query (session-persistence-and-ownership
+// design §1/§5): a group is "owned" exactly when a GroupMembership exists
+// for it. The earliest editor membership is authoritative — claimVisitorGroup
+// and POST /api/account/groups both only ever create one editor membership
+// per group today, but "earliest" keeps this correct even if that changes.
+// The member row lookup can come back empty (defensively typed, not
+// expected in practice — every path that creates a GroupMembership also
+// sets that same user's member.userId in the same transaction).
+export async function getGroupOwner(
+  groupId: string,
+  client: GroupOwnerClient = prisma as unknown as GroupOwnerClient,
+): Promise<GroupOwner | null> {
+  const membership = await client.groupMembership.findFirst({
+    where: { groupId, role: "editor" },
+    orderBy: { createdAt: "asc" },
+    select: { userId: true },
+  });
+  if (!membership) return null;
+
+  const member = await client.member.findFirst({
+    where: { groupId, userId: membership.userId },
+    select: { name: true },
+  });
+
+  return { userId: membership.userId, memberName: member?.name ?? null };
+}

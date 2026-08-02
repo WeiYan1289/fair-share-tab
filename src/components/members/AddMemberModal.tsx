@@ -13,16 +13,22 @@ interface NewMember {
   balance: number;
 }
 
+type AddMemberScope = { type: "event"; eventId: string } | { type: "group"; groupId: string };
+
 interface AddMemberModalProps {
-  eventId: string;
+  scope: AddMemberScope;
   onClose: () => void;
   onAdded: (member: NewMember) => void;
 }
 
-// Screen Spec P4-04, add-member state. Writes a brand-new Member and
-// attaches them to this event (POST /api/events/{id}/members) -- members
-// are never picked from an existing pool here, only created.
-export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProps) {
+// Screen Spec P4-04, add-member state (event scope) / P3-02 (group scope,
+// session-persistence-and-ownership design §6). Writes a brand-new Member
+// and, for event scope only, attaches them to that event in the same
+// request (POST /api/events/{id}/members) -- members are never picked from
+// an existing pool here, only created. Group scope posts to
+// POST /api/groups/{id}/members instead, which creates the member with no
+// event attachment at all.
+export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,8 +41,13 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
     setSubmitting(true);
     setError(null);
 
+    const endpoint =
+      scope.type === "event"
+        ? `/api/events/${scope.eventId}/members`
+        : `/api/groups/${scope.groupId}/members`;
+
     try {
-      const res = await fetch(`/api/events/${eventId}/members`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), email: email.trim() || undefined }),
@@ -83,6 +94,12 @@ export function AddMemberModal({ eventId, onClose, onAdded }: AddMemberModalProp
             className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>
+
+        {scope.type === "group" && (
+          <p className="mb-5 text-[12px] leading-relaxed text-muted dark:text-dark-muted">
+            They&apos;ll join the group. Add them to a trip to include them in its bills.
+          </p>
+        )}
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}
 
