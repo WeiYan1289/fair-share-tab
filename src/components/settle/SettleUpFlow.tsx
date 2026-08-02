@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ExitGroupButton } from "@/components/group/ExitGroupButton";
 import { MemberAccountControls } from "@/components/group/MemberAccountControls";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
@@ -140,7 +141,7 @@ export function SettleUpFlow({
               ← {eventName}
             </Link>
             <div className="flex items-center gap-3">
-              {actorType === "member" && <MemberAccountControls />}
+              {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
               <TutorialButton />
               <ThemeToggle />
             </div>
@@ -233,7 +234,7 @@ export function SettleUpFlow({
           ← Back
         </button>
         <div className="flex items-center gap-3">
-          {actorType === "member" && <MemberAccountControls />}
+          {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
           <TutorialButton />
           <ThemeToggle />
         </div>

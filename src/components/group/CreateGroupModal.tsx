@@ -146,6 +146,18 @@ export function CreateGroupModal({ onClose, asMember = false }: CreateGroupModal
                 ? "Filled in from your account — change it if this group should show something different."
                 : "This is how the group will see you in bills and balances."}
           </p>
+          {/* The wording is path-specific because "the first member becomes
+              the owner" is only true when a GroupMembership can exist —
+              asMember means this group is created directly under the
+              caller's account, while the anonymous path only becomes
+              ownable later, by this same person, if they register from
+              this device (session-persistence-and-ownership design §1,
+              "Owner reminder at group creation"). */}
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-2">
+            {asMember
+              ? "You'll be shown as this group's owner."
+              : "Create an account later to become this group's owner."}
+          </p>
         </div>
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}
