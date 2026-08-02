@@ -52,3 +52,27 @@ export async function requireSession(options?: { role?: "editor" }): Promise<Res
 
   return { ...payload, actorType: payload.kind === "member" ? "member" : "visitor" };
 }
+
+/**
+ * Used only by the homepage redirect (session-persistence-and-ownership
+ * design §2/§3): resolves the group a valid fst_session currently points
+ * at, or null if there is none, or it's malformed, or its underlying link
+ * or membership has been revoked. Calls requireSession() rather than
+ * reading the cookie directly so a visitor whose link was revoked falls
+ * through to the marketing landing page instead of bouncing toward a group
+ * they can no longer open.
+ *
+ * The try/catch must stay inside this helper. redirect() from
+ * next/navigation works by throwing a special error; a caller that wrapped
+ * its own call to this function in a try/catch spanning a redirect() call
+ * would swallow that throw and silently break the redirect.
+ */
+export async function resolveActiveGroupId(): Promise<string | null> {
+  try {
+    const session = await requireSession();
+    return session.groupId;
+  } catch (error) {
+    if (error instanceof SessionError) return null;
+    throw error;
+  }
+}
