@@ -67,3 +67,20 @@ Design decisions still open, listed so they don't get silently invented:
 
 - **Audit log** of bill edits — not designed; worth adding early if disputes occur.
 - **Concurrent edit conflicts** — v1 is last-write-wins.
+- **Rate limiting is in-memory and per-process** (`src/lib/auth/rate-limit.ts`) —
+  fine for a single warm instance, weak against a distributed attacker on a
+  multi-instance serverless deployment. Login, register, group creation, and
+  token lookup all share this limiter. Fixing it means a shared store (e.g.
+  Upstash Redis); out of scope until it's actually load-bearing.
+- **A registered user cannot save a pasted share link's group into their
+  account** — deliberately unbuilt, not missing. `GroupMembership` already
+  supports it with no schema change (it's an unlimited many-to-many), but doing
+  so would let a membership survive link revocation — regenerating the link
+  would stop being a complete access-revocation mechanism. Shipping it
+  responsibly needs owner-side membership management alongside it.
+- **A guest group creator who clears cookies (or uses "Exit group") permanently
+  loses the ability to register and claim that group.** Claiming is driven by a
+  signed, device-bound cookie (`fst_visitor_created_group`) set only at the
+  moment of anonymous group creation — there's no clean fix without adding some
+  form of identity for anonymous users, which would be a larger, separate
+  feature. Accepted cost of the anonymous-first design.
