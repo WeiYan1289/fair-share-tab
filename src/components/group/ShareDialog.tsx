@@ -62,10 +62,28 @@ export function ShareDialog({ groupId, groupName, actorType, onClose }: ShareDia
   // server render pass and the client, so checking it synchronously here
   // would cause a hydration mismatch on the "Share via…" button.
   const [canShare, setCanShare] = useState(false);
+  const [canClaim, setCanClaim] = useState(false);
 
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && "share" in navigator);
   }, []);
+
+  // Only relevant for a visitor: a registered member's own group always has
+  // an owner (themselves), so computeCanClaim is false for them regardless
+  // (session-persistence-and-ownership design §5).
+  useEffect(() => {
+    if (isMember) return;
+    let cancelled = false;
+    fetch(`/api/groups/${groupId}/context`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { canClaim: boolean } | null) => {
+        if (!cancelled) setCanClaim(data?.canClaim ?? false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId, isMember]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,14 +240,24 @@ export function ShareDialog({ groupId, groupName, actorType, onClose }: ShareDia
                           </span>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        disabled={loading || !link}
-                        onClick={() => setConfirmRole(role)}
-                        className="text-[12px] font-bold text-gold hover:opacity-80 disabled:opacity-50"
-                      >
-                        Regenerate
-                      </button>
+                      {(isMember || !link) && (
+                        <button
+                          type="button"
+                          disabled={loading || !link}
+                          onClick={() => setConfirmRole(role)}
+                          className="text-[12px] font-bold text-gold hover:opacity-80 disabled:opacity-50"
+                        >
+                          Regenerate
+                        </button>
+                      )}
+                      {!isMember && link && canClaim && (
+                        <NextLink
+                          href="/register"
+                          className="text-[12px] font-bold text-gold hover:opacity-80"
+                        >
+                          Own &amp; regenerate →
+                        </NextLink>
+                      )}
                     </div>
 
                     <div className="mb-2 flex gap-2">

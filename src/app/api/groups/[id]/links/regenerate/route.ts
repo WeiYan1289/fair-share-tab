@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { canRegenerateOrCreateLink } from "@/lib/auth/share-link-access";
 import { generateShareToken } from "@/lib/auth/token";
 import { prisma } from "@/lib/prisma";
 import { regenerateLinkSchema } from "@/lib/validation/group";
@@ -32,6 +33,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const parsed = regenerateLinkSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const existingLink = await prisma.groupShareLink.findFirst({
+    where: { groupId, role: parsed.data.role, revokedAt: null },
+  });
+
+  if (
+    !canRegenerateOrCreateLink({ hasActiveLink: existingLink !== null, actorType: session.actorType })
+  ) {
+    return NextResponse.json(
+      { error: "Only a registered member can regenerate an existing link" },
+      { status: 403 },
+    );
   }
 
   const newLink = await prisma.$transaction(async (tx) => {
