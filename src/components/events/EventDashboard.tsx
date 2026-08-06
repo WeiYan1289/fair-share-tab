@@ -11,7 +11,7 @@ import { MemberChip } from "@/components/members/MemberChip";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
-import { Link as LinkIcon, Lock, Pencil, Receipt, Trash2 } from "lucide-react";
+import { Eye, Link as LinkIcon, Pencil, Receipt, Trash2 } from "lucide-react";
 
 interface EventMemberView {
   id: string;
@@ -334,28 +334,41 @@ function BillRow({
             {settled ? "Settled" : "Unsettled"}
           </span>
           <div className="flex items-center gap-2 text-sm text-muted-2 sm:gap-2.5">
-            {/* Settled: open to every role -- read-only detail, and rule 10
-                makes the bill immutable at the API layer either way, so a
-                viewer has no reason to be shut out of seeing what they were
-                charged. Unsettled: editor only, since this link leads to
-                the real editable form. */}
-            {(settled || canEdit) && (
+            {/* Eye = read-only detail, for whichever role doesn't have a
+                better affordance here: everyone once the bill is settled
+                (rule 10 makes it immutable regardless of role), or a
+                viewer on an unsettled bill (they have no write access
+                either way). Pencil/Trash stay editor-only, since they lead
+                to the real write path. */}
+            {settled ? (
               <Link
                 href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-                title={settled ? "View bill details" : "Edit bill"}
-                aria-label={settled ? "View bill details" : "Edit bill"}
+                title="View bill details"
+                aria-label="View bill details"
               >
-                {settled ? (
-                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                ) : (
-                  <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                )}
+                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
               </Link>
-            )}
-            {canEdit && !settled && (
-              <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-              </button>
+            ) : canEdit ? (
+              <>
+                <Link
+                  href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
+                  title="Edit bill"
+                  aria-label="Edit bill"
+                >
+                  <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                </Link>
+                <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                </button>
+              </>
+            ) : (
+              <Link
+                href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
+                title="View bill details"
+                aria-label="View bill details"
+              >
+                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+              </Link>
             )}
           </div>
         </div>

@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
 import { computeEqualSplit } from "@/lib/settlement";
-import { Check, Lock, TriangleAlert } from "lucide-react";
+import { Check, Eye, TriangleAlert } from "lucide-react";
 
 interface FormMember {
   id: string;
@@ -36,6 +36,11 @@ interface BillFormProps {
   currency: string;
   members: FormMember[];
   initialBill?: InitialBill;
+  /** True for two independent reasons: the bill is settled (immutable
+   * regardless of role), or the caller isn't an editor. Read-only either
+   * way, but the two cases get different banner copy below -- one is a
+   * property of the bill, the other of who's looking at it. */
+  viewOnly?: boolean;
 }
 
 function parseAmount(text: string, minorUnit: number): number {
@@ -44,15 +49,16 @@ function parseAmount(text: string, minorUnit: number): number {
   return Math.round(n * 10 ** minorUnit);
 }
 
-// Screen Spec P5-01 (equal split) / P5-02 (custom amounts) / P5-03 (locked,
-// rendered instead of the form below when the bill is settled). Split into
-// a thin wrapper + inner component so the locked branch can return early
-// without calling any hooks conditionally.
+// Screen Spec P5-01 (equal split) / P5-02 (custom amounts) / P5-03
+// (read-only, rendered instead of the form below whenever the caller can't
+// write to this bill). Split into a thin wrapper + inner component so the
+// read-only branch can return early without calling any hooks
+// conditionally.
 export function BillForm(props: BillFormProps) {
   const dashboardHref = `/g/${props.groupId}/events/${props.eventId}`;
-  if (props.initialBill?.status === "settled") {
+  if (props.initialBill && props.viewOnly) {
     return (
-      <LockedBillView
+      <ReadOnlyBillView
         dashboardHref={dashboardHref}
         bill={props.initialBill}
         members={props.members}
@@ -454,19 +460,29 @@ function MemberSelectChip({
   );
 }
 
-// Read-only detail for a settled bill (Screen Spec P5-03). Reachable by
-// both editor and viewer sessions -- CLAUDE.md rule 10 makes settled bills
-// immutable at the API layer regardless of role, so there is nothing here
-// that needs an editor to be safe, and no reason a viewer shouldn't see
-// what they were actually charged.
+// Read-only detail for a bill (Screen Spec P5-03), reached for either of
+// two independent reasons: the bill is settled (immutable for every role,
+// CLAUDE.md rule 10), or the viewer isn't an editor. Both render the same
+// Eye-led view -- the icon means "you're looking, not writing" either way
+// -- and only the banner copy names which reason applies, since "settled"
+// is a fact about the bill and "you can't edit" is a fact about the
+// viewer.
+//
+// Deliberately no Lock icon anywhere on this page. There is no "unmark as
+// settled" action in this codebase -- not a stub, not a disabled button,
+// nothing -- and CLAUDE.md rule 10 makes settled bills immutable at the
+// API layer with no reversal path today. A Lock icon here would visually
+// promise a toggle that doesn't exist, which is exactly the bug the
+// previous version of this view had (its copy literally said "unmark it
+// as settled from Settle up," a flow that was never real). If a real
+// unsettle feature gets designed and built, it needs its own affordance
+// wired to an endpoint that actually exists -- not a re-skin of this one.
 //
 // Previously this rendered only the title and total, dimmed to 45%
 // opacity, plus a disabled "Save bill" button -- a view so thin it read as
-// a broken edit form rather than a bill you could inspect. It also told
-// people to "unmark it as settled from Settle up," a flow that does not
-// exist: rule 10 makes settled bills permanently immutable, full stop.
-// That copy is corrected below rather than carried forward.
-function LockedBillView({
+// a broken edit form rather than a bill you could inspect. That's fixed
+// below with the full payer + split breakdown.
+function ReadOnlyBillView({
   dashboardHref,
   bill,
   members,
@@ -479,21 +495,34 @@ function LockedBillView({
 }) {
   const memberById = new Map(members.map((m) => [m.id, m]));
   const payer = memberById.get(bill.payerId);
+  const settled = bill.status === "settled";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cream px-5 py-8 dark:bg-dark-bg">
       <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
       <div className="w-full max-w-[520px] rounded-lg bg-white p-7 shadow-[0_16px_36px_-20px_rgba(19,46,40,0.22)] sm:p-8 dark:bg-dark-card">
         <div className="mb-4 flex items-center gap-2.5">
-          <Lock className="h-5 w-5 text-ink dark:text-dark-text" aria-hidden="true" />
+          <Eye className="h-5 w-5 text-ink dark:text-dark-text" aria-hidden="true" />
           <h1 className="num text-[22px] text-ink dark:text-dark-text">{bill.title}</h1>
         </div>
         <div className="mb-5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
-          <Lock className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-          <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-            This bill is <strong className="text-ink dark:text-dark-text">settled</strong> and
-            can&apos;t be changed.
-          </p>
+          {settled ? (
+            <>
+              <Eye className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+              <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
+                This bill is <strong className="text-ink dark:text-dark-text">settled</strong> —
+                view only.
+              </p>
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+              <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
+                You can view this bill, but only an{" "}
+                <strong className="text-ink dark:text-dark-text">editor</strong> can change it.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="mb-4.5">
