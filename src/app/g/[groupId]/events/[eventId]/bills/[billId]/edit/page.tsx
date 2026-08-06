@@ -11,9 +11,15 @@ export default async function EditBillPage({
 }) {
   const { groupId, eventId, billId } = await params;
 
+  // Any role may land here now, not just editor: a settled bill renders
+  // read-only regardless of who's looking (rule 10 makes it immutable at
+  // the API layer either way), and a viewer has no reason to be shut out
+  // of seeing what they were actually charged. The editor check below is
+  // deferred until the bill's status is known, since only the unsettled
+  // (genuinely editable) case still needs it.
   let session;
   try {
-    session = await requireSession({ role: "editor" });
+    session = await requireSession();
   } catch (error) {
     if (error instanceof SessionError) redirect("/");
     throw error;
@@ -39,6 +45,15 @@ export default async function EditBillPage({
 
   if (!event || event.groupId !== groupId) redirect(`/g/${groupId}/events`);
   if (!bill || bill.eventId !== eventId || bill.event.groupId !== groupId) {
+    redirect(`/g/${groupId}/events/${eventId}`);
+  }
+
+  // A viewer reaching an unsettled bill's edit form has no legitimate path
+  // here -- BillRow only ever links here for a viewer when the bill is
+  // settled (Lock icon, not Pencil). This is the server-side backstop for
+  // someone navigating the URL directly; PATCH /api/bills/{id} enforces the
+  // same rule independently, so this is defense in depth, not the only gate.
+  if (bill.status !== "settled" && session.role !== "editor") {
     redirect(`/g/${groupId}/events/${eventId}`);
   }
 

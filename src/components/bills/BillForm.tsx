@@ -55,6 +55,7 @@ export function BillForm(props: BillFormProps) {
       <LockedBillView
         dashboardHref={dashboardHref}
         bill={props.initialBill}
+        members={props.members}
         currency={props.currency}
       />
     );
@@ -453,15 +454,32 @@ function MemberSelectChip({
   );
 }
 
+// Read-only detail for a settled bill (Screen Spec P5-03). Reachable by
+// both editor and viewer sessions -- CLAUDE.md rule 10 makes settled bills
+// immutable at the API layer regardless of role, so there is nothing here
+// that needs an editor to be safe, and no reason a viewer shouldn't see
+// what they were actually charged.
+//
+// Previously this rendered only the title and total, dimmed to 45%
+// opacity, plus a disabled "Save bill" button -- a view so thin it read as
+// a broken edit form rather than a bill you could inspect. It also told
+// people to "unmark it as settled from Settle up," a flow that does not
+// exist: rule 10 makes settled bills permanently immutable, full stop.
+// That copy is corrected below rather than carried forward.
 function LockedBillView({
   dashboardHref,
   bill,
+  members,
   currency,
 }: {
   dashboardHref: string;
   bill: InitialBill;
+  members: FormMember[];
   currency: string;
 }) {
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const payer = memberById.get(bill.payerId);
+
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cream px-5 py-8 dark:bg-dark-bg">
       <ThemeToggle className="absolute top-5 right-5 sm:top-7 sm:right-9" />
@@ -470,35 +488,65 @@ function LockedBillView({
           <Lock className="h-5 w-5 text-ink dark:text-dark-text" aria-hidden="true" />
           <h1 className="num text-[22px] text-ink dark:text-dark-text">{bill.title}</h1>
         </div>
-        <div className="mb-4.5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
+        <div className="mb-5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
           <Lock className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
           <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-            This bill is{" "}
-            <strong className="text-ink dark:text-dark-text">settled and locked</strong>. Unmark
-            it as settled from Settle up to make changes.
+            This bill is <strong className="text-ink dark:text-dark-text">settled</strong> and
+            can&apos;t be changed.
           </p>
         </div>
-        <div className="pointer-events-none mb-4.5 opacity-45">
+
+        <div className="mb-4.5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
-          <div className="rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-[14.5px] text-ink dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
+          <p className="num text-[22px] text-ink dark:text-dark-text">
             {formatMoney(bill.totalAmount, currency)}
+          </p>
+        </div>
+
+        {payer && (
+          <div className="mb-4.5">
+            <label className="mb-1.5 block text-xs font-bold text-muted-2">Paid by</label>
+            <div className="flex items-center gap-2.5">
+              <InitialsAvatar name={payer.name} color={payer.avatarColor} size={26} />
+              <span className="text-[14px] text-ink dark:text-dark-text">{payer.name}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-5">
+          <label className="mb-2 block text-xs font-bold text-muted-2">
+            Split {bill.splitMethod === "equal" ? "equally" : ""}
+          </label>
+          <div className="rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
+            {bill.splits.map((split) => {
+              const member = memberById.get(split.memberId);
+              return (
+                <div key={split.memberId} className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <InitialsAvatar
+                      name={member?.name ?? "?"}
+                      color={member?.avatarColor ?? "#8A9490"}
+                      size={24}
+                    />
+                    <span className="text-[13.5px] text-ink dark:text-dark-text">
+                      {member?.name ?? "Removed member"}
+                    </span>
+                  </div>
+                  <span className="num text-[15px] text-ink dark:text-dark-text">
+                    {formatMoney(split.shareAmount, currency)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="flex gap-2.5">
-          <Link
-            href={dashboardHref}
-            className="flex-1 rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
-          >
-            Close
-          </Link>
-          <button
-            type="button"
-            disabled
-            className="flex-1 cursor-not-allowed rounded-md bg-disabled py-3.5 text-center text-sm font-bold text-disabled-text dark:bg-white/10 dark:text-white/30"
-          >
-            Save bill
-          </button>
-        </div>
+
+        <Link
+          href={dashboardHref}
+          className="block rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
+        >
+          Close
+        </Link>
       </div>
     </div>
   );

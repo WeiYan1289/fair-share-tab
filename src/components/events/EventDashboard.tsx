@@ -333,11 +333,17 @@ function BillRow({
           >
             {settled ? "Settled" : "Unsettled"}
           </span>
-          {canEdit && (
-            <div className="flex items-center gap-2 text-sm text-muted-2 sm:gap-2.5">
+          <div className="flex items-center gap-2 text-sm text-muted-2 sm:gap-2.5">
+            {/* Settled: open to every role -- read-only detail, and rule 10
+                makes the bill immutable at the API layer either way, so a
+                viewer has no reason to be shut out of seeing what they were
+                charged. Unsettled: editor only, since this link leads to
+                the real editable form. */}
+            {(settled || canEdit) && (
               <Link
                 href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-                title={settled ? "Settled — view only" : "Edit bill"}
+                title={settled ? "View bill details" : "Edit bill"}
+                aria-label={settled ? "View bill details" : "Edit bill"}
               >
                 {settled ? (
                   <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
@@ -345,13 +351,13 @@ function BillRow({
                   <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                 )}
               </Link>
-              {!settled && (
-                <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
-                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          )}
+            )}
+            {canEdit && !settled && (
+              <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
