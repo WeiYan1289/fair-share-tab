@@ -1,14 +1,19 @@
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 import { USER_SESSION_COOKIE_NAME, verifyUserSession } from "./session";
 import { SessionError } from "./require-session";
+import { isSessionStale } from "./session-staleness";
 
 /**
  * The account-identity counterpart to requireSession(): "who is logged in,"
  * independent of any group. Throws SessionError(401) if no valid
- * fst_user_session cookie is present. Unlike requireSession(), there is no
- * per-request revocation check against the database — the user session is
- * invalidated by logging out (which clears the cookie), not by a
- * server-side flag (session.ts's USER_SESSION_COOKIE_OPTIONS comment).
+ * fst_user_session cookie is present.
+ *
+ * Like requireSession(), this now re-checks the database on every request:
+ * a cookie issued before the account's last password change is rejected.
+ * Without that check a password reset would lock out future logins while
+ * leaving a cookie an attacker already holds working for its full one-year
+ * maxAge — which is most of what resetting a password is supposed to fix.
  */
 export async function requireUserSession(): Promise<{ userId: string }> {
   const userId = await getCurrentUserId();
@@ -23,5 +28,17 @@ export async function getCurrentUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(USER_SESSION_COOKIE_NAME)?.value;
   const payload = verifyUserSession(raw);
-  return payload?.userId ?? null;
+  if (!payload) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { passwordChangedAt: true },
+  });
+  // A deleted user's cookie is as invalid as a stale one.
+  if (!user) return null;
+  if (isSessionStale({ issuedAt: payload.issuedAt, passwordChangedAt: user.passwordChangedAt })) {
+    return null;
+  }
+
+  return payload.userId;
 }

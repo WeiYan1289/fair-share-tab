@@ -1,19 +1,19 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { signSession, signUserSession, verifySession, verifyUserSession, signValue } from "./session";
-import type { SessionPayload } from "./session";
+import type { SignableSessionPayload } from "./session";
 
 beforeAll(() => {
   process.env.SESSION_SECRET = "test-secret-do-not-use-in-production";
 });
 
-const linkPayload: SessionPayload = {
+const linkPayload: SignableSessionPayload = {
   kind: "link",
   groupId: "11111111-1111-1111-1111-111111111111",
   role: "editor",
   shareLinkId: "22222222-2222-2222-2222-222222222222",
 };
 
-const memberPayload: SessionPayload = {
+const memberPayload: SignableSessionPayload = {
   kind: "member",
   groupId: "11111111-1111-1111-1111-111111111111",
   role: "editor",
@@ -28,10 +28,14 @@ describe("signSession / verifySession", () => {
     expect(verifySession(cookieValue)).toEqual(linkPayload);
   });
 
-  it("round-trips a valid member-kind payload", () => {
+  it("round-trips a valid member-kind payload, stamping issuedAt", () => {
+    const before = Date.now();
     const cookieValue = signSession(memberPayload);
 
-    expect(verifySession(cookieValue)).toEqual(memberPayload);
+    const verified = verifySession(cookieValue);
+
+    expect(verified).toEqual({ ...memberPayload, issuedAt: expect.any(Number) });
+    expect(verified && "issuedAt" in verified && verified.issuedAt).toBeGreaterThanOrEqual(before);
   });
 
   it("treats a payload with no `kind` as a link session (back-compat)", () => {
@@ -76,15 +80,40 @@ describe("signSession / verifySession", () => {
 
     expect(verifySession(cookieValue)).toBeNull();
   });
+
+  // Unlike a missing `kind`, which is tolerated as a legacy link session, a
+  // member cookie with no issuedAt cannot be checked against
+  // password_changed_at — so it must be rejected rather than trusted.
+  it("rejects a member-kind payload with no issuedAt", () => {
+    const cookieValue = signValue(memberPayload);
+
+    expect(verifySession(cookieValue)).toBeNull();
+  });
+
+  it("still accepts a legacy link session, which carries no issuedAt", () => {
+    const cookieValue = signValue(linkPayload);
+
+    expect(verifySession(cookieValue)).toEqual(linkPayload);
+  });
 });
 
 describe("signUserSession / verifyUserSession", () => {
   const userPayload = { userId: "55555555-5555-5555-5555-555555555555" };
 
-  it("round-trips a valid payload", () => {
+  it("round-trips a valid payload, stamping issuedAt", () => {
+    const before = Date.now();
     const cookieValue = signUserSession(userPayload);
 
-    expect(verifyUserSession(cookieValue)).toEqual(userPayload);
+    const verified = verifyUserSession(cookieValue);
+
+    expect(verified).toEqual({ ...userPayload, issuedAt: expect.any(Number) });
+    expect(verified?.issuedAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("rejects a payload with no issuedAt", () => {
+    const cookieValue = signValue(userPayload);
+
+    expect(verifyUserSession(cookieValue)).toBeNull();
   });
 
   it("rejects a tampered payload", () => {
