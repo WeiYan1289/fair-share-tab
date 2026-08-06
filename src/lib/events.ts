@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { collectBillParticipants } from "@/lib/bill-participants";
 import { computeNetBalances } from "@/lib/settlement";
 
 // Shared by the events API route and the events-list Server Component
@@ -56,6 +57,11 @@ export async function getEventDetail(eventId: string, groupId: string) {
 
   if (!event || event.groupId !== groupId) return null;
 
+  // Over ALL bills, not just unsettled ones: this answers "did they take
+  // part at all", which is what separates a member who is square from a
+  // member who was never in a bill. Both net to zero.
+  const participants = collectBillParticipants(event.bills);
+
   const unsettledBills = event.bills.filter((bill) => bill.status === "unsettled");
   const balances = computeNetBalances(
     unsettledBills.map((bill) => ({
@@ -84,6 +90,7 @@ export async function getEventDetail(eventId: string, groupId: string) {
       isActive: member.isActive,
       createdAt: member.createdAt,
       balance: balances.get(member.id) ?? 0,
+      inAnyBill: participants.has(member.id),
     })),
     bills: event.bills.map((bill) => ({
       id: bill.id,

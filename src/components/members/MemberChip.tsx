@@ -26,6 +26,10 @@ export interface ChipMember {
    * member list) where there's no single event to net over -- the card
    * just doesn't show a balance line rather than showing a misleading 0. */
   balance?: number;
+  /** Whether this member appears in any of the event's bills, as payer or
+   * participant. Only set alongside `balance`; distinguishes "square" from
+   * "never took part", which are the same zero. */
+  inAnyBill?: boolean;
 }
 
 interface MemberChipProps {
@@ -196,15 +200,25 @@ export function MemberChip({
   }
 
   const hasBalance = member.balance !== undefined && currency !== undefined;
+  // A member with no bills and a member who came out exactly even both net
+  // to zero, but they mean opposite things -- "Settled up" on someone who
+  // was never in a bill claims a participation that never happened.
+  const uninvolved = hasBalance && member.inAnyBill === false;
   const balanceText = !hasBalance
     ? null
-    : member.balance === 0
-      ? "Settled up"
-      : `${member.balance! > 0 ? "+" : "-"}${formatMoney(Math.abs(balance), currency!)}`;
+    : uninvolved
+      ? "No bills"
+      : member.balance === 0
+        ? "Settled up"
+        : `${member.balance! > 0 ? "+" : "-"}${formatMoney(Math.abs(balance), currency!)}`;
   const balanceColor = cn(
-    hasBalance && member.balance! > 0 && "text-emerald dark:text-mint",
-    hasBalance && member.balance! < 0 && "text-coral",
-    hasBalance && member.balance === 0 && "text-muted dark:text-dark-muted",
+    // Settled up borrows the bill row's settled-pill colour so "square"
+    // reads the same wherever it appears. Uninvolved drops to the dimmest
+    // grey in the palette: absence should look like absence, not a state.
+    uninvolved && "text-muted-2 dark:text-dark-muted/70",
+    !uninvolved && hasBalance && member.balance! > 0 && "text-emerald dark:text-mint",
+    !uninvolved && hasBalance && member.balance! < 0 && "text-coral",
+    !uninvolved && hasBalance && member.balance === 0 && "text-emerald dark:text-mint",
   );
 
   return (

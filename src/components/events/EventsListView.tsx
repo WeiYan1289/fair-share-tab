@@ -8,10 +8,13 @@ import { ShareDialog } from "@/components/group/ShareDialog";
 import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmModal";
 import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
+import { cn } from "@/lib/cn";
 import { colorForSeed } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
 import { CreateEventModal } from "./CreateEventModal";
-import { Link as LinkIcon } from "lucide-react";
+import { RenameEventModal } from "./RenameEventModal";
+import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-aria-components";
+import { Link as LinkIcon, MoreVertical, Pencil } from "lucide-react";
 
 interface EventSummary {
   id: string;
@@ -49,6 +52,7 @@ export function EventsListView({
   const [showShare, setShowShare] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [renameEventTarget, setRenameEventTarget] = useState<EventSummary | null>(null);
   const canEdit = viewerRole === "editor";
 
   async function handleRename(memberId: string, name: string) {
@@ -164,7 +168,13 @@ export function EventsListView({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
               {events.map((event) => (
-                <EventCard key={event.id} groupId={groupId} event={event} />
+                <EventCard
+                  key={event.id}
+                  groupId={groupId}
+                  event={event}
+                  canEdit={canEdit}
+                  onRequestRename={setRenameEventTarget}
+                />
               ))}
             </div>
           </>
@@ -184,6 +194,17 @@ export function EventsListView({
 
       {showCreateEvent && (
         <CreateEventModal groupId={groupId} onClose={() => setShowCreateEvent(false)} />
+      )}
+      {renameEventTarget && (
+        <RenameEventModal
+          eventId={renameEventTarget.id}
+          currentName={renameEventTarget.name}
+          onClose={() => setRenameEventTarget(null)}
+          onRenamed={() => {
+            setRenameEventTarget(null);
+            router.refresh();
+          }}
+        />
       )}
       {deactivateTarget && (
         <DeactivateConfirmModal
@@ -257,7 +278,17 @@ const STATUS_COPY: Record<EventSummary["settlementState"], { label: string; valu
   unsettled: { label: "Outstanding", value: "", className: "text-coral" },
 };
 
-function EventCard({ groupId, event }: { groupId: string; event: EventSummary }) {
+function EventCard({
+  groupId,
+  event,
+  canEdit,
+  onRequestRename,
+}: {
+  groupId: string;
+  event: EventSummary;
+  canEdit: boolean;
+  onRequestRename: (event: EventSummary) => void;
+}) {
   const color = colorForSeed(event.id);
   const letter = event.name.trim().charAt(0).toUpperCase() || "?";
   const status = STATUS_COPY[event.settlementState];
@@ -265,54 +296,89 @@ function EventCard({ groupId, event }: { groupId: string; event: EventSummary })
     event.settlementState === "unsettled"
       ? formatMoney(event.unsettledAmount, event.currency)
       : status.value;
+  const isArchived = event.status === "archived";
 
+  // The menu is a sibling of the Link, not a child: <a> may not contain a
+  // <button> under HTML's interactive content model, and nesting them would
+  // also fire navigation on every menu click. The wrapper is relative so the
+  // trigger can sit over the card's corner without joining its hit area.
   return (
-    <Link
-      href={`/g/${groupId}/events/${event.id}`}
-      className="block rounded-lg border border-ink/7 bg-white p-4 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
-    >
-      {/* Member count sits under the name in the same column, instead of
-          its own full-width line below the icon row -- that used to leave
-          the icon's row height as dead space above it. */}
-      <div className="mb-3 flex items-center gap-2.5 sm:mb-4 sm:gap-3">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold sm:h-[42px] sm:w-[42px] sm:text-[15px]"
-          style={{ backgroundColor: `${color}1A`, color }}
-        >
-          {letter}
+    <div className="relative">
+      <Link
+        href={`/g/${groupId}/events/${event.id}`}
+        className="block rounded-lg border border-ink/7 bg-white p-4 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
+      >
+        {/* Member count sits under the name in the same column, instead of
+            its own full-width line below the icon row -- that used to leave
+            the icon's row height as dead space above it. */}
+        <div className={cn("mb-3 flex items-center gap-2.5 sm:mb-4 sm:gap-3", canEdit && "pr-7")}>
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold sm:h-[42px] sm:w-[42px] sm:text-[15px]"
+            style={{ backgroundColor: `${color}1A`, color }}
+          >
+            {letter}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
+              {event.name}
+            </p>
+            <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
+              {event.memberCount} member{event.memberCount === 1 ? "" : "s"}
+            </p>
+          </div>
+          {isArchived && (
+            <span className="rounded-full bg-gold-tint px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-gold dark:bg-gold/16">
+              Archived
+            </span>
+          )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
-            {event.name}
-          </p>
-          <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
-            {event.memberCount} member{event.memberCount === 1 ? "" : "s"}
-          </p>
+        <div className="mb-3 h-px bg-ink/8 sm:mb-4 dark:bg-white/10" />
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="mb-1 text-[11px] tracking-wide text-muted-2 uppercase sm:text-[11.5px]">
+              Total spent
+            </p>
+            <p className="num text-[18px] text-ink sm:text-[22px] dark:text-dark-text">
+              {formatMoney(event.totalSpend, event.currency)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="mb-1 text-[11px] tracking-wide text-muted-2 uppercase sm:text-[11.5px]">
+              {status.label}
+            </p>
+            <p className={`num text-[18px] sm:text-[22px] ${status.className}`}>{statusValue}</p>
+          </div>
         </div>
-        {event.status === "archived" && (
-          <span className="rounded-full bg-gold-tint px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-gold dark:bg-gold/16">
-            Archived
-          </span>
-        )}
-      </div>
-      <div className="mb-3 h-px bg-ink/8 sm:mb-4 dark:bg-white/10" />
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="mb-1 text-[11px] tracking-wide text-muted-2 uppercase sm:text-[11.5px]">
-            Total spent
-          </p>
-          <p className="num text-[18px] text-ink sm:text-[22px] dark:text-dark-text">
-            {formatMoney(event.totalSpend, event.currency)}
-          </p>
+      </Link>
+
+      {canEdit && (
+        <div className="absolute top-3 right-3 sm:top-5 sm:right-5">
+          <MenuTrigger>
+            <AriaButton
+              aria-label={`Actions for ${event.name}`}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-2 outline-none hover:bg-ink/6 data-[pressed]:bg-ink/10 dark:hover:bg-white/8"
+            >
+              <MoreVertical className="h-4 w-4" aria-hidden="true" />
+            </AriaButton>
+            <Popover className="min-w-[172px] rounded-md border border-ink/10 bg-white p-1 shadow-[0_16px_32px_-14px_rgba(19,46,40,0.35)] dark:border-white/10 dark:bg-dark-card">
+              <Menu
+                className="outline-none"
+                onAction={(key: Key) => {
+                  if (key === "rename") onRequestRename(event);
+                }}
+              >
+                <MenuItem
+                  id="rename"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-semibold text-ink outline-none data-[focused]:bg-ink/6 dark:text-dark-text dark:data-[focused]:bg-white/8"
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Rename
+                </MenuItem>
+              </Menu>
+            </Popover>
+          </MenuTrigger>
         </div>
-        <div className="text-right">
-          <p className="mb-1 text-[11px] tracking-wide text-muted-2 uppercase sm:text-[11.5px]">
-            {status.label}
-          </p>
-          <p className={`num text-[18px] sm:text-[22px] ${status.className}`}>{statusValue}</p>
-        </div>
-      </div>
-    </Link>
+      )}
+    </div>
   );
 }
 

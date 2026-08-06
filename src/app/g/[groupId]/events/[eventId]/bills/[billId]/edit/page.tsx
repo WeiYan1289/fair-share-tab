@@ -11,9 +11,14 @@ export default async function EditBillPage({
 }) {
   const { groupId, eventId, billId } = await params;
 
+  // Any role may land here. Two independent reasons make a bill read-only:
+  // it's settled (immutable at the API layer regardless of role -- rule
+  // 10), or the viewer isn't an editor. Neither reason blocks viewing --
+  // only editing -- so both render the same read-only detail rather than
+  // redirecting away.
   let session;
   try {
-    session = await requireSession({ role: "editor" });
+    session = await requireSession();
   } catch (error) {
     if (error instanceof SessionError) redirect("/");
     throw error;
@@ -42,6 +47,13 @@ export default async function EditBillPage({
     redirect(`/g/${groupId}/events/${eventId}`);
   }
 
+  // Read-only whenever either condition holds. PATCH /api/bills/{id}
+  // enforces the same two rules independently (settled rejected outright;
+  // role checked via requireSession({ role: "editor" })), so this is what
+  // decides which UI to render, not the only thing standing between a
+  // viewer and a write.
+  const viewOnly = bill.status === "settled" || session.role !== "editor";
+
   // Active event members, plus anyone this bill already references (payer
   // or a split participant) even if they've since been deactivated -- a
   // past bill keeps its members (CLAUDE.md rule 4), so editing it shouldn't
@@ -68,6 +80,7 @@ export default async function EditBillPage({
   return (
     <BillForm
       mode="edit"
+      viewOnly={viewOnly}
       groupId={groupId}
       eventId={eventId}
       currency={event.currency}
