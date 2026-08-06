@@ -19,3 +19,12 @@ export const regenerateLinkSchema = z.object({
 });
 
 export type RegenerateLinkInput = z.infer<typeof regenerateLinkSchema>;
+
+// PATCH /api/account/groups/{groupId} — owner-only rename (spec 2026-08-06
+// feature A). No length cap for the same reason RenameEventModal has none:
+// group names are never rendered into narrow chips or settlement rows.
+export const updateGroupSchema = z.object({
+  name: z.string().trim().min(1, "Group name is required"),
+});
+
+export type UpdateGroupInput = z.infer<typeof updateGroupSchema>;
