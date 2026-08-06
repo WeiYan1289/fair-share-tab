@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
+import { RenameGroupModal } from "@/components/group/RenameGroupModal";
 import { TutorialButton } from "@/components/ui/TutorialButton";
 import { colorForSeed } from "@/lib/constants";
-import { LogOut } from "lucide-react";
+import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-aria-components";
+import { LogOut, MoreVertical, Pencil } from "lucide-react";
 
 interface GroupSummary {
   groupId: string;
@@ -24,7 +27,9 @@ interface MyGroupsViewProps {
 // core differentiator from an anonymous visitor (capped at one), so this
 // page is where they all live once an account exists.
 export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
+  const router = useRouter();
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<GroupSummary | null>(null);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -83,7 +88,7 @@ export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {groups.map((group) => (
-                <GroupCard key={group.groupId} group={group} />
+                <GroupCard key={group.groupId} group={group} onRequestRename={setRenameTarget} />
               ))}
             </div>
           </>
@@ -103,6 +108,17 @@ export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
 
       {showCreateGroup && (
         <CreateGroupModal onClose={() => setShowCreateGroup(false)} asMember />
+      )}
+      {renameTarget && (
+        <RenameGroupModal
+          groupId={renameTarget.groupId}
+          currentName={renameTarget.name}
+          onClose={() => setRenameTarget(null)}
+          onRenamed={() => {
+            setRenameTarget(null);
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );
@@ -133,37 +149,75 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-function GroupCard({ group }: { group: GroupSummary }) {
+function GroupCard({
+  group,
+  onRequestRename,
+}: {
+  group: GroupSummary;
+  onRequestRename: (group: GroupSummary) => void;
+}) {
   const color = colorForSeed(group.groupId);
   const letter = group.name.trim().charAt(0).toUpperCase() || "?";
 
+  // The menu is a sibling of the form's submit button, not a child: a
+  // <button> may not contain a <button>, and nesting would submit the
+  // enter-group form on every menu click (same reasoning as EventCard in
+  // EventsListView.tsx).
   return (
-    <form method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
-      <button
-        type="submit"
-        className="block w-full rounded-lg border border-ink/7 bg-white p-4 text-left shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
-      >
-        {/* Member/event count sits under the name in the same column,
-            instead of its own full-width line below the icon row -- that
-            used to leave the icon's row height as dead space above it. */}
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold sm:h-[42px] sm:w-[42px] sm:text-[15px]"
-            style={{ backgroundColor: `${color}1A`, color }}
+    <div className="relative">
+      <form method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
+        <button
+          type="submit"
+          className="block w-full rounded-lg border border-ink/7 bg-white p-4 text-left shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
+        >
+          {/* Member/event count sits under the name in the same column,
+              instead of its own full-width line below the icon row -- that
+              used to leave the icon's row height as dead space above it. */}
+          <div className="flex items-center gap-3 pr-7">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[13px] font-extrabold sm:h-[42px] sm:w-[42px] sm:text-[15px]"
+              style={{ backgroundColor: `${color}1A`, color }}
+            >
+              {letter}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
+                {group.name}
+              </p>
+              <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
+                {group.memberCount} member{group.memberCount === 1 ? "" : "s"} · {group.eventCount} event
+                {group.eventCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+        </button>
+      </form>
+
+      <div className="absolute top-3 right-3 sm:top-5 sm:right-5">
+        <MenuTrigger>
+          <AriaButton
+            aria-label={`Actions for ${group.name}`}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-2 outline-none hover:bg-ink/6 data-[pressed]:bg-ink/10 dark:hover:bg-white/8"
           >
-            {letter}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
-              {group.name}
-            </p>
-            <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
-              {group.memberCount} member{group.memberCount === 1 ? "" : "s"} · {group.eventCount} event
-              {group.eventCount === 1 ? "" : "s"}
-            </p>
-          </div>
-        </div>
-      </button>
-    </form>
+            <MoreVertical className="h-4 w-4" aria-hidden="true" />
+          </AriaButton>
+          <Popover className="min-w-[172px] rounded-md border border-ink/10 bg-white p-1 shadow-[0_16px_32px_-14px_rgba(19,46,40,0.35)] dark:border-white/10 dark:bg-dark-card">
+            <Menu
+              className="outline-none"
+              onAction={(key: Key) => {
+                if (key === "rename") onRequestRename(group);
+              }}
+            >
+              <MenuItem
+                id="rename"
+                className="flex cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-semibold text-ink outline-none data-[focused]:bg-ink/6 dark:text-dark-text dark:data-[focused]:bg-white/8"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Rename
+              </MenuItem>
+            </Menu>
+          </Popover>
+        </MenuTrigger>
+      </div>
+    </div>
   );
 }
