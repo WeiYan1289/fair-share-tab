@@ -31,9 +31,23 @@ npm test                 # run the test suite
 npx prisma migrate dev   # apply database migrations
 ```
 
-Requires a `.env.local` with `DATABASE_URL`, `DIRECT_URL`, and
-`SUPABASE_SERVICE_KEY` — see [CLAUDE.md](CLAUDE.md) for the full list and
-project conventions.
+Requires a `.env.local` with `DATABASE_URL`, `DIRECT_URL`,
+`SUPABASE_SERVICE_KEY`, `SESSION_SECRET`, and — for password reset —
+`MAILER`, `APP_URL`, and (when `MAILER=resend`) `RESEND_API_KEY` and
+`EMAIL_FROM`. See [CLAUDE.md](CLAUDE.md) for the full list and project
+conventions.
+
+For local development, `MAILER=console` prints reset links to the terminal
+instead of sending them, so no API key or verified domain is needed:
+
+```
+MAILER=console
+APP_URL=http://localhost:3000
+```
+
+`APP_URL` is an origin — scheme and host, no trailing slash, no path. Reset
+links are built from it and never from the request's `Host` header, which is
+attacker-controlled.
 
 ## Documentation
 

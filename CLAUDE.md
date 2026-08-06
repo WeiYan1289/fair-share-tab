@@ -75,6 +75,38 @@ the address bar. Validate `revoked_at` on every request, not just at exchange.
 **10. Settled bills are immutable.** Reject edits and deletes on
 `status = 'settled'` at the API layer.
 
+**11. Password reset has four invariants that break silently.** Each one
+looks fine in the browser when violated, which is why they are listed here
+rather than left to code review.
+
+- **`POST /api/auth/forgot` returns one identical response** — same body,
+  same status, same duration — whether the email matched, did not match, or
+  was throttled. Any observable difference is a user-enumeration oracle.
+  This is why the mail send and the token write both run inside `after()`
+  and the token is generated *before* the user lookup: so both branches do
+  the same work on the request path.
+- **Reset links are built from `APP_URL`, never from the request `Host`
+  header.** `Host` is attacker-controlled; deriving the link from it lets a
+  forged header make the server email a victim a link to the attacker's
+  domain. An unset `APP_URL` throws rather than falling back.
+- **Every password change sets `user.password_changed_at`.** Both session
+  cookies carry an `issuedAt` and re-check it on every request — including
+  `fst_session`'s `kind: "member"` variant, not just `fst_user_session`.
+  A password change leaves `group_membership` untouched, so without that
+  check an attacker holding a group cookie keeps editor access after the
+  owner resets. A cookie with no `issuedAt` is rejected, not trusted.
+- **Reset tokens are stored as SHA-256, single-use, and a successful reset
+  invalidates every other outstanding token for that user.** SHA-256 rather
+  than Argon2id only because the lookup is *by* token and needs a
+  deterministic digest — safe solely because the token carries ~190 bits of
+  entropy. Never apply that reasoning to anything user-chosen.
+
+Per-account rate limiting (60s cooldown, 5/24h) is DB-backed against
+`password_reset_token` on purpose: the in-memory limiter in
+`src/lib/auth/rate-limit.ts` does not survive serverless, so it cannot be
+what this feature's abuse resistance rests on. See `docs/data-model.md`
+§3.11.
+
 ## Architecture notes
 
 - The **settlement engine is a pure module** with no framework or DB imports. It takes
