@@ -79,6 +79,7 @@ export function ResetForm({ token }: ResetFormProps) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="Choose a new password"
           className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
         />
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">At least 8 characters.</p>
