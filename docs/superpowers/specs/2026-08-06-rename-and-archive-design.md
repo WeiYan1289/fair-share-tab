@@ -3,8 +3,8 @@
 **Date:** 2026-08-06
 **Status:** Approved
 
-Three independent features, built as three branches/PRs off `main`, in
-order A → B → C. Each is self-contained and independently revertable.
+Four independent features, built as separate branches/PRs off `main`, in
+order A → B → C → D. Each is self-contained and independently revertable.
 
 A fourth request — unsettling a settled bill — was **explicitly dropped**
 during brainstorming. CLAUDE.md rule 10 (settled bills are immutable)
@@ -89,6 +89,25 @@ the exclusion rule.
   pages. Everyone else — including registered non-owner members — gets
   the explanation page until restore.
 
+## D. Settle confirmation: real-world payment acknowledgment
+
+`ConfirmSettleModal` (`src/components/settle/SettleUpFlow.tsx`) already
+shows every transfer with exact amounts and warns the action can't be
+undone. What it doesn't do is ask the editor to verify the money
+actually moved. With unsettle dropped, settling on a wrong assumption is
+permanent, so the precondition deserves an explicit gate:
+
+- **Checkbox gate:** a required checkbox above the buttons — "These
+  payments have been made in real life" — unticked by default and reset
+  every time the modal opens. "Yes, mark as settled" stays disabled
+  until it is ticked.
+- **Copy tweak:** reframe the transfer list as something to verify
+  against reality (e.g. lead-in "Check that each of these payments has
+  actually been made:") while keeping the existing can't-be-undone
+  warning.
+- Client-only UX change — the confirm API is untouched; server-side
+  validation is unchanged because no new invariant is introduced.
+
 ---
 
 ## Decisions log (from brainstorming)
@@ -100,7 +119,8 @@ the exclusion rule.
 | Archive an event with unsettled bills? | Warn (with count) but allow |
 | Who archives/restores groups? | Owner only (`getGroupOwner`) |
 | Link visitor hitting an archived group sees | Explanation page, not 404 |
-| Delivery | Three branches/PRs: A → B → C |
+| Settle modal verifies real-world payment? | Yes — required checkbox gate (feature D) |
+| Delivery | Four branches/PRs: A → B → C → D |
 
 ## Testing
 
