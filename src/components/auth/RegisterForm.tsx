@@ -53,8 +53,9 @@ export function RegisterForm() {
 
       <h1 className="num mb-1.5 text-[22px] text-ink dark:text-dark-text">Create an account</h1>
       <p className="mb-6 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-        Unlocks unlimited groups and a &ldquo;My groups&rdquo; dashboard. If you still hold the
-        link to a group you just created, it comes with you automatically.
+        Without an account you can make one group per browser. With one, make as many as you
+        like and find them all in one place. If you&rsquo;re holding a link to a group you just
+        made, it comes with you.
       </p>
 
       <div className="mb-3.5">
@@ -74,7 +75,6 @@ export function RegisterForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
           className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
         />
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">At least 8 characters.</p>

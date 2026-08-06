@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { AuthTabs } from "./AuthTabs";
 
@@ -43,7 +44,7 @@ export function LoginForm() {
 
       <h1 className="num mb-1.5 text-[22px] text-ink dark:text-dark-text">Log in</h1>
       <p className="mb-6 text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-        For registered members only — a group link never needs this.
+        For people with an account. You never need one to open a group link.
       </p>
 
       <div className="mb-3.5">
@@ -63,7 +64,6 @@ export function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Your password"
           className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
         />
       </div>
@@ -73,6 +73,13 @@ export function LoginForm() {
       <Button variant="primary" disabled={!canSubmit} onClick={handleSubmit} className="mt-5 w-full text-center">
         Log in
       </Button>
+
+      <Link
+        href="/forgot"
+        className="mt-4 block text-center text-xs text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text"
+      >
+        Forgot your password?
+      </Link>
     </div>
   );
 }

@@ -285,6 +285,7 @@ for a given person. See §9.
 | `id` | UUID (PK) | Primary key. |
 | `email` | string UNIQUE | Normalized to lowercase before insert (Postgres unique indexes are case-sensitive by default). |
 | `password_hash` | string | Argon2id hash. Never included in any API response or client-visible payload. |
+| `password_changed_at` | timestamp NULL | Set on every password change. NULL means never changed since registration. Compared against a session cookie's `issuedAt` on every request so a password change evicts sessions minted before it — see §3.11. |
 | `created_at` | timestamp | Set on creation. |
 | `updated_at` | timestamp | Updated on any change. |
 
@@ -303,6 +304,41 @@ counterpart to `group_share_link`. Unlike a share link, this is tied to a specif
 | `created_at` | timestamp | Set on creation. |
 
 Unique constraint: `(group_id, user_id)` — a user has at most one membership per group.
+
+### 3.11 `password_reset_token`
+
+A single-use credential for account recovery, issued by `POST /api/auth/forgot` and
+consumed by `POST /api/auth/reset`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID (PK) | Primary key. |
+| `user_id` | UUID (FK) | References `user.id`. `ON DELETE CASCADE` — a token has no meaning without its account. |
+| `token_hash` | string UNIQUE | SHA-256 of the raw token. The raw token exists only in the email. |
+| `expires_at` | timestamp | 30 minutes after creation. |
+| `used_at` | timestamp NULL | Set on use. A successful reset also sets this on every *other* outstanding token for the same user. |
+| `created_at` | timestamp | Set on creation. Read by the per-account rate limits below. |
+
+Index: `(user_id, created_at)` — read on every forgot-password request, not decorative.
+
+**Why hashed, unlike `group_share_link.token` (§3.2).** A share link is a *capability*
+meant to be held by several people, revoked by flipping `revoked_at`. A reset token is
+a *credential* for one person's account recovery, structurally closer to
+`password_hash`. If this table leaked, raw tokens would hand over every account with a
+pending reset.
+
+**Why SHA-256 and not Argon2id.** The reset flow looks a token up *by* its hash, which
+needs a deterministic, indexable digest — a salted slow hash can only be verified
+against a row already found. That is safe only because the token carries ~190 bits of
+entropy (32 base62 characters), leaving no guessable keyspace. Never apply this
+reasoning to anything user-chosen.
+
+**Rate limiting lives on this table.** Two per-account limits are evaluated against
+`created_at`: a 60-second cooldown and a cap of 5 per 24 hours. They are DB-backed
+rather than in-memory because the in-memory limiter (§3.3 of system-design.md) only
+holds within a single warm serverless instance. A throttled request returns the same
+generic 200 as a sent one — a distinguishable throttle would itself leak whether an
+account exists.
 
 ---
 
@@ -453,8 +489,6 @@ must survive whether or not a person ever creates an account.
 - **Email verification** — a new account is usable immediately. Accepted as low-stakes
   today (worst case: claiming your own just-created group under an unverified email)
   but must be revisited before any future email-based invite feature.
-- **Password reset** — no self-service recovery path yet; a deliberate, known gap, not
-  a silent oversight.
 - **OAuth / social login** — email + password only.
 - **Changing an event's currency after its first bill, and cross-currency
   settlement** — an event's currency is fixed once money has been recorded against

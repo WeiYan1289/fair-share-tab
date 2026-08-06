@@ -71,13 +71,13 @@ model Member {
   avatarColor String   @map("avatar_color")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  group        Group          @relation(fields: [groupId], references: [id], onDelete: Restrict)
-  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  group        Group         @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   eventMembers EventMember[]
-  billsPaid    Bill[]         @relation("BillPayer")
+  billsPaid    Bill[]        @relation("BillPayer")
   splits       Split[]
-  transfersOut Transfer[]     @relation("TransferFrom")
-  transfersIn  Transfer[]     @relation("TransferTo")
+  transfersOut Transfer[]    @relation("TransferFrom")
+  transfersIn  Transfer[]    @relation("TransferTo")
 
   @@index([groupId])
   @@index([groupId, isActive])
@@ -92,10 +92,41 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  members     Member[]
-  memberships GroupMembership[]
+  // Null means "password never changed since registration". Set on every
+  // password change so an already-issued session cookie can be recognised
+  // as stale and rejected -- without this, resetting a password would not
+  // evict a session an attacker already holds (see the password-reset
+  // design, "Session invalidation").
+  passwordChangedAt DateTime? @map("password_changed_at")
+
+  members             Member[]
+  memberships         GroupMembership[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("user")
+}
+
+// A single-use credential for account recovery. Unlike GroupShareLink --
+// which stores its token raw because a share link is a capability meant to
+// be held by many people -- this token is stored only as a SHA-256 hash,
+// so a leak of this table cannot be replayed against pending resets.
+// SHA-256 rather than Argon2id because the lookup is BY token, which needs
+// a deterministic, indexable hash; the token's ~190 bits of entropy are
+// what make a fast hash safe here.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Not decorative: this is the index the per-account cooldown and daily
+  // cap read on every forgot-password request.
+  @@index([userId, createdAt])
+  @@map("password_reset_token")
 }
 
 // Grants a registered user standing access to a group, parallel to (and

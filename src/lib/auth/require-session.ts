@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME, verifySession, type SessionPayload } from "./session";
+import { isSessionStale } from "./session-staleness";
 
 export class SessionError extends Error {
   status: 401 | 403;
@@ -40,9 +41,27 @@ export async function requireSession(options?: { role?: "editor" }): Promise<Res
       throw new SessionError(401, "This link has been revoked");
     }
   } else {
-    const membership = await prisma.groupMembership.findUnique({ where: { id: payload.membershipId } });
+    const membership = await prisma.groupMembership.findUnique({
+      where: { id: payload.membershipId },
+      // Pulled in the same round trip as the membership check, so the
+      // password-change check below costs no extra query.
+      include: { user: { select: { passwordChangedAt: true } } },
+    });
     if (!membership || membership.groupId !== payload.groupId || membership.userId !== payload.userId) {
       throw new SessionError(401, "This membership no longer grants access");
+    }
+    // A password reset must evict this cookie too, not just
+    // fst_user_session. The membership row survives a password change
+    // untouched, so without this check an attacker holding a group cookie
+    // would keep full editor access to the group after the owner reset
+    // their password — and the group data is the thing worth protecting.
+    if (
+      isSessionStale({
+        issuedAt: payload.issuedAt,
+        passwordChangedAt: membership.user.passwordChangedAt,
+      })
+    ) {
+      throw new SessionError(401, "This session ended when the account password changed");
     }
   }
 

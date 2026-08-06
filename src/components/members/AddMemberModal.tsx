@@ -30,7 +30,6 @@ interface AddMemberModalProps {
 // event attachment at all.
 export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +49,7 @@ export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps)
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() || undefined }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       if (!res.ok) throw new Error("create failed");
       const data = await res.json();
@@ -69,7 +68,7 @@ export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps)
           Add a member
         </h2>
 
-        <div className="mb-3.5">
+        <div className="mb-5">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">Name</label>
           <input
             type="text"
@@ -78,19 +77,6 @@ export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps)
             onChange={(e) => setName(e.target.value)}
             placeholder="Emma Torres"
             maxLength={MAX_MEMBER_NAME_LENGTH}
-            className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
-          />
-        </div>
-
-        <div className="mb-5">
-          <label className="mb-1.5 block text-xs font-bold text-muted-2">
-            Email <span className="font-normal text-muted-2">(optional, for invites)</span>
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="emma@email.com"
             className="w-full rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text"
           />
         </div>

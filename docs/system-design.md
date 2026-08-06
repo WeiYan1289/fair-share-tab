@@ -137,6 +137,22 @@ offer someone in this state" logic, but not identically:
 - `login` and `register` are rate-limited the same way token lookups are (§3.3 above);
   `login` returns a generic "Invalid email or password" for both a nonexistent email
   and a wrong password, to avoid user enumeration.
+- `forgot` and `reset` carry the same per-IP limiter, but it is explicitly *not* what
+  their abuse resistance rests on — it is in-memory and per-instance, so it does not
+  survive serverless. The load-bearing controls are the DB-backed per-account cooldown
+  and daily cap in data-model.md §3.11. Note the resulting structural bound: a token is
+  only ever created for an *existing* account, so total daily sends cannot exceed
+  `registered_users × 5` regardless of attacker effort. There is deliberately **no**
+  global send cap — one attacker tripping it would deny password reset to everyone,
+  turning a bounded nuisance into an outage.
+- **Session invalidation on password change.** Both session cookies carry an `issuedAt`
+  and are re-checked against `user.password_changed_at` on every request. This covers
+  `fst_session`'s `kind: "member"` variant as well as `fst_user_session`: a password
+  change leaves the `group_membership` row untouched, so without that check an attacker
+  holding a group cookie would keep editor access after the owner reset their password.
+  A member cookie with no `issuedAt` is rejected rather than trusted — unlike the
+  permissive "no `kind` means link session" fallback, treating a missing field as valid
+  here is exactly the hole the mechanism closes.
 
 ---
 
@@ -246,6 +262,8 @@ one-group cap (§3.3) is enforced instead.
 | `POST` | `/api/auth/register` | Body `{ email, password }`. Creates a `user`. If the request carries a valid `fst_visitor_created_group` cookie, claims that group into the new account in the same transaction (data-model.md §9). Sets `fst_user_session`. |
 | `POST` | `/api/auth/login` | Body `{ email, password }`. Sets `fst_user_session`. Generic error on bad credentials (§3.3). |
 | `POST` | `/api/auth/logout` | Clears `fst_user_session`. Also clears `fst_session` if it's currently a `kind: "member"` session (that kind only ever means "acting in this group as this account," so it has no meaning post-logout) — but never a `kind: "link"` session, which is an anonymous capability unrelated to any account. |
+| `POST` | `/api/auth/forgot` | Body `{ email }`. Always returns the same generic 200, whether the email matched, did not match, or was throttled — any observable difference would leak account existence. On a match, and within the per-account limits (data-model.md §3.11), issues a `password_reset_token` and emails a link built from `APP_URL`. The send is deferred with `after()` so a match and a miss take the same time. |
+| `POST` | `/api/auth/reset` | Body `{ token, newPassword }`. Verifies an unused, unexpired token, then in one transaction rehashes the password, stamps `user.password_changed_at`, and marks every outstanding token for that user used. Issues no session — auto-login would let the emailed token itself mint one. One generic error for unknown/used/expired. |
 | `GET` | `/api/auth/me` | Returns the current user (or 401), for client-side auth-state checks. |
 | `GET` | `/api/account/groups` | Lists every group with a `group_membership` for the logged-in user. Requires `fst_user_session`. |
 | `POST` | `/api/account/groups/{groupId}/enter` | Mints a `{ kind: "member" }` group-context session cookie from the caller's `group_membership`, redirects to `/g/{groupId}/events`. POST (not GET, since it's state-changing) submitted via a `<form>` so it's still a normal full-page navigation, not a client-side fetch. |

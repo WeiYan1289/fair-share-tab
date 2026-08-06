@@ -28,3 +28,26 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const forgotSchema = z.object({
+  email: emailSchema,
+});
+
+export type ForgotInput = z.infer<typeof forgotSchema>;
+
+// Matches reset-token.ts's RESET_TOKEN_LENGTH — kept independent rather
+// than imported for the same reason MAX_PASSWORD_LENGTH is: this is a
+// client-shared Zod schema, and reset-token.ts pulls in node:crypto.
+// Validating the exact shape here means malformed guessing traffic is
+// rejected before it ever reaches the token index.
+const RESET_TOKEN_LENGTH = 32;
+
+export const resetSchema = z.object({
+  token: z
+    .string()
+    .length(RESET_TOKEN_LENGTH)
+    .regex(/^[0-9A-Za-z]+$/),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(MAX_PASSWORD_LENGTH),
+});
+
+export type ResetInput = z.infer<typeof resetSchema>;

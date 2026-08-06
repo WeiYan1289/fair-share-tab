@@ -13,12 +13,38 @@ export const USER_SESSION_COOKIE_NAME = "fst_user_session";
  */
 export type SessionPayload =
   | { kind: "link"; groupId: string; role: "editor" | "viewer"; shareLinkId: string }
-  | { kind: "member"; groupId: string; role: "editor" | "viewer"; userId: string; membershipId: string };
+  | {
+      kind: "member";
+      groupId: string;
+      role: "editor" | "viewer";
+      userId: string;
+      membershipId: string;
+      /**
+       * Epoch ms. Compared against user.password_changed_at on every
+       * request so a password reset evicts sessions minted before it.
+       * Only the member variant carries this: a link session is an
+       * anonymous capability with no account behind it to reset.
+       */
+      issuedAt: number;
+    };
 
 /** The account-identity session: "who is logged in," independent of any group. */
 export interface UserSessionPayload {
   userId: string;
+  /** Epoch ms — see the member variant of SessionPayload above. */
+  issuedAt: number;
 }
+
+/**
+ * What a caller supplies when minting a session: everything except
+ * issuedAt, which the signing functions stamp themselves. Forgetting it
+ * would mint a session that fails verification (or, worse, one that
+ * outlives the password change meant to kill it), so it is deliberately
+ * not the caller's job to remember.
+ */
+export type SignableSessionPayload =
+  | Extract<SessionPayload, { kind: "link" }>
+  | Omit<Extract<SessionPayload, { kind: "member" }>, "issuedAt">;
 
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -63,8 +89,8 @@ export function verifyValue(cookieValue: string | undefined | null): unknown | n
 }
 
 /** Signs a group-context session payload into an opaque, tamper-evident cookie value. */
-export function signSession(payload: SessionPayload): string {
-  return signValue(payload);
+export function signSession(payload: SignableSessionPayload): string {
+  return signValue(payload.kind === "member" ? { ...payload, issuedAt: Date.now() } : payload);
 }
 
 /**
@@ -90,27 +116,42 @@ export function verifySession(cookieValue: string | undefined | null): SessionPa
   if (kind === "link" && typeof payload.shareLinkId === "string") {
     return { kind: "link", groupId, role, shareLinkId: payload.shareLinkId };
   }
-  if (kind === "member" && typeof payload.userId === "string" && typeof payload.membershipId === "string") {
+  // A member cookie with no issuedAt predates password-change invalidation
+  // and cannot be checked against password_changed_at, so it is rejected
+  // rather than trusted — a one-time logout for anyone holding one. The
+  // permissive `kind ?? "link"` fallback above is deliberately NOT extended
+  // here: treating a missing field as valid is exactly the hole this
+  // mechanism exists to close.
+  if (
+    kind === "member" &&
+    typeof payload.userId === "string" &&
+    typeof payload.membershipId === "string" &&
+    typeof payload.issuedAt === "number"
+  ) {
     return {
       kind: "member",
       groupId,
       role,
       userId: payload.userId,
       membershipId: payload.membershipId,
+      issuedAt: payload.issuedAt,
     };
   }
   return null;
 }
 
 /** Signs a user-identity session payload into an opaque, tamper-evident cookie value. */
-export function signUserSession(payload: UserSessionPayload): string {
-  return signValue(payload);
+export function signUserSession(payload: Omit<UserSessionPayload, "issuedAt">): string {
+  return signValue({ ...payload, issuedAt: Date.now() });
 }
 
+/** Rejects a cookie with no issuedAt — see the note in verifySession. */
 export function verifyUserSession(cookieValue: string | undefined | null): UserSessionPayload | null {
   const payload = verifyValue(cookieValue) as Record<string, unknown> | null;
-  if (!payload || typeof payload.userId !== "string") return null;
-  return { userId: payload.userId };
+  if (!payload || typeof payload.userId !== "string" || typeof payload.issuedAt !== "number") {
+    return null;
+  }
+  return { userId: payload.userId, issuedAt: payload.issuedAt };
 }
 
 export const SESSION_COOKIE_OPTIONS = {
@@ -125,7 +166,8 @@ export const SESSION_COOKIE_OPTIONS = {
   maxAge: 60 * 60 * 24 * 365,
 };
 
-// Same shape as the group-context cookie's options — the user-identity
-// cookie is revoked by the user changing their password / logging out
-// (which simply clears it), not by any server-side flag check per request.
+// Same shape as the group-context cookie's options. The long maxAge is
+// safe because the cookie is no longer purely stateless: requireUserSession
+// re-checks its issuedAt against user.password_changed_at on every request,
+// so a password change evicts it server-side rather than waiting for expiry.
 export const USER_SESSION_COOKIE_OPTIONS = SESSION_COOKIE_OPTIONS;
