@@ -206,6 +206,27 @@ npx prisma migrate dev # create + apply a migration
 npx prisma studio      # inspect data
 ```
 
+`build` runs `prisma generate` first, and must keep doing so. The generated
+client is written to `src/generated/prisma`, which is gitignored, and Prisma 7
+has no `postinstall` hook — so on a fresh clone (every Vercel build) nothing
+else creates it and `src/lib/prisma.ts` fails to resolve its import. It does
+not touch the database; it only reads the schema and emits TypeScript.
+
+## Deployment
+
+Vercel, with build and output settings left at their defaults — the only
+required override is the `build` script above, which lives in `package.json`
+so local, CI, and Vercel all behave identically.
+
+`vercel.json` pins functions to `sin1` (Singapore) to sit beside the Supabase
+instance. Without it, functions default to `iad1` (Washington DC) and every
+query crosses the Pacific — and since most pages issue several *sequential*
+queries, that round trip compounds per request rather than being paid once.
+
+Migrations are never run by the build. Apply them deliberately with
+`npx prisma migrate deploy`, which connects via `DIRECT_URL` — migrations
+cannot run through the pooler.
+
 ## Environment
 
 `.env.local` (gitignored):
