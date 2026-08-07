@@ -9,6 +9,7 @@ import { ChevronDown, Plus } from "lucide-react";
 interface GroupSummary {
   groupId: string;
   name: string;
+  status: "active" | "archived";
 }
 
 interface GroupSwitcherProps {
@@ -74,21 +75,46 @@ export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherPr
             <div className="mb-1 flex flex-col">
               {groups.map((group) => {
                 const isCurrent = group.groupId === groupId;
+                const isArchived = group.status === "archived";
                 return isCurrent ? (
                   <span
                     key={group.groupId}
                     aria-current="true"
-                    className="truncate rounded px-2.5 py-2 text-[13px] font-bold text-forest dark:text-mint"
+                    className="flex items-center justify-between gap-2 truncate rounded px-2.5 py-2 text-[13px] font-bold text-forest dark:text-mint"
                   >
-                    {group.name}
+                    <span className="truncate">{group.name}</span>
+                    {isArchived && (
+                      <span className="shrink-0 rounded-full bg-gold-tint px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-gold dark:bg-gold/16">
+                        Archived
+                      </span>
+                    )}
                   </span>
+                ) : isArchived ? (
+                  // Archived groups are sealed (CLAUDE.md rule 4) -- there is
+                  // no "enter" for them anymore, only Restore on the
+                  // dedicated read-only screen. Route there instead of
+                  // submitting the enter-group form, which would just
+                  // dead-end at /group-archived. Mirrors MyGroupsView, which
+                  // dropped archived groups from its enterable grid the same
+                  // way.
+                  <Link
+                    key={group.groupId}
+                    href="/account/groups/archived"
+                    onClick={() => setOpen(false)}
+                    className="flex w-full items-center justify-between gap-2 truncate rounded px-2.5 py-2 text-left text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"
+                  >
+                    <span className="truncate">{group.name}</span>
+                    <span className="shrink-0 rounded-full bg-gold-tint px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-gold dark:bg-gold/16">
+                      Archived
+                    </span>
+                  </Link>
                 ) : (
                   <form key={group.groupId} method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
                     <button
                       type="submit"
-                      className="block w-full truncate rounded px-2.5 py-2 text-left text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"
+                      className="flex w-full items-center justify-between gap-2 truncate rounded px-2.5 py-2 text-left text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"
                     >
-                      {group.name}
+                      <span className="truncate">{group.name}</span>
                     </button>
                   </form>
                 );
