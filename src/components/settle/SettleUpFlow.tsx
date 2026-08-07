@@ -18,6 +18,11 @@ import { Check } from "lucide-react";
 // switch back with the toggle.
 const GRAPH_TO_LIST_THRESHOLD = 12;
 
+// Shown for every confirm failure except one the server explained itself.
+const GENERIC_CONFIRM_ERROR = "Couldn't mark this as settled — check your connection and try again.";
+// Same idea for the preview/calculate call -- see handleCalculate.
+const GENERIC_PREVIEW_ERROR = "Couldn't calculate the settlement — check your connection and try again.";
+
 export interface SettleMember {
   id: string;
   name: string;
@@ -99,13 +104,25 @@ export function SettleUpFlow({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billIds: [...selectedIds] }),
       });
-      if (!res.ok) throw new Error("preview failed");
+      if (!res.ok) {
+        // Same reasoning as handleConfirm below: the preview route 409s an
+        // archived event with a human-readable message, and this call runs
+        // before confirm is ever reachable -- surface the real reason
+        // rather than a generic "couldn't calculate" that hides it. A 400
+        // still returns Zod's flatten() object, which must not render.
+        const body = await res.json().catch(() => null);
+        const message = typeof body?.error === "string" ? body.error : null;
+        setError(message ?? GENERIC_PREVIEW_ERROR);
+        return;
+      }
       const data: { transfers: Transfer[] } = await res.json();
       setTransfers(data.transfers);
       setView(data.transfers.length > GRAPH_TO_LIST_THRESHOLD ? "list" : "graph");
       setStep("graph");
     } catch {
-      setError("Couldn't calculate the settlement — check your connection and try again.");
+      // A thrown error here is a transport failure, never a server
+      // message -- its raw text is not user-facing copy.
+      setError(GENERIC_PREVIEW_ERROR);
     } finally {
       setCalculating(false);
     }
@@ -120,11 +137,26 @@ export function SettleUpFlow({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billIds: [...selectedIds] }),
       });
-      if (!res.ok) throw new Error("confirm failed");
+      if (!res.ok) {
+        // The confirm route rejects an archived event with a 409 and a
+        // human-readable message ("This event is archived and cannot be
+        // settled") -- surface that instead of a generic failure, since
+        // reaching this button archived is a real path: the dashboard and
+        // this page both stay navigable while archived. The string check
+        // matters: a 400 returns Zod's flatten() object here, which must
+        // fall through to the generic copy rather than render as [object].
+        const body = await res.json().catch(() => null);
+        const message = typeof body?.error === "string" ? body.error : null;
+        setError(message ?? GENERIC_CONFIRM_ERROR);
+        setConfirming(false);
+        return;
+      }
       router.push(dashboardHref);
       router.refresh();
     } catch {
-      setError("Couldn't mark this as settled — check your connection and try again.");
+      // A thrown error here is a transport failure, never a server
+      // message -- its raw text ("Failed to fetch") is not user-facing copy.
+      setError(GENERIC_CONFIRM_ERROR);
       setConfirming(false);
     }
   }
@@ -341,6 +373,7 @@ function ConfirmSettleModal({
   onConfirm: () => void;
 }) {
   const nameById = new Map(members.map((m) => [m.id, m.name]));
+  const [acknowledged, setAcknowledged] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -349,6 +382,9 @@ function ConfirmSettleModal({
         <h2 className="num mb-2.5 text-[21px] text-ink dark:text-dark-text">
           Mark these {transfers.length} transfer{transfers.length === 1 ? "" : "s"} as settled?
         </h2>
+        <p className="mb-3 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
+          Check that each of these payments has actually been made:
+        </p>
         <div className="mb-4 flex flex-col gap-2">
           {transfers.map((t, i) => (
             <div
@@ -362,10 +398,21 @@ function ConfirmSettleModal({
             </div>
           ))}
         </div>
-        <p className="mb-5 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
+        <p className="mb-3 text-[12.5px] leading-relaxed text-muted dark:text-dark-muted">
           This can&apos;t be undone — the {billCount} selected bill{billCount === 1 ? "" : "s"}{" "}
           will be marked settled and balances reset to zero.
         </p>
+        <label className="mb-5 flex cursor-pointer items-start gap-2.5 rounded-md bg-cream px-3.5 py-3 dark:bg-dark-bg">
+          <input
+            type="checkbox"
+            checked={acknowledged}
+            onChange={(e) => setAcknowledged(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-forest"
+          />
+          <span className="text-[13px] font-semibold text-ink dark:text-dark-text">
+            These payments have been made in real life
+          </span>
+        </label>
         <div className="flex gap-2.5">
           <button
             type="button"
@@ -376,7 +423,7 @@ function ConfirmSettleModal({
           </button>
           <button
             type="button"
-            disabled={confirming}
+            disabled={confirming || !acknowledged}
             onClick={onConfirm}
             className="flex-1 rounded-md bg-forest py-3.5 text-center text-sm font-bold text-cream disabled:opacity-60 dark:bg-dark-forest"
           >
