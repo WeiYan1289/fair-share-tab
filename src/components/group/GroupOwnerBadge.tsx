@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { dedupedFetchJson } from "@/lib/dedupe-fetch";
 
 interface GroupContext {
   hasOwner: boolean;
@@ -18,12 +19,9 @@ export function GroupOwnerBadge({ groupId }: { groupId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/groups/${groupId}/context`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: GroupContext | null) => {
-        if (!cancelled) setContext(data);
-      })
-      .catch(() => {});
+    dedupedFetchJson<GroupContext>(`/api/groups/${groupId}/context`).then((data) => {
+      if (!cancelled) setContext(data);
+    });
     return () => {
       cancelled = true;
     };
