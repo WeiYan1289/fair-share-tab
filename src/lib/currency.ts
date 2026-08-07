@@ -1,7 +1,8 @@
 /**
  * Single source of truth for the curated currency list (CLAUDE.md rule 1).
- * Each event picks one of these at creation; MYR is the default. Only JPY
- * has a zero-decimal minor unit -- everything else here uses 2. `country`
+ * Each event picks one of these at creation; MYR is the default. JPY and
+ * KRW have a zero-decimal minor unit -- everything else here uses 2, so
+ * never assume a division by 100 anywhere. `country`
  * is a lowercase ISO 3166-1 alpha-2 code used to render an SVG flag via the
  * `flag-icons` package's `fi fi-<country>` class (EUR uses `eu`, the flag
  * `flag-icons` ships for the European Union, since it isn't one country).
@@ -20,6 +21,7 @@ export const CURRENCIES: readonly CurrencyMeta[] = [
   { code: "JPY", label: "Japanese Yen", symbol: "¥", minorUnit: 0, country: "jp" },
   { code: "CNY", label: "Chinese Yuan (RMB)", symbol: "CN¥", minorUnit: 2, country: "cn" },
   { code: "TWD", label: "New Taiwan Dollar", symbol: "NT$", minorUnit: 2, country: "tw" },
+  { code: "KRW", label: "South Korean Won", symbol: "₩", minorUnit: 0, country: "kr" },
   { code: "USD", label: "US Dollar", symbol: "US$", minorUnit: 2, country: "us" },
   { code: "THB", label: "Thai Baht", symbol: "฿", minorUnit: 2, country: "th" },
   { code: "IDR", label: "Indonesian Rupiah", symbol: "Rp", minorUnit: 2, country: "id" },

@@ -14,8 +14,14 @@ describe("createEventSchema", () => {
     expect(result.data?.currency).toBe("JPY");
   });
 
-  it("rejects a currency code outside the curated list", () => {
+  it("accepts KRW, the second zero-decimal currency", () => {
     const result = createEventSchema.safeParse({ name: "Seoul Trip", currency: "KRW" });
+    expect(result.success).toBe(true);
+    expect(result.data?.currency).toBe("KRW");
+  });
+
+  it("rejects a currency code outside the curated list", () => {
+    const result = createEventSchema.safeParse({ name: "Zurich Trip", currency: "CHF" });
     expect(result.success).toBe(false);
   });
 
