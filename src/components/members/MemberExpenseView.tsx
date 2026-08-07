@@ -39,6 +39,10 @@ interface MemberExpenseViewProps {
   currencies: string[];
   events: MemberExpenseEventView[];
   initialCurrency: string | null;
+  /** True when this member is also involved in an archived event -- those
+   * events' bills are excluded from `events` above, so the copy needs to
+   * say so rather than claim "every event" (CLAUDE.md rule 5). */
+  hasArchivedEvents: boolean;
 }
 
 // Screen Spec P4-06. Deliberately answers one question -- what has this
@@ -55,6 +59,7 @@ export function MemberExpenseView({
   currencies,
   events,
   initialCurrency,
+  hasArchivedEvents,
 }: MemberExpenseViewProps) {
   const [selectedCurrency, setSelectedCurrency] = useState(
     initialCurrency && currencies.includes(initialCurrency) ? initialCurrency : (currencies[0] ?? null),
@@ -93,16 +98,21 @@ export function MemberExpenseView({
                 {member.name}&rsquo;s expenses
               </h1>
               <p className="mt-0.5 text-[12.5px] text-muted sm:text-[13px] dark:text-dark-muted">
-                {member.name}&rsquo;s share of every bill across every event in {groupName}
+                {member.name}&rsquo;s share of every bill across every active event in {groupName}
                 {events.length > 0 ? " — including trips that are already settled." : "."}
               </p>
+              {hasArchivedEvents && (
+                <p className="mt-1 text-[11.5px] text-muted-2">
+                  Archived events aren&rsquo;t counted here.
+                </p>
+              )}
             </div>
           </div>
 
           <MemberTabs groupId={groupId} memberId={member.id} />
 
           {events.length === 0 || !selectedCurrency ? (
-            <EmptyExpensesState memberName={member.name} />
+            <EmptyExpensesState memberName={member.name} hasArchivedEvents={hasArchivedEvents} />
           ) : (
             <>
               {currencies.length > 1 && (
@@ -170,7 +180,7 @@ export function MemberExpenseView({
   );
 }
 
-function EmptyExpensesState({ memberName }: { memberName: string }) {
+function EmptyExpensesState({ memberName, hasArchivedEvents }: { memberName: string; hasArchivedEvents: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-center">
       <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint">
@@ -178,8 +188,15 @@ function EmptyExpensesState({ memberName }: { memberName: string }) {
       </div>
       <p className="mb-1.5 text-[15px] font-bold text-ink dark:text-dark-text">No expenses yet</p>
       <p className="max-w-[320px] text-[13px] text-muted dark:text-dark-muted">
-        {memberName} hasn&rsquo;t paid for or been split on any bills yet.
+        {hasArchivedEvents
+          ? `${memberName} hasn’t paid for or been split on any bills in an active event yet.`
+          : `${memberName} hasn’t paid for or been split on any bills yet.`}
       </p>
+      {hasArchivedEvents && (
+        <p className="mt-1 max-w-[320px] text-[11.5px] text-muted-2">
+          Archived events aren&rsquo;t counted here.
+        </p>
+      )}
     </div>
   );
 }

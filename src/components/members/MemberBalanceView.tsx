@@ -27,18 +27,25 @@ interface MemberBalanceViewProps {
   actorType: "member" | "visitor";
   member: { id: string; name: string; avatarColor: string; isActive: boolean };
   events: MemberBalanceEventView[];
+  /** True when this member is also involved in an archived event -- those
+   * events' balances are excluded from `events` above, so the copy needs to
+   * say so rather than imply nothing is owed anywhere (CLAUDE.md rule 5). */
+  hasArchivedEvents: boolean;
 }
 
 // Screen Spec P4-07, sibling to the Expenses tab (P4-06). Only unsettled
 // events appear here at all -- a settled event's debts are already
 // resolved via its transfers, so it's simply omitted rather than shown at
-// zero (mirrors getEventDetail's own unsettled-only balance).
+// zero (mirrors getEventDetail's own unsettled-only balance). Archived
+// events are excluded from this math entirely (spec 2026-08-06 feature B),
+// so every claim below is scoped to active events, not "every event".
 export function MemberBalanceView({
   groupId,
   groupName,
   actorType,
   member,
   events,
+  hasArchivedEvents,
 }: MemberBalanceViewProps) {
   const backHref = `/g/${groupId}/events`;
 
@@ -59,16 +66,21 @@ export function MemberBalanceView({
                 {member.name}&rsquo;s balance
               </h1>
               <p className="mt-0.5 text-[12.5px] text-muted sm:text-[13px] dark:text-dark-muted">
-                What&rsquo;s still outstanding for {member.name} across every event in {groupName}.
-                Settled trips don&rsquo;t appear here.
+                What&rsquo;s still outstanding for {member.name} across every active event in{" "}
+                {groupName}. Settled trips don&rsquo;t appear here.
               </p>
+              {hasArchivedEvents && (
+                <p className="mt-1 text-[11.5px] text-muted-2">
+                  Archived events aren&rsquo;t counted here.
+                </p>
+              )}
             </div>
           </div>
 
           <MemberTabs groupId={groupId} memberId={member.id} />
 
           {events.length === 0 ? (
-            <EmptyBalanceState memberName={member.name} />
+            <EmptyBalanceState memberName={member.name} hasArchivedEvents={hasArchivedEvents} />
           ) : (
             <div className="flex flex-col gap-4 sm:gap-6">
               {events.map((event) => (
@@ -82,7 +94,7 @@ export function MemberBalanceView({
   );
 }
 
-function EmptyBalanceState({ memberName }: { memberName: string }) {
+function EmptyBalanceState({ memberName, hasArchivedEvents }: { memberName: string; hasArchivedEvents: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-center">
       <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint">
@@ -90,8 +102,13 @@ function EmptyBalanceState({ memberName }: { memberName: string }) {
       </div>
       <p className="mb-1.5 text-[15px] font-bold text-ink dark:text-dark-text">All settled up</p>
       <p className="max-w-[320px] text-[13px] text-muted dark:text-dark-muted">
-        {memberName} has nothing outstanding in any event right now.
+        {memberName} has nothing outstanding in any active event right now.
       </p>
+      {hasArchivedEvents && (
+        <p className="mt-1 max-w-[320px] text-[11.5px] text-muted-2">
+          Archived events aren&rsquo;t counted here.
+        </p>
+      )}
     </div>
   );
 }

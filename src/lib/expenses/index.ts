@@ -27,6 +27,13 @@ export interface MemberExpenses {
   /** Currency codes this member has spend in, MYR-first. */
   currencies: string[];
   events: MemberExpenseEvent[];
+  /**
+   * True when this member has any involvement (as participant, payer, or
+   * split) in an archived event -- those events' bills are excluded from
+   * `events`/`currencies` above (spec 2026-08-06 feature B), so the UI can
+   * caveat "every event" copy instead of asserting something false.
+   */
+  hasArchivedEvents: boolean;
 }
 
 async function loadMember(memberId: string, groupId: string) {
@@ -39,13 +46,14 @@ async function loadMember(memberId: string, groupId: string) {
 }
 
 /**
- * Spend history for one member across every event they're connected to in
+ * Spend history for one member across every active event they're connected to in
  * this group -- including events they've since left (a member can pay for
  * or be split on a bill in an event they're no longer part of) and events
  * that are fully settled (this is spend history, not outstanding debt; see
  * computeMemberEventExpense). Grouped by currency, never converted or
  * summed across currencies (CLAUDE.md rule 1) -- an event picks its own
  * currency, so "total spend" only means something within one currency.
+ * Archived events are excluded from member math (spec 2026-08-06 feature B).
  */
 export async function getMemberExpenses(memberId: string, groupId: string): Promise<MemberExpenses | null> {
   const member = await loadMember(memberId, groupId);
@@ -54,6 +62,7 @@ export async function getMemberExpenses(memberId: string, groupId: string): Prom
   const events = await prisma.event.findMany({
     where: {
       groupId,
+      status: "active",
       OR: [
         { eventMembers: { some: { memberId } } },
         { bills: { some: { payerId: memberId } } },
@@ -107,7 +116,19 @@ export async function getMemberExpenses(memberId: string, groupId: string): Prom
     return a.localeCompare(b);
   });
 
-  return { member, currencies, events: eventResults };
+  const archivedCount = await prisma.event.count({
+    where: {
+      groupId,
+      status: "archived",
+      OR: [
+        { eventMembers: { some: { memberId } } },
+        { bills: { some: { payerId: memberId } } },
+        { bills: { some: { splits: { some: { memberId } } } } },
+      ],
+    },
+  });
+
+  return { member, currencies, events: eventResults, hasArchivedEvents: archivedCount > 0 };
 }
 
 export interface MemberBalanceTransfer {
@@ -127,6 +148,8 @@ export interface MemberBalanceEvent {
 
 export interface MemberBalance {
   events: MemberBalanceEvent[];
+  /** See MemberExpenses.hasArchivedEvents -- same caveat, for the balance tab. */
+  hasArchivedEvents: boolean;
 }
 
 /**
@@ -135,13 +158,14 @@ export interface MemberBalance {
  * transfers that would settle it, filtered to the ones touching this
  * member. Reuses the settlement engine directly rather than recomputing
  * debt logic here; a settled event is omitted entirely, not shown at zero.
+ * Archived events are excluded from member math (spec 2026-08-06 feature B).
  */
 export async function getMemberBalance(memberId: string, groupId: string): Promise<MemberBalance | null> {
   const member = await loadMember(memberId, groupId);
   if (!member) return null;
 
   const events = await prisma.event.findMany({
-    where: { groupId, eventMembers: { some: { memberId } } },
+    where: { groupId, status: "active", eventMembers: { some: { memberId } } },
     orderBy: { createdAt: "desc" },
     include: {
       bills: { where: { status: "unsettled" }, include: { splits: true } },
@@ -173,7 +197,11 @@ export async function getMemberBalance(memberId: string, groupId: string): Promi
     results.push({ id: event.id, name: event.name, currency: event.currency, net, transfers: namedTransfers });
   }
 
-  return { events: results };
+  const archivedCount = await prisma.event.count({
+    where: { groupId, status: "archived", eventMembers: { some: { memberId } } },
+  });
+
+  return { events: results, hasArchivedEvents: archivedCount > 0 };
 }
 
 export interface MemberEventActivity {
@@ -194,7 +222,9 @@ export interface MemberEventActivity {
  * only, same as getMemberBalance). This is the destination for the event
  * dashboard's member chip, deliberately scoped to one event so it never
  * shows anything from the member's other trips -- that's what
- * getMemberExpenses/getMemberBalance are for.
+ * getMemberExpenses/getMemberBalance are for. Unlike those cross-event
+ * functions, this is not filtered by event status; it is reached from
+ * inside the event's own dashboard, so archived events remain navigable.
  */
 export async function getMemberEventActivity(
   memberId: string,
