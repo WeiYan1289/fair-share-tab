@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
-import { getEventDetail } from "@/lib/events";
+import {
+  ArchivedEventError,
+  assertEventNotArchived,
+  getEventDetail,
+  isRestoreOnlyEventPatch,
+} from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { datesInOrder, updateEventSchema } from "@/lib/validation/event";
 
@@ -56,6 +61,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
+  // The only permitted write on an archived event is a PATCH that restores
+  // it: status:"active" and nothing else. Anything else -- a rename, a date
+  // change, or even status:"active" bundled with a rename -- must 409, so
+  // the archived check only skips over the helper for that exact shape.
+  if (!isRestoreOnlyEventPatch(parsed.data)) {
+    try {
+      assertEventNotArchived(existing, "This event is archived and cannot be edited");
+    } catch (error) {
+      if (error instanceof ArchivedEventError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
+    }
+  }
+
   // The schema's datesInOrder refine only catches an inverted range when both
   // dates are present in the SAME payload. A partial PATCH (e.g. only
   // startDate) merges against the already-stored date, so we must re-check
@@ -87,7 +107,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(name !== undefined && { name }),
       ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
       ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
-      ...(status !== undefined && { status }),
+      ...(status !== undefined && {
+        status,
+        archivedAt: status === "archived" ? new Date() : null,
+      }),
     },
   });
 

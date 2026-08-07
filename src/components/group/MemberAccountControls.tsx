@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
+import { dedupedFetchJson } from "@/lib/dedupe-fetch";
 
 // Every in-group page (events list, event dashboard, settle-up, member
 // screens) shows this, but until now only /account/groups itself showed
@@ -21,11 +22,9 @@ export function MemberAccountControls() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { user: { email: string } } | null) => {
-        if (!cancelled && data) setEmail(data.user.email);
-      });
+    dedupedFetchJson<{ user: { email: string } }>("/api/auth/me").then((data) => {
+      if (!cancelled && data) setEmail(data.user.email);
+    });
     return () => {
       cancelled = true;
     };

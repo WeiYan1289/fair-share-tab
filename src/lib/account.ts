@@ -1,4 +1,41 @@
 import { prisma } from "@/lib/prisma";
+import type { UpdateGroupInput } from "@/lib/validation/group";
+
+// Thrown by assertGroupNotArchived; the account/groups PATCH route catches
+// this the same way the events PATCH route catches ArchivedEventError --
+// instanceof check, then `NextResponse.json({ error: error.message },
+// { status: error.status })`. Mirrors ArchivedEventError in events.ts.
+export class ArchivedGroupError extends Error {
+  status = 409 as const;
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+// Archived means sealed (CLAUDE.md rule 4): every write on an archived
+// group must 409, with one exception -- the account/groups PATCH route
+// that restores status to "active". That route does NOT call this helper
+// when the request is restore-only; see isRestoreOnlyGroupPatch below.
+// Mirrors assertEventNotArchived in events.ts.
+export function assertGroupNotArchived(group: { status: string }, message: string): void {
+  if (group.status === "archived") {
+    throw new ArchivedGroupError(message);
+  }
+}
+
+// The account/groups PATCH route's one exception to assertGroupNotArchived:
+// a payload that ONLY restores status to "active" (nothing else) is let
+// through against an archived group. Extracted as a named predicate --
+// rather than left inline in the route -- specifically so it has direct
+// Vitest coverage (CLAUDE.md's "small decision predicate" test category):
+// this is a pure function of updateGroupSchema's shape, and if a field is
+// ever added to that schema without being added here, the seal silently
+// reopens for that field whenever it rides along with status:"active" on
+// an archived group. Mirrors isRestoreOnlyEventPatch in events.ts.
+export function isRestoreOnlyGroupPatch(data: UpdateGroupInput): boolean {
+  return data.status === "active" && data.name === undefined;
+}
 
 // Shared by the account/groups API route and the /account/groups Server
 // Component (mirrors listGroupEvents in events.ts) so "which groups can
@@ -9,7 +46,15 @@ export async function listUserGroups(userId: string) {
     orderBy: { createdAt: "desc" },
     include: {
       group: {
-        include: { _count: { select: { members: { where: { isActive: true } }, events: true } } },
+        include: {
+          _count: { select: { members: { where: { isActive: true } }, events: true } },
+          memberships: {
+            where: { role: "editor" },
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            select: { userId: true },
+          },
+        },
       },
     },
   });
@@ -18,8 +63,49 @@ export async function listUserGroups(userId: string) {
     groupId: membership.groupId,
     role: membership.role,
     name: membership.group.name,
+    status: membership.group.status,
+    isOwner: membership.group.memberships[0]?.userId === userId,
     memberCount: membership.group._count.members,
     eventCount: membership.group._count.events,
+  }));
+}
+
+// Backs the archived-groups screen (archived-readonly T4): a ruled list,
+// not the card grid, so it only needs the fields that list actually
+// renders. No money figure -- a group spans events that may each use a
+// different currency, so any single total would either be wrong or
+// silently mix currencies (CLAUDE.md rule 1). Ordered by archivedAt desc,
+// nulls last (rows archived before T0 added the column), then createdAt
+// desc, mirroring listArchivedGroupEvents in events.ts.
+export async function listArchivedUserGroups(userId: string) {
+  const memberships = await prisma.groupMembership.findMany({
+    where: { userId, group: { status: "archived" } },
+    orderBy: [
+      { group: { archivedAt: { sort: "desc", nulls: "last" } } },
+      { group: { createdAt: "desc" } },
+    ],
+    include: {
+      group: {
+        include: {
+          _count: { select: { members: { where: { isActive: true } }, events: true } },
+          memberships: {
+            where: { role: "editor" },
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            select: { userId: true },
+          },
+        },
+      },
+    },
+  });
+
+  return memberships.map((membership) => ({
+    groupId: membership.groupId,
+    name: membership.group.name,
+    isOwner: membership.group.memberships[0]?.userId === userId,
+    memberCount: membership.group._count.members,
+    eventCount: membership.group._count.events,
+    archivedAt: membership.group.archivedAt,
   }));
 }
 

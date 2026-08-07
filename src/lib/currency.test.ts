@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CURRENCIES, CURRENCY_CODES, DEFAULT_CURRENCY, getCurrencyMeta } from "./currency";
 
 describe("currency metadata", () => {
-  it("has exactly 12 curated currencies", () => {
-    expect(CURRENCIES.length).toBe(12);
+  it("has exactly 13 curated currencies", () => {
+    expect(CURRENCIES.length).toBe(13);
   });
 
   it("has unique 3-letter uppercase codes", () => {
@@ -20,9 +20,12 @@ describe("currency metadata", () => {
     }
   });
 
-  it("has exactly one zero-decimal currency (JPY)", () => {
-    const zeroDecimal = CURRENCIES.filter((c) => c.minorUnit === 0);
-    expect(zeroDecimal).toEqual([expect.objectContaining({ code: "JPY" })]);
+  // Guards the assumption that leaks into every money helper: most code can
+  // be written as if minorUnit were always 2, and these are the entries that
+  // would break it. Update deliberately, never to make a failure go away.
+  it("has exactly two zero-decimal currencies (JPY, KRW)", () => {
+    const zeroDecimal = CURRENCIES.filter((c) => c.minorUnit === 0).map((c) => c.code);
+    expect(zeroDecimal).toEqual(["JPY", "KRW"]);
   });
 
   it("defaults to MYR, listed first", () => {
@@ -37,7 +40,10 @@ describe("currency metadata", () => {
     );
   });
 
-  it("getCurrencyMeta throws on an unsupported code", () => {
-    expect(() => getCurrencyMeta("KRW")).toThrow(/unsupported/i);
+  // CHF is a real ISO 4217 code deliberately left out of the curated list --
+  // the point is that "valid currency" and "offered by this app" are not the
+  // same set. (This case used KRW until KRW was curated.)
+  it("getCurrencyMeta throws on a real code that isn't curated", () => {
+    expect(() => getCurrencyMeta("CHF")).toThrow(/unsupported/i);
   });
 });

@@ -13,8 +13,9 @@ import { colorForSeed } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
 import { CreateEventModal } from "./CreateEventModal";
 import { RenameEventModal } from "./RenameEventModal";
+import { ArchiveEventModal } from "./ArchiveEventModal";
 import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-aria-components";
-import { Link as LinkIcon, MoreVertical, Pencil } from "lucide-react";
+import { Archive, ChevronRight, Link as LinkIcon, MoreVertical, Pencil } from "lucide-react";
 
 interface EventSummary {
   id: string;
@@ -24,6 +25,7 @@ interface EventSummary {
   memberCount: number;
   totalSpend: number;
   unsettledAmount: number;
+  unsettledCount: number;
   settlementState: "empty" | "settled" | "unsettled";
 }
 
@@ -53,7 +55,10 @@ export function EventsListView({
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
   const [renameEventTarget, setRenameEventTarget] = useState<EventSummary | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<EventSummary | null>(null);
   const canEdit = viewerRole === "editor";
+  const activeEvents = events.filter((e) => e.status === "active");
+  const archivedEvents = events.filter((e) => e.status === "archived");
 
   async function handleRename(memberId: string, name: string) {
     await fetch(`/api/members/${memberId}`, {
@@ -142,7 +147,7 @@ export function EventsListView({
           </>
         )}
 
-        {events.length === 0 ? (
+        {activeEvents.length === 0 && archivedEvents.length === 0 ? (
           <EmptyState canEdit={canEdit} onCreate={() => setShowCreateEvent(true)} />
         ) : (
           <>
@@ -152,7 +157,7 @@ export function EventsListView({
                   Your events
                 </h1>
                 <p className="mt-1.5 text-[13px] text-muted sm:text-[13.5px] dark:text-dark-muted">
-                  {events.length} event{events.length === 1 ? "" : "s"}
+                  {activeEvents.length} event{activeEvents.length === 1 ? "" : "s"}
                 </p>
               </div>
               {canEdit && (
@@ -167,21 +172,32 @@ export function EventsListView({
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-              {events.map((event) => (
+              {activeEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   groupId={groupId}
                   event={event}
                   canEdit={canEdit}
                   onRequestRename={setRenameEventTarget}
+                  onRequestArchive={setArchiveTarget}
                 />
               ))}
             </div>
+
+            {archivedEvents.length > 0 && (
+              <Link
+                href={`/g/${groupId}/events/archived`}
+                className="mt-10 flex items-center gap-1.5 text-[13px] font-bold text-muted-2 dark:text-dark-muted"
+              >
+                Archived events · {archivedEvents.length}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            )}
           </>
         )}
       </div>
 
-      {canEdit && events.length > 0 && (
+      {canEdit && (activeEvents.length > 0 || archivedEvents.length > 0) && (
         <button
           type="button"
           onClick={() => setShowCreateEvent(true)}
@@ -202,6 +218,16 @@ export function EventsListView({
           onClose={() => setRenameEventTarget(null)}
           onRenamed={() => {
             setRenameEventTarget(null);
+            router.refresh();
+          }}
+        />
+      )}
+      {archiveTarget && (
+        <ArchiveEventModal
+          event={archiveTarget}
+          onClose={() => setArchiveTarget(null)}
+          onArchived={() => {
+            setArchiveTarget(null);
             router.refresh();
           }}
         />
@@ -283,11 +309,13 @@ function EventCard({
   event,
   canEdit,
   onRequestRename,
+  onRequestArchive,
 }: {
   groupId: string;
   event: EventSummary;
   canEdit: boolean;
   onRequestRename: (event: EventSummary) => void;
+  onRequestArchive: (event: EventSummary) => void;
 }) {
   const color = colorForSeed(event.id);
   const letter = event.name.trim().charAt(0).toUpperCase() || "?";
@@ -296,7 +324,12 @@ function EventCard({
     event.settlementState === "unsettled"
       ? formatMoney(event.unsettledAmount, event.currency)
       : status.value;
-  const isArchived = event.status === "archived";
+
+  // EventCard only ever renders active events now -- archived events live
+  // on the dedicated read-only screen (T3), reached via the "Archived
+  // events" row below the grid. So there is no isArchived branch, no
+  // Archived pill, and no Restore menu item here; Archive stays the only
+  // status-changing action a card offers.
 
   // The menu is a sibling of the Link, not a child: <a> may not contain a
   // <button> under HTML's interactive content model, and nesting them would
@@ -326,11 +359,6 @@ function EventCard({
               {event.memberCount} member{event.memberCount === 1 ? "" : "s"}
             </p>
           </div>
-          {isArchived && (
-            <span className="rounded-full bg-gold-tint px-3 py-1 text-[11.5px] font-bold whitespace-nowrap text-gold dark:bg-gold/16">
-              Archived
-            </span>
-          )}
         </div>
         <div className="mb-3 h-px bg-ink/8 sm:mb-4 dark:bg-white/10" />
         <div className="flex items-end justify-between">
@@ -365,6 +393,7 @@ function EventCard({
                 className="outline-none"
                 onAction={(key: Key) => {
                   if (key === "rename") onRequestRename(event);
+                  if (key === "archive") onRequestArchive(event);
                 }}
               >
                 <MenuItem
@@ -372,6 +401,12 @@ function EventCard({
                   className="flex cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-semibold text-ink outline-none data-[focused]:bg-ink/6 dark:text-dark-text dark:data-[focused]:bg-white/8"
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Rename
+                </MenuItem>
+                <MenuItem
+                  id="archive"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-semibold text-ink outline-none data-[focused]:bg-ink/6 dark:text-dark-text dark:data-[focused]:bg-white/8"
+                >
+                  <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Archive
                 </MenuItem>
               </Menu>
             </Popover>

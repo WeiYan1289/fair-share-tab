@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
 import { assignAvatarColor } from "@/lib/constants";
+import { ArchivedEventError, assertEventNotArchived } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { createMemberSchema } from "@/lib/validation/member";
 
@@ -30,6 +31,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event || event.groupId !== session.groupId) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+  try {
+    assertEventNotArchived(event, "This event is archived and cannot have new members");
+  } catch (error) {
+    if (error instanceof ArchivedEventError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   const body = await request.json().catch(() => null);

@@ -12,6 +12,17 @@ export class SessionError extends Error {
   }
 }
 
+// Thrown instead of a plain SessionError so pages can send the visitor to
+// the /group-archived explanation page rather than the landing page — the
+// visitor had legitimate access, the group is just parked (spec 2026-08-06
+// feature C). API routes need no special handling: it carries 403 like any
+// SessionError.
+export class ArchivedGroupError extends SessionError {
+  constructor() {
+    super(403, "This group has been archived by its owner");
+  }
+}
+
 // actorType lets UI code (e.g. ShareDialog) branch on "is this an anonymous
 // visitor or a registered member" without re-deriving it from payload.kind
 // itself. userId is only present for member-kind sessions.
@@ -36,16 +47,22 @@ export async function requireSession(options?: { role?: "editor" }): Promise<Res
   }
 
   if (payload.kind === "link") {
-    const link = await prisma.groupShareLink.findUnique({ where: { id: payload.shareLinkId } });
+    const link = await prisma.groupShareLink.findUnique({
+      where: { id: payload.shareLinkId },
+      include: { group: { select: { status: true } } },
+    });
     if (!link || link.revokedAt !== null || link.groupId !== payload.groupId) {
       throw new SessionError(401, "This link has been revoked");
+    }
+    if (link.group.status === "archived") {
+      throw new ArchivedGroupError();
     }
   } else {
     const membership = await prisma.groupMembership.findUnique({
       where: { id: payload.membershipId },
       // Pulled in the same round trip as the membership check, so the
       // password-change check below costs no extra query.
-      include: { user: { select: { passwordChangedAt: true } } },
+      include: { user: { select: { passwordChangedAt: true } }, group: { select: { status: true } } },
     });
     if (!membership || membership.groupId !== payload.groupId || membership.userId !== payload.userId) {
       throw new SessionError(401, "This membership no longer grants access");
@@ -62,6 +79,9 @@ export async function requireSession(options?: { role?: "editor" }): Promise<Res
       })
     ) {
       throw new SessionError(401, "This session ended when the account password changed");
+    }
+    if (membership.group.status === "archived") {
+      throw new ArchivedGroupError();
     }
   }
 

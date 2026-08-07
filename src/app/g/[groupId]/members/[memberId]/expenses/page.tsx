@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { getMemberExpenses } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { MemberExpenseView } from "@/components/members/MemberExpenseView";
@@ -20,6 +20,7 @@ export default async function MemberExpensesPage({
   try {
     session = await requireSession();
   } catch (error) {
+    if (error instanceof ArchivedGroupError) redirect("/group-archived");
     if (error instanceof SessionError) redirect("/");
     throw error;
   }
@@ -46,6 +47,7 @@ export default async function MemberExpensesPage({
         lines: e.lines.map((line) => ({ ...line, createdAt: line.createdAt.toISOString() })),
       }))}
       initialCurrency={currency ?? null}
+      hasArchivedEvents={expenses.hasArchivedEvents}
     />
   );
 }

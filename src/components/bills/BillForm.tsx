@@ -204,10 +204,24 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
           body: JSON.stringify(body),
         },
       );
-      if (!res.ok) throw new Error("save failed");
+      if (!res.ok) {
+        // The bills route 409s an archived event with a human-readable
+        // message ("This event is archived and cannot have new bills") --
+        // surface that instead of a generic failure, since this form stays
+        // reachable (bookmark, back button, history) after its event is
+        // archived. A 400 still returns Zod's flatten() object here, which
+        // must not render -- only use body.error when it's a string.
+        const body = await res.json().catch(() => null);
+        const message = typeof body?.error === "string" ? body.error : null;
+        setError(message ?? "Couldn't save that bill — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
       router.push(dashboardHref);
       router.refresh();
     } catch {
+      // A thrown error here is a transport failure, never a server
+      // message -- its raw text is not user-facing copy.
       setError("Couldn't save that bill — check your connection and try again.");
       setSubmitting(false);
     }

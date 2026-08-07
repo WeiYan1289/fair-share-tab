@@ -292,7 +292,7 @@ one-group cap (§3.3) is enforced instead.
 | `GET` | `/api/groups/{id}/events` | List with computed total spend and unsettled amount. |
 | `POST` | `/api/groups/{id}/events` | Create `{ name, currency?, startDate?, endDate?, memberIds[] }`. `currency` defaults to `MYR`; see the curated list in `data-model.md` §5. |
 | `GET` | `/api/events/{id}` | Detail with members, bills, and computed balances. |
-| `PATCH` | `/api/events/{id}` | Rename, change dates, or archive. Currency cannot be changed here — it is fixed at creation and locked once the event has its first bill. |
+| `PATCH` | `/api/events/{id}` | Rename, change dates, or archive. Currency cannot be changed here — it is fixed at creation and locked once the event has its first bill. **On an archived event this 409s**, along with every other event-scoped write; the sole exception is a payload of `{ status: "active" }` alone, and bundling `name` or a date with that restore is rejected too (`data-model.md` §6 invariant 14). |
 
 ### Bills
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { getMemberBalance } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { MemberBalanceView } from "@/components/members/MemberBalanceView";
@@ -17,6 +17,7 @@ export default async function MemberBalancePage({
   try {
     session = await requireSession();
   } catch (error) {
+    if (error instanceof ArchivedGroupError) redirect("/group-archived");
     if (error instanceof SessionError) redirect("/");
     throw error;
   }
@@ -40,6 +41,7 @@ export default async function MemberBalancePage({
       actorType={session.actorType}
       member={memberRow}
       events={balance.events}
+      hasArchivedEvents={balance.hasArchivedEvents}
     />
   );
 }

@@ -19,6 +19,11 @@ enum EventStatus {
   archived
 }
 
+enum GroupStatus {
+  active
+  archived
+}
+
 enum SplitMethod {
   equal
   custom
@@ -35,10 +40,16 @@ enum SettlementStatus {
 }
 
 model Group {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String      @id @default(uuid()) @db.Uuid
   name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  status    GroupStatus @default(active)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Null means "not archived, or archived before this column existed".
+  // Set to now() when status flips to archived, cleared back to null on
+  // restore -- both writes happen in the group PATCH handler (T2).
+  archivedAt DateTime? @map("archived_at")
 
   shareLinks  GroupShareLink[]
   members     Member[]
@@ -160,6 +171,11 @@ model Event {
   endDate   DateTime?   @map("end_date") @db.Date
   status    EventStatus @default(active)
   createdAt DateTime    @default(now()) @map("created_at")
+
+  // Null means "not archived, or archived before this column existed".
+  // Set to now() when status flips to archived, cleared back to null on
+  // restore -- both writes happen in the event PATCH handler (T1).
+  archivedAt DateTime? @map("archived_at")
 
   group        Group         @relation(fields: [groupId], references: [id], onDelete: Restrict)
   eventMembers EventMember[]

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { getEventDetail } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { EventDashboard } from "@/components/events/EventDashboard";
@@ -17,6 +17,7 @@ export default async function EventDashboardPage({
   try {
     session = await requireSession();
   } catch (error) {
+    if (error instanceof ArchivedGroupError) redirect("/group-archived");
     if (error instanceof SessionError) redirect("/");
     throw error;
   }

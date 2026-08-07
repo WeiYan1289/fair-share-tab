@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { listGroupEvents } from "@/lib/events";
 import { listGroupMembers } from "@/lib/members";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +22,7 @@ export default async function EventsPage({
   try {
     session = await requireSession();
   } catch (error) {
+    if (error instanceof ArchivedGroupError) redirect("/group-archived");
     if (error instanceof SessionError) redirect("/");
     throw error;
   }
@@ -47,6 +48,7 @@ export default async function EventsPage({
         memberCount: event.memberCount,
         totalSpend: event.totalSpend,
         unsettledAmount: event.unsettledAmount,
+        unsettledCount: event.unsettledCount,
         settlementState: event.settlementState,
       }))}
       members={members}

@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
 import { BillValidationError, resolveBillSplits, serializeBill } from "@/lib/bills";
+import { ArchivedEventError, assertEventNotArchived } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { billSchema } from "@/lib/validation/bill";
 
 async function loadBillForGroup(billId: string, groupId: string) {
   const bill = await prisma.bill.findUnique({
     where: { id: billId },
-    include: { event: { select: { groupId: true } } },
+    include: { event: { select: { groupId: true, status: true } } },
   });
   if (!bill || bill.event.groupId !== groupId) return null;
   return bill;
@@ -41,6 +42,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       { error: "This bill is settled and must be unsettled before it can be edited" },
       { status: 409 },
     );
+  }
+  try {
+    assertEventNotArchived(existing.event, "This event is archived and cannot be edited");
+  } catch (error) {
+    if (error instanceof ArchivedEventError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   const body = await request.json().catch(() => null);
@@ -114,6 +123,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       { error: "This bill is settled and must be unsettled before it can be deleted" },
       { status: 409 },
     );
+  }
+  try {
+    assertEventNotArchived(existing.event, "This event is archived and cannot be deleted from");
+  } catch (error) {
+    if (error instanceof ArchivedEventError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   await prisma.bill.delete({ where: { id: billId } });

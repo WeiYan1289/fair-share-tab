@@ -26,3 +26,11 @@ export function formatDateRange(
   if (startDate && endDate) return `${fmt(startDate)} – ${fmt(endDate)}`;
   return fmt(startDate ?? endDate!);
 }
+
+/** e.g. "6 Aug" -- used for the "archived 6 Aug" meta segment on the
+ * archived-events/groups screens. Callers omit the whole segment when the
+ * underlying date is null (T0: rows archived before the column existed). */
+export function formatShortDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-MY", { day: "numeric", month: "short" });
+}

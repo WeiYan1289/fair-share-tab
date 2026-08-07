@@ -32,10 +32,11 @@ These are correctness requirements, not preferences. Violating any of them is a 
 
 **1. Money is integers in the smallest unit of the event's currency.** Each event
 independently selects its currency (default MYR) from a curated list (MYR, SGD, JPY,
-CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. Only JPY has
-zero decimal places; every other currency in the list uses 2. `RM 12.50` is stored and
-computed as `1250`; `¥1,500` is stored and computed as `1500`. Never use float, never
-use decimal-as-string. Convert to display only at the UI boundary
+CNY, TWD, KRW, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. JPY
+and KRW have zero decimal places; every other currency in the list uses 2, so never
+assume a division by 100. `RM 12.50` is stored and computed as `1250`; `¥1,500` and
+`₩1,500` are stored and computed as `1500`. Never use float, never use
+decimal-as-string. Convert to display only at the UI boundary
 (`amount / 10 ** minorUnit`, `RM 1,240.00` / `¥1,500`).
 
 **2. Splits must sum to the bill total.** `SUM(split.share_amount) === bill.total_amount`
@@ -47,9 +48,22 @@ distribute the remainder in the currency's smallest unit one at a time — to th
 first if the payer participates, then by `member.created_at`. Sum must equal total
 exactly. `RM 250.00 / 3` → `8334 / 8333 / 8333`.
 
-**4. Members are never deleted.** Only `is_active = false`. They stay on every bill
-they already appear on and remain settleable. Do not add a delete endpoint or a delete
-button. Same for groups (never deleted) and events (archived).
+**4. Nothing is ever deleted, and archived means sealed.** Members only get
+`is_active = false` — they stay on every bill they already appear on and remain
+settleable. Events and groups both get `status = 'archived'`. Do not add a
+delete endpoint or a delete button for any of them.
+
+Archived is a read-only state, not a filter. An archived event rejects every
+write with a 409; an archived group refuses every session, the owner included.
+The only permitted action on either is restore, taken from the dedicated
+archive screens (`/g/{groupId}/events/archived`,
+`/account/groups/archived`) — which is why those screens are ruled lists rather
+than cards, and why an archived item is never rendered as a card in the main
+list. Enforce the seal server-side; hiding the buttons is not the gate.
+
+Archiving is always reversible and never destroys data: restoring a group brings
+its existing share links straight back to life, because archiving leaves
+`revoked_at` untouched.
 
 **5. Member names are shown plainly, identically to everyone with the link.**
 No per-viewer identity is tracked anywhere in the app, so there is no "you" to
@@ -68,14 +82,45 @@ in v1. Server validates the share-token session cookie, then queries.
 
 **8. Share tokens: CSPRNG, ≥128 bits, base62.** Exchange the token for an `httpOnly`
 session cookie on first visit and redirect to a clean URL — never leave the token in
-the address bar. Validate `revoked_at` on every request, not just at exchange.
+the address bar. Validate `revoked_at` on every request, not just at exchange — and
+`group.status` alongside it, for the same reason: a credential that was valid when
+issued must be re-checked, not trusted.
 
 **9. `viewer` role is enforced server-side.** Hiding buttons is not access control.
+The same goes for owner-only actions (rename, archive, restore, share-link
+regeneration): the menu item may be hidden for convenience, but the endpoint must
+still 403. **The owner is the user holding the group's earliest `editor`
+`group_membership`** — derived, never stored. `getGroupOwner` in
+`src/lib/account.ts` is canonical; if you resolve it inline anywhere, keep the
+`created_at ASC` ordering or you will silently promote the wrong editor.
 
 **10. Settled bills are immutable.** Reject edits and deletes on
-`status = 'settled'` at the API layer.
+`status = 'settled'` at the API layer. There is no unsettle path and adding one is
+its own design problem, not a quick fix: a settlement can cover several bills with
+one already-computed set of transfers, so releasing a single bill would leave its
+siblings' transfers wrong. Do not add a Lock icon, a disabled "unmark" button, or
+copy implying the action can be reversed. Because it cannot be undone, the settle
+confirmation requires an explicit "these payments have been made in real life"
+acknowledgement before it will submit.
 
-**11. Password reset has four invariants that break silently.** Each one
+**11. Archiving hides money, so say so where the money is shown.** Archived events
+are excluded from member expense and balance figures — filtered in the query
+functions in `src/lib/expenses/`, never in components, so every tab agrees by
+construction. `getMemberEventActivity` is the deliberate exception: it is scoped to
+one event and reached from that event's own dashboard.
+
+This only holds because rule 4's seal holds. Hiding an event's money while
+still accepting writes to it means a new bill counts toward nobody's balance —
+that was a real bug, not a hypothetical, and the seal is what fixes it. If you
+ever relax one, you have reintroduced the other.
+
+Two consequences that are easy to get wrong: any UI copy claiming to cover
+"every event" becomes false the moment an archived event holds unsettled money —
+scope the wording and say archived events are not counted; and archiving is
+allowed even with unsettled bills, so the confirmation must state the count and
+amount being hidden, plus that the event cannot be settled while archived.
+
+**12. Password reset has four invariants that break silently.** Each one
 looks fine in the browser when violated, which is why they are listed here
 rather than left to code review.
 

@@ -58,7 +58,15 @@ interface EventDashboardProps {
 // (read-only for viewer-role sessions).
 export function EventDashboard({ groupId, groupName, viewerRole, actorType, event }: EventDashboardProps) {
   const router = useRouter();
-  const canEdit = viewerRole === "editor";
+  // This dashboard is only reachable by bookmark, back button, or history
+  // once its event is archived (T3 moved the live entry point to the
+  // read-only archived-events list) -- but nothing stopped someone from
+  // landing here anyway, and every write route 409s an archived event
+  // server-side (CLAUDE.md rule 4/9). So the screen must say so and stop
+  // offering writes that would only fail: no "canEdit" affordance survives
+  // archiving, regardless of role.
+  const isArchived = event.status === "archived";
+  const canEdit = viewerRole === "editor" && !isArchived;
   const [showAddMember, setShowAddMember] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(
     null,
@@ -104,12 +112,28 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
 
         <div className="mb-7 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="num truncate text-[20px] text-ink sm:text-[36px] dark:text-dark-text">
-              {event.name}
-            </h1>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <h1 className="num truncate text-[20px] text-ink sm:text-[36px] dark:text-dark-text">
+                {event.name}
+              </h1>
+              {isArchived && (
+                <span className="shrink-0 rounded-full bg-gold-tint px-2.5 py-1 text-[10.5px] font-bold whitespace-nowrap text-gold sm:text-[11.5px] dark:bg-gold/16">
+                  Archived
+                </span>
+              )}
+            </div>
             {dateRange && (
               <p className="mt-1 text-[12px] text-muted sm:text-[13px] dark:text-dark-muted">
                 {dateRange} · {event.members.length} member{event.members.length === 1 ? "" : "s"}
+              </p>
+            )}
+            {isArchived && (
+              <p className="mt-1 text-[12px] text-muted sm:text-[13px] dark:text-dark-muted">
+                This event is archived and read-only.{" "}
+                <Link href={`/g/${groupId}/events/archived`} className="font-bold text-link dark:text-mint">
+                  Restore it
+                </Link>{" "}
+                to make changes.
               </p>
             )}
           </div>
@@ -166,7 +190,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
           <p className="text-[12.5px] font-bold tracking-wide text-muted-2 uppercase dark:text-dark-muted">
             Bills
           </p>
-          {event.bills.length > 0 && (
+          {event.bills.length > 0 && !isArchived && (
             <div className="flex gap-2.5">
               <Link
                 href={`/g/${groupId}/events/${event.id}/settle`}

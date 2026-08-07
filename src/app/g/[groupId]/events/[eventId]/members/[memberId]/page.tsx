@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { getMemberEventActivity } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { MemberEventActivityView } from "@/components/members/MemberEventActivityView";
@@ -19,6 +19,7 @@ export default async function MemberEventActivityPage({
   try {
     session = await requireSession();
   } catch (error) {
+    if (error instanceof ArchivedGroupError) redirect("/group-archived");
     if (error instanceof SessionError) redirect("/");
     throw error;
   }
