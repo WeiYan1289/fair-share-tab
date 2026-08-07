@@ -46,3 +46,10 @@ next-env.d.ts
 
 # git worktrees (scratch, per-session)
 /.worktrees/
+
+# local Claude Code config (dev-server launch profile, per-machine settings)
+/.claude/
+
+# local-only scratch docs (generated guides, exported artifacts) — the
+# authoritative documents live in docs/ and are committed.
+/docs/local/
