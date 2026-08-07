@@ -18,7 +18,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ grou
     return new NextResponse("Too many attempts. Please try again in a minute.", { status: 429 });
   }
 
-  const link = await prisma.groupShareLink.findUnique({ where: { token } });
+  const link = await prisma.groupShareLink.findUnique({
+    where: { token },
+    include: { group: { select: { status: true } } },
+  });
 
   // Same response for "never existed" and "revoked" — copy stays generic on
   // purpose (Screen Spec P2-05).
@@ -27,6 +30,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ grou
       status: 404,
       headers: { "X-Robots-Tag": "noindex" },
     });
+  }
+
+  // An archived group's links stay valid but dormant (spec 2026-08-06
+  // feature C): no session is minted, and restore makes this same URL work
+  // again with no re-sharing.
+  if (link.group.status === "archived") {
+    return NextResponse.redirect(new URL("/group-archived", request.url), { status: 303 });
   }
 
   const session = signSession({ kind: "link", groupId: link.groupId, role: link.role, shareLinkId: link.id });

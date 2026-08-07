@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
+import { ArchivedEventError, assertEventNotArchived } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import {
   computeSettlementPreview,
@@ -34,8 +35,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!event || event.groupId !== session.groupId) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
-  if (event.status === "archived") {
-    return NextResponse.json({ error: "This event is archived and cannot be settled" }, { status: 409 });
+  try {
+    assertEventNotArchived(event, "This event is archived and cannot be settled");
+  } catch (error) {
+    if (error instanceof ArchivedEventError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   const body = await request.json().catch(() => null);

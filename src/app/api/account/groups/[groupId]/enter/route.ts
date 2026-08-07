@@ -43,6 +43,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ gro
     return new NextResponse("You don't have access to this group.", { status: 404 });
   }
 
+  const group = await prisma.group.findUnique({ where: { id: groupId }, select: { status: true } });
+  if (!group) {
+    return new NextResponse("Group not found.", { status: 404 });
+  }
+  if (group.status === "archived") {
+    return NextResponse.redirect(new URL("/group-archived", request.url), { status: 303 });
+  }
+
   const groupSession = signSession({
     kind: "member",
     groupId,

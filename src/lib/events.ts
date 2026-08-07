@@ -1,6 +1,50 @@
 import { prisma } from "@/lib/prisma";
 import { collectBillParticipants } from "@/lib/bill-participants";
 import { computeNetBalances } from "@/lib/settlement";
+import type { UpdateEventInput } from "@/lib/validation/event";
+
+// Thrown by assertEventNotArchived; every write route against an event (or
+// a bill scoped to one) catches this the same way it catches SessionError/
+// CsrfError -- instanceof check, then `NextResponse.json({ error:
+// error.message }, { status: error.status })`.
+export class ArchivedEventError extends Error {
+  status = 409 as const;
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+// Archived means sealed (CLAUDE.md rule 4): every write on an archived
+// event must 409, with one exception -- the events PATCH route that
+// restores status to "active". That route does NOT call this helper when
+// the request is restore-only; every other write route (bills, event
+// members, event rename/dates, settlement preview/confirm) calls this
+// unconditionally against the event row it already loaded, so the check
+// lives in exactly one place and can't drift between routes.
+export function assertEventNotArchived(event: { status: string }, message: string): void {
+  if (event.status === "archived") {
+    throw new ArchivedEventError(message);
+  }
+}
+
+// The events PATCH route's one exception to assertEventNotArchived: a
+// payload that ONLY restores status to "active" (nothing else) is let
+// through against an archived event. Extracted as a named predicate --
+// rather than left inline in the route -- specifically so it has direct
+// Vitest coverage (CLAUDE.md's "small decision predicate" test category):
+// this is a pure function of updateEventSchema's shape, and if a field is
+// ever added to that schema without being added here, the seal silently
+// reopens for that field whenever it rides along with status:"active" on
+// an archived event.
+export function isRestoreOnlyEventPatch(data: UpdateEventInput): boolean {
+  return (
+    data.status === "active" &&
+    data.name === undefined &&
+    data.startDate === undefined &&
+    data.endDate === undefined
+  );
+}
 
 // Shared by the events API route and the events-list Server Component
 // (system-design.md §5 "Events") so the total-spend / unsettled-amount
@@ -16,9 +60,9 @@ export async function listGroupEvents(groupId: string) {
   });
 
   return events.map((event) => {
-    const unsettledAmount = event.bills
-      .filter((bill) => bill.status === "unsettled")
-      .reduce((sum, bill) => sum + bill.totalAmount, 0);
+    const unsettledBills = event.bills.filter((bill) => bill.status === "unsettled");
+    const unsettledAmount = unsettledBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+    const unsettledCount = unsettledBills.length;
 
     // Drives the event card's status label (Screen Spec P3-02): an event
     // with no bills yet is not "settled", it just hasn't started, and the
@@ -37,7 +81,42 @@ export async function listGroupEvents(groupId: string) {
       memberCount: event._count.eventMembers,
       totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
       unsettledAmount,
+      unsettledCount,
       settlementState,
+    };
+  });
+}
+
+// Backs the archived-events screen (T3): a ruled list, not the card grid,
+// so it only needs the fields that list actually renders -- no
+// settlementState, since an archived event's status can't move without
+// restoring it first. Ordered by archivedAt desc, nulls last (rows
+// archived before T0 added the column), then createdAt desc so those
+// undated rows still have a stable, recency-ish order.
+export async function listArchivedGroupEvents(groupId: string) {
+  const events = await prisma.event.findMany({
+    where: { groupId, status: "archived" },
+    orderBy: [{ archivedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    include: {
+      _count: { select: { eventMembers: true } },
+      bills: { select: { totalAmount: true, status: true } },
+    },
+  });
+
+  return events.map((event) => {
+    const unsettledAmount = event.bills
+      .filter((bill) => bill.status === "unsettled")
+      .reduce((sum, bill) => sum + bill.totalAmount, 0);
+
+    return {
+      id: event.id,
+      name: event.name,
+      currency: event.currency,
+      totalSpend: event.bills.reduce((sum, bill) => sum + bill.totalAmount, 0),
+      billCount: event.bills.length,
+      memberCount: event._count.eventMembers,
+      unsettledAmount,
+      archivedAt: event.archivedAt,
     };
   });
 }

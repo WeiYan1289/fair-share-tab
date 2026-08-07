@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGroupOwner, type GroupOwnerClient } from "./account";
+import { getGroupOwner, isRestoreOnlyGroupPatch, type GroupOwnerClient } from "./account";
 
 const GROUP_ID = "11111111-1111-1111-1111-111111111111";
 const OTHER_GROUP_ID = "99999999-9999-9999-9999-999999999999";
@@ -62,5 +62,32 @@ describe("getGroupOwner", () => {
     const owner = await getGroupOwner(OTHER_GROUP_ID, client);
 
     expect(owner).toBeNull();
+  });
+});
+
+// isRestoreOnlyGroupPatch is the archived-groups PATCH route's one
+// exception to sealing: a payload that ONLY restores status to "active"
+// is let through against an archived group, everything else 409s. It is a
+// pure function of updateGroupSchema's shape (src/lib/validation/group.ts)
+// -- if a field is ever added to that schema without being added here, the
+// seal silently reopens for that field whenever it rides along with
+// status:"active" on an archived group. These cases must be revisited any
+// time updateGroupSchema gains a field. Mirrors isRestoreOnlyEventPatch's
+// test coverage in events.test.ts.
+describe("isRestoreOnlyGroupPatch", () => {
+  it("is true for status:active alone", () => {
+    expect(isRestoreOnlyGroupPatch({ status: "active" })).toBe(true);
+  });
+
+  it("is false when a name rides along with status:active", () => {
+    expect(isRestoreOnlyGroupPatch({ status: "active", name: "x" })).toBe(false);
+  });
+
+  it("is false for status:archived", () => {
+    expect(isRestoreOnlyGroupPatch({ status: "archived" })).toBe(false);
+  });
+
+  it("is false for a rename with no status field at all", () => {
+    expect(isRestoreOnlyGroupPatch({ name: "x" })).toBe(false);
   });
 });
