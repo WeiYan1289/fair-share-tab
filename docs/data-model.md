@@ -155,7 +155,9 @@ The top-level container. Never hard-deleted.
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | Primary key. |
-| `name` | string | e.g. "Family & Friends". Required, trimmed, non-empty. |
+| `name` | string | e.g. "Family & Friends". Required, trimmed, non-empty. Renameable by the owner (§3.10). |
+| `status` | enum | `active` or `archived`. Never hard-deleted. An archived group is unreachable through every entrance — see §9.1. |
+| `archived_at` | timestamp NULL | Set when `status` becomes `archived`, cleared back to NULL on restore. NULL also means "archived before this column existed" — the archive screens sort nulls last and omit the date rather than printing a placeholder. |
 | `created_at` | timestamp | Set on creation. |
 | `updated_at` | timestamp | Updated on any change. |
 
@@ -198,10 +200,11 @@ One trip within a group.
 | `id` | UUID (PK) | Primary key. |
 | `group_id` | UUID (FK) | References `group.id`. |
 | `name` | string | e.g. "Japan Trip 2025". Required. |
-| `currency` | string(3) | ISO 4217, from a curated list (MYR, SGD, JPY, CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. Defaults to `MYR`. Chosen at creation and **locked once the event has its first bill** (see §5, §6 invariant 9). |
+| `currency` | string(3) | ISO 4217, from a curated list (MYR, SGD, JPY, CNY, TWD, KRW, USD, THB, IDR, HKD, EUR, GBP, AUD) — see `src/lib/currency.ts`. Defaults to `MYR`. Chosen at creation and **locked once the event has its first bill** (see §5, §6 invariant 9). |
 | `start_date` | date NULL | Optional, for the date range in the header. |
 | `end_date` | date NULL | Optional. |
-| `status` | enum | `active` or `archived`. Never hard-deleted. |
+| `status` | enum | `active` or `archived`. Never hard-deleted. An archived event rejects every write — see §6 invariant 14. |
+| `archived_at` | timestamp NULL | Same rule as `group.archived_at` (§3.1): set on archive, cleared on restore, NULL for rows archived before the column existed. |
 | `created_at` | timestamp | Set on creation. |
 
 ### 3.5 `event_member`
@@ -305,6 +308,15 @@ counterpart to `group_share_link`. Unlike a share link, this is tied to a specif
 
 Unique constraint: `(group_id, user_id)` — a user has at most one membership per group.
 
+**The owner of a group is the user holding its earliest `editor` membership,
+ordered by `created_at`.** This is not a stored flag — it is derived, and it is
+an access-control primitive: renaming, archiving, restoring, and share-link
+regeneration are all owner-only. `getGroupOwner` in `src/lib/account.ts` is the
+canonical implementation; the archived-group gate (§9.1) resolves the same rule
+inline on its own path. v1 only ever creates one editor membership per group, so
+"earliest" is unambiguous today — but write the ordering explicitly in any new
+call site, so this stays correct if co-owner invites are ever added.
+
 ### 3.11 `password_reset_token`
 
 A single-use credential for account recovery, issued by `POST /api/auth/forgot` and
@@ -361,12 +373,13 @@ the UI (§7's display rule applies identically either way).
 ## 5. Money handling — multi-currency
 
 Each **event** picks its own currency (default MYR) from a curated list defined in
-`src/lib/currency.ts`: MYR, SGD, JPY, CNY, TWD, USD, THB, IDR, HKD, EUR, GBP, AUD.
+`src/lib/currency.ts`: MYR, SGD, JPY, CNY, TWD, KRW, USD, THB, IDR, HKD, EUR, GBP, AUD.
 
 - Every amount is stored as an integer number of the currency's smallest unit — its
-  ISO 4217 minor unit. For 2-decimal currencies (everything in the list except JPY),
-  1 unit = 100 smallest units, so `RM 12.50` is stored as `1250`. **JPY has zero
-  decimal places** — `¥1,500` is stored as `1500`, not `150000`.
+  ISO 4217 minor unit. For 2-decimal currencies (everything in the list except JPY
+  and KRW), 1 unit = 100 smallest units, so `RM 12.50` is stored as `1250`. **JPY and
+  KRW have zero decimal places** — `¥1,500` and `₩1,500` are stored as `1500`, not
+  `150000`.
 - Never use `float`, `double`, or `Decimal`-as-string for amounts. Integer columns only.
 - Convert to display only at the UI boundary: `amount / 10 ** minorUnit`, formatted
   with the currency's symbol and the correct number of decimal places
@@ -396,9 +409,13 @@ Each **event** picks its own currency (default MYR) from a curated list defined 
    `member.created_at` order, one unit each. The sum must still equal the total
    exactly. Example: `RM 250.00 / 3` → `8334 / 8333 / 8333` sen.
 6. **Members are never deleted** — only `is_active = false`.
-7. **Groups and events are never hard-deleted** — events use `status = 'archived'`.
+7. **Groups and events are never hard-deleted** — both use `status = 'archived'`
+   (§3.1, §3.4).
 8. **Settled bills are immutable** — a bill with `status = 'settled'` cannot be edited
-   or deleted until it is unsettled.
+   or deleted, full stop. There is no unsettle path in v1: not an endpoint, not a
+   disabled button. Anything that implies one is a bug. Because the action is
+   irreversible, the settle confirmation requires an explicit acknowledgement that
+   the payments really happened before it will submit.
 9. **One currency per event, locked at creation** — an event's `currency` is chosen
    when it's created and cannot change once the event has its first bill. Settlement
    is always scoped to a single event (§3.8), so netting never crosses currencies.
@@ -409,6 +426,36 @@ Each **event** picks its own currency (default MYR) from a curated list defined 
     response and log line, no exceptions.
 13. **`member.user_id`, once set, is never unset by application code** — claiming a
     member into an account is one-directional in v1; there is no "unlink account" flow.
+14. **Archived means sealed, not merely hidden.** Two halves, and the first is
+    what makes the second safe.
+
+    *Sealed:* an archived event rejects **every** write server-side with a 409 —
+    creating or editing or deleting a bill, adding an event member, renaming,
+    and both settlement endpoints. The single permitted write is the PATCH that
+    sets `status` back to `active`, and a PATCH that bundles `name` or dates
+    alongside that restore is rejected too, so nothing can ride in on the
+    exemption. `assertEventNotArchived` and `isRestoreOnlyEventPatch` in
+    `src/lib/events.ts` are the only implementations of that rule; the predicate
+    is unit-tested precisely because adding a field to `updateEventSchema`
+    without adding it there would silently reopen the seal. An archived group is
+    sealed the same way, by refusing the session outright (§9.1).
+
+    *Hidden:* `getMemberExpenses` and `getMemberBalance` filter
+    `event.status = 'active'`, so an archived event's amounts appear in no
+    member's expense history or balance until it is restored. The filter lives
+    in those query functions, never in components, so every tab agrees by
+    construction. `getMemberEventActivity` is deliberately **not** filtered — it
+    is scoped to a single event and reached from that event's own dashboard.
+
+    Without the seal, the hiding is a data-integrity bug: a bill created on an
+    archived event would count toward nobody's balance. That is exactly what
+    happened before the seal existed, and it is why the two halves belong to one
+    invariant.
+
+    Because archiving can hide real debt, the archive confirmation states the
+    unsettled bill count and amount and says the event cannot be settled while
+    archived, and the member views say plainly that archived events are not
+    counted rather than claiming to cover "every event".
 
 ---
 
@@ -470,9 +517,43 @@ not a person ever creates an account — both are permanent, first-class ways in
 `member` and `user` are never merged into one table. A member is a name on a bill and
 must survive whether or not a person ever creates an account.
 
----
+### 9.1 Archived groups
 
-## 10. Suggested indexes
+Archiving is the owner's way to park a group without deleting anything
+(`group.status`, §3.1). While archived it must be unreachable through **every**
+entrance, and all three checks are server-side:
+
+1. **`requireSession`** re-checks `group.status` on every request, for both
+   credential kinds — exactly the discipline `revoked_at` already gets (§4). This
+   is what covers a visitor who was already holding a session cookie when the
+   group was archived; their very next request is refused. The status is pulled
+   inside the query that already runs, so an active group costs no extra round
+   trip.
+2. **`GET /g/{token}`** (share-link exchange) mints no session at all.
+3. **`POST /api/account/groups/{id}/enter`** (the registered-user counterpart)
+   refuses in the same way.
+
+`ArchivedGroupError` extends the ordinary session error with status 403, so API
+routes inherit the right response with no per-route change, while pages redirect
+to a `/group-archived` explanation screen rather than a generic not-found — the
+visitor had legitimate access and the group is only parked.
+
+**Nobody is exempt, including the owner.** An earlier revision carved out the
+owner so their deep links would not dead-end while Restore lived on a card in
+the main groups list. Restore now lives on `/account/groups/archived`, so that
+justification is gone and the carve-out with it — along with the extra
+membership query it ran. An archived group refuses every session uniformly,
+which is one fewer branch in the code that decides who gets in.
+
+Restore itself is unaffected because it never goes through a group-context
+session: `PATCH /api/account/groups/{id}` authenticates with the account-level
+user session. That separation is what makes sealing the group safe rather than
+a lockout, so keep it — moving restore behind a group session would strand the
+owner outside their own group.
+
+**Archiving never touches share tokens.** `revoked_at` stays null, so restoring
+the group makes every existing link work again with nothing to re-share. That is
+the whole point of archiving rather than revoking.
 
 - `group_share_link(token)` — unique, hot path on every request.
 - `member(group_id)`, `member(group_id, is_active)`

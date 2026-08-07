@@ -23,15 +23,18 @@ reduces many bills to the fewest transfers.
 Access is a **shareable link per group** — no accounts in v1, but the schema is built
 so login can be added later without a migration.
 
-## Ten rules that must not be broken
+## Eleven rules that must not be broken
 
 1. Money is **integers in the event currency's smallest unit**. Each event picks its
    own currency (default MYR) from a curated list — see `src/lib/currency.ts`.
-   `RM 12.50` → `1250`; `¥1,500` → `1500` (JPY has zero decimal places).
+   `RM 12.50` → `1250`; `¥1,500` → `1500` (JPY and KRW have zero decimal places).
 2. **Splits always sum to the bill total** — validated server-side, in a transaction.
 3. **Equal-split rounding is deterministic** — the remainder goes to the payer first,
    then by `created_at`.
-4. **Members are never deleted** — deactivated only.
+4. **Nothing is ever deleted** — members deactivate, events and groups archive,
+   links revoke. Archiving is always reversible, and **archived means sealed**:
+   an archived event rejects every write, an archived group refuses every
+   session, and the only action on either is restore.
 5. **Show the viewer's real name**, never the bare word "You".
 6. **`member` and `user` are separate** — `member.user_id` is nullable, always NULL in
    v1.
@@ -40,7 +43,11 @@ so login can be added later without a migration.
 8. **Share tokens**: CSPRNG ≥128 bits, exchanged for an httpOnly cookie, never left in
    the URL.
 9. **`viewer` role enforced server-side.**
-10. **Settled bills are immutable.**
+10. **Settled bills are immutable** — there is no unsettle path, so the settle
+    confirmation requires an explicit acknowledgement first.
+11. **Archived events leave every member's money figures** — filtered in
+    `src/lib/expenses/`, not in components. Copy near those figures must not claim
+    to cover "every event".
 
 ## Build order
 

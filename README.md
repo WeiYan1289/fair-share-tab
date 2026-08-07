@@ -12,10 +12,25 @@ just a shareable link.
   down to the cent
 - **Settle up** collapses every bill in an event down to the smallest set of
   person-to-person transfers, so nobody sends more payments than they have to
+- **Archiving** puts a finished trip or a dormant group out of the way without
+  deleting anything, and restores it unchanged whenever you want
 
 Access is by shareable link only. Anyone with the link can view a group, and
 an editable link lets them add and edit bills too — a view-only link is
 available for anyone who should just be able to check balances.
+
+Settling is permanent, so the confirmation asks you to tick that the payments
+really happened before it will go through.
+
+Archiving puts something beyond reach rather than merely out of sight. An
+archived event drops out of everyone's expense and balance figures and stops
+accepting changes; an archived group stops opening for everyone, its owner
+included. Share links go quiet rather than break, and start working again the
+moment the group is restored.
+
+Archived events and groups live on their own screens, reached from a link below
+each list, where the only thing you can do is restore one. Nothing is ever
+deleted: members deactivate, events and groups archive, links revoke.
 
 ## Tech stack
 
