@@ -56,6 +56,7 @@ interface BillWithSplits {
   status: string;
   category: string | null;
   note: string | null;
+  receiptUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
   splits: { memberId: string; shareAmount: number }[];
@@ -72,6 +73,7 @@ export function serializeBill(bill: BillWithSplits) {
     status: bill.status,
     category: bill.category,
     note: bill.note,
+    receiptUrl: bill.receiptUrl,
     createdAt: bill.createdAt,
     updatedAt: bill.updatedAt,
     splits: bill.splits.map((s) => ({ memberId: s.memberId, shareAmount: s.shareAmount })),

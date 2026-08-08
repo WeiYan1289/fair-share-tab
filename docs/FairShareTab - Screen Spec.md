@@ -168,9 +168,16 @@ Logging, editing, locking, and deleting individual expenses.
 - **Route:** /g/:groupId/events/:eventId/bills/new (or /bills/:billId/edit)
 - **Entered from:** P4-01 + Add bill or a bill row's edit icon. Exits back to P4-01 on Save/Cancel.
 - **Data read:** Event.members[] (active only); existing Bill fields when editing
-- **Actions → writes:** Fill title/amount → Bill.title/amount. Select Paid by / Split between → Bill.paidBy/splitAmong. Toggle split mode → equal (this) or custom (P5-02). Save bill → creates/updates the Bill.
+- **Actions → writes:** Fill title/amount → Bill.title/amount. Select Paid by / Split between → Bill.paidBy/splitAmong. Toggle split mode → equal (this) or custom (P5-02). Attach a photo → Bill.receiptUrl (optional). Save bill → creates/updates the Bill.
 - **States:** Equal split (this) / custom + error (P5-02) / locked-settled (P5-03)
 - **Notes:** Inactive members are excluded from both member lists, with an explanatory note shown.
+- **Receipt field** (between Total amount and Paid by), labelled **"Receipt (optional)"**:
+  - **Empty:** dashed "⊕ Add a photo" button. Save is enabled regardless.
+  - **Uploading:** local thumbnail appears instantly, with filename, size and a progress bar. The thumbnail is inert while in flight.
+  - **Attached:** "N KB · attached ✓". Clicking the thumbnail opens a full-size in-app preview — it never re-opens the file picker. Replacing is Remove (×) then pick again.
+  - **Failed:** the reason, inline. Retry is offered only where retrying could succeed — a file rejected for size or an unreadable format gets none, since re-sending the same bytes cannot change the outcome.
+  - **Save is never disabled by receipt state.** Pressing Save mid-upload shows "Uploading receipt…" and waits up to 10s; if the upload fails or times out the bill saves *without* the receipt and says so, offering Retry receipt / Done rather than silently discarding it.
+  - Accepts JPEG/PNG/WebP up to 10 MB, downscaled in the browser to a 1600px JPEG before upload. HEIC is excluded from `accept` on purpose: iOS transcodes to JPEG at pick time when the list names JPEG.
 
 ### P5-02 — Add bill — custom amounts (error + rounding/currency)
 - **Route:** Same as P5-01, split mode = custom
@@ -183,10 +190,11 @@ Logging, editing, locking, and deleting individual expenses.
 ### P5-03 — Editing a settled bill — locked
 - **Route:** Same edit path as P5-01, for a Bill with settled = true
 - **Entered from:** a settled bill's lock icon on P4-01. Close returns to P4-01; there is no save path.
-- **Data read:** The settled Bill's fields (read-only)
+- **Data read:** The settled Bill's fields (read-only), including its receipt if it has one
 - **Actions → writes:** None available — Save bill is disabled. The bill must be unmarked as settled via P6-03 first.
 - **States:** Locked (only state)
 - **Notes:** This is the only path back to an editable bill — there is no direct unlock action on this screen.
+- **Receipt:** shown as a thumbnail that opens the same full-size in-app preview as P5-01, with no add/remove control. Visible to **viewers** as well as editors — the app shows everyone with the link the same thing. If the bill has no receipt, the block is absent entirely; there is no "No receipt" empty state. If the image fails to load the block also disappears, so an unreachable Blob store degrades to "no receipt" rather than a broken icon.
 
 ### P5-04 — Delete bill — confirmation
 - **Route:** Confirm dialog over P4-01

@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ReceiptField } from "@/components/bills/ReceiptField";
+import { ReceiptThumbnail } from "@/components/bills/ReceiptThumbnail";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { useReceiptUpload } from "@/lib/receipts/use-receipt-upload";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
@@ -26,6 +29,7 @@ interface InitialBill {
   payerId: string;
   splitMethod: string;
   status: string;
+  receiptUrl?: string | null;
   splits: { memberId: string; shareAmount: number }[];
 }
 
@@ -105,6 +109,12 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const receipt = useReceiptUpload(groupId, initialBill?.receiptUrl);
+  // Set when a save succeeded but the receipt did not make it. Holds the
+  // saved bill's id so the notice's retry can PATCH just that bill.
+  const [savedWithoutReceipt, setSavedWithoutReceipt] = useState<string | null>(null);
+  const [waitingForUpload, setWaitingForUpload] = useState(false);
+
   const totalAmountSen = parseAmount(amountText, minorUnit);
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
@@ -170,30 +180,45 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
     splitBetween.size > 0 &&
     (splitMethod === "equal" ? equalShares !== null : customReconciled);
 
+  // Shared by handleSave and the post-save receipt retry, which re-sends
+  // the whole bill because PATCH is a full replace.
+  function buildBody(receiptUrl: string | null) {
+    const base = {
+      title: title.trim(),
+      totalAmount: totalAmountSen,
+      payerId,
+      // Omitted rather than null when absent: the schema field is
+      // .optional(), and absence is what means "no receipt".
+      ...(receiptUrl ? { receiptUrl } : {}),
+    };
+    return splitMethod === "equal"
+      ? { ...base, splitMethod: "equal" as const, participantIds: [...splitBetween] }
+      : {
+          ...base,
+          splitMethod: "custom" as const,
+          customShares: [...splitBetween].map((id) => ({
+            memberId: id,
+            shareAmount: parseAmount(customAmounts[id] ?? "", minorUnit),
+          })),
+        };
+  }
+
   async function handleSave() {
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
 
-    const body =
-      splitMethod === "equal"
-        ? {
-            title: title.trim(),
-            totalAmount: totalAmountSen,
-            payerId,
-            splitMethod: "equal" as const,
-            participantIds: [...splitBetween],
-          }
-        : {
-            title: title.trim(),
-            totalAmount: totalAmountSen,
-            payerId,
-            splitMethod: "custom" as const,
-            customShares: [...splitBetween].map((id) => ({
-              memberId: id,
-              shareAmount: parseAmount(customAmounts[id] ?? "", minorUnit),
-            })),
-          };
+    // The receipt must never hold the bill hostage. Wait a bounded 10s for
+    // an in-flight upload, then save regardless of how it went.
+    setWaitingForUpload(receipt.state.status === "working");
+    const receiptUrl = await receipt.settle(10_000);
+    setWaitingForUpload(false);
+
+    // A receipt was picked but did not land -- save anyway, then say so
+    // rather than silently discarding a file the user watched attach.
+    const lostReceipt = receiptUrl === null && receipt.state.status !== "empty";
+
+    const body = buildBody(receiptUrl);
 
     try {
       const res = await fetch(
@@ -217,6 +242,14 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         setSubmitting(false);
         return;
       }
+
+      if (lostReceipt) {
+        const saved = await res.json().catch(() => null);
+        setSavedWithoutReceipt(saved?.bill?.id ?? initialBill?.id ?? null);
+        setSubmitting(false);
+        return;
+      }
+
       router.push(dashboardHref);
       router.refresh();
     } catch {
@@ -225,6 +258,43 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
       setError("Couldn't save that bill — check your connection and try again.");
       setSubmitting(false);
     }
+  }
+
+  // Retry from the post-save notice: re-upload, then PATCH just the saved
+  // bill. The full body is still in memory, which satisfies PATCH's
+  // full-replace contract.
+  async function handleRetryReceipt() {
+    if (!savedWithoutReceipt) return;
+    setSubmitting(true);
+    setError(null);
+    receipt.retry();
+
+    const receiptUrl = await receipt.settle(15_000);
+    if (!receiptUrl) {
+      setError("Still couldn't upload the receipt.");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/bills/${savedWithoutReceipt}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildBody(receiptUrl)),
+      });
+      if (!res.ok) {
+        setError("Saved the bill, but couldn't attach the receipt.");
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setError("Saved the bill, but couldn't attach the receipt.");
+      setSubmitting(false);
+      return;
+    }
+
+    router.push(dashboardHref);
+    router.refresh();
   }
 
   return (
@@ -273,6 +343,8 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             />
           </div>
         </div>
+
+        <ReceiptField receipt={receipt} />
 
         <div className="mb-4.5">
           <label className="mb-2 block text-xs font-bold text-muted-2">Paid by</label>
@@ -430,19 +502,52 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
 
         {error && <p className="mb-3 text-xs text-coral">{error}</p>}
 
-        <button
-          type="button"
-          disabled={!canSubmit}
-          onClick={handleSave}
-          className={cn(
-            "w-full rounded-md py-4 text-center text-[15.5px] font-bold",
-            canSubmit
-              ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest dark:hover:bg-dark-forest-hover"
-              : "cursor-not-allowed bg-disabled text-disabled-text dark:bg-white/10 dark:text-white/30",
-          )}
-        >
-          Save bill
-        </button>
+        {/* The bill is already saved at this point -- the receipt is the
+            only thing outstanding, so this replaces Save rather than
+            sitting alongside it. */}
+        {savedWithoutReceipt ? (
+          <div className="rounded-md border border-ink/8 bg-white p-4 dark:border-white/8 dark:bg-dark-card">
+            <p className="mb-3 text-[13.5px] text-ink dark:text-dark-text">
+              Bill saved — but the receipt didn&apos;t upload.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={handleRetryReceipt}
+                disabled={submitting}
+                className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream disabled:opacity-60 dark:bg-dark-forest"
+              >
+                {submitting ? "Retrying…" : "Retry receipt"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  router.push(dashboardHref);
+                  router.refresh();
+                }}
+                className="rounded-md border border-ink/16 px-5 py-2.5 text-[13.5px] font-bold text-ink dark:border-white/16 dark:text-dark-text"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            // canSubmit deliberately carries no receipt condition -- the
+            // optional attachment must never gate the money-critical action.
+            disabled={!canSubmit}
+            onClick={handleSave}
+            className={cn(
+              "w-full rounded-md py-4 text-center text-[15.5px] font-bold",
+              canSubmit
+                ? "bg-forest text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest dark:hover:bg-dark-forest-hover"
+                : "cursor-not-allowed bg-disabled text-disabled-text dark:bg-white/10 dark:text-white/30",
+            )}
+          >
+            {waitingForUpload ? "Uploading receipt…" : submitting ? "Saving…" : "Save bill"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -583,6 +688,10 @@ function ReadOnlyBillView({
             })}
           </div>
         </div>
+
+        {/* Absent entirely when there is no receipt -- no "No receipt"
+            empty state, and no block at all if the image fails to load. */}
+        {bill.receiptUrl && <ReceiptThumbnail url={bill.receiptUrl} />}
 
         <Link
           href={dashboardHref}

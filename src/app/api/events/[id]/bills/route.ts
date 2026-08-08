@@ -63,6 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         splitMethod: input.splitMethod,
         category: input.category,
         note: input.note,
+        receiptUrl: input.receiptUrl ?? null,
       },
     });
 

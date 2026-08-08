@@ -209,6 +209,7 @@ model Bill {
   status      BillStatus  @default(unsettled)
   category    String?
   note        String?
+  receiptUrl  String?     @map("receipt_url")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
