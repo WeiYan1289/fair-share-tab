@@ -93,6 +93,7 @@ export default async function EditBillPage({
         payerId: bill.payerId,
         splitMethod: bill.splitMethod,
         status: bill.status,
+        receiptUrl: bill.receiptUrl,
         splits: bill.splits.map((s) => ({ memberId: s.memberId, shareAmount: s.shareAmount })),
       }}
     />
