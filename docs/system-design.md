@@ -311,13 +311,51 @@ Create/edit body:
   "payerId": "member-uuid",
   "splitMethod": "equal",
   "participantIds": ["m1", "m2", "m3"],
-  "customShares": null
+  "customShares": null,
+  "receiptUrl": "https://<store>.public.blob.vercel-storage.com/receipts/<groupId>/<uuid>.jpg"
 }
 ```
 
 For `splitMethod: "custom"`, send
 `customShares: [{ "memberId": "m1", "shareAmount": 3000 }, ...]` and omit
 `participantIds` — participation is implied by the shares.
+
+`receiptUrl` is optional. Omitting it means the bill has no receipt — since
+both create and edit are full replaces, that is also how a receipt is removed,
+which is why there is no delete endpoint for one. The host is validated
+server-side on every write (see `data-model.md` §3.6).
+
+### Receipts
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/receipts/upload-token` | Mint a scoped, single-upload Vercel Blob token. Same-origin + **editor** session. |
+
+Image bytes never pass through a function. The browser compresses the picked
+photo, calls this route for a token, then `PUT`s straight to Blob:
+
+```
+[pick] → compress (1600px JPEG, in-browser) → POST /api/receipts/upload-token
+                                            → PUT bytes direct to Blob
+                                            → { url } → sent with the bill body
+```
+
+Three consequences worth stating, because each one is load-bearing:
+
+- **The 4.5 MB function body limit never applies**, which matters because an
+  unmodified phone photo routinely exceeds it. Client uploads also incur no
+  Fast Data Transfer charge.
+- **`BLOB_READ_WRITE_TOKEN` stays server-side.** The browser only ever receives
+  a short-lived token scoped to one upload. No `NEXT_PUBLIC_*` variable exists
+  for Blob, and adding one would violate §3.3.
+- **The token route validates the pathname prefix against the session's
+  `groupId`.** The SDK mints the token for the pathname the *client* asked for
+  and offers no way to rewrite it, so validation — not substitution — is what
+  stops a client writing into another group's prefix.
+
+`onUploadCompleted` is a deliberate no-op: it fires from Vercel's servers with
+no session cookie and never fires on localhost. The client reads the URL from
+the upload's return value instead.
 
 ### Settlement
 

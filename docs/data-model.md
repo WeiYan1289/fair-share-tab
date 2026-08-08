@@ -234,8 +234,30 @@ A single expense within an event.
 | `status` | enum | `unsettled` or `settled`. Settled bills are locked from editing (§6, invariant 8). |
 | `category` | string NULL | Optional (food, transport, lodging…). |
 | `note` | text NULL | Optional free text. |
+| `receipt_url` | string NULL | Optional photo of the bill. Absolute Vercel Blob URL — see below. |
 | `created_at` | timestamp | Set on creation. |
 | `updated_at` | timestamp | Updated on any change. |
+
+**`receipt_url`** holds one optional receipt image, and nothing else: no
+filename, no size, no upload timestamp. The pathname is derivable from the URL
+and `updated_at` already brackets the timing, so storing either separately
+would be duplicated state.
+
+The value is always an absolute `https://<store>.public.blob.vercel-storage.com/…`
+URL returned by the Blob SDK — never constructed by us, and never derived from
+`APP_URL` or the request `Host`. It therefore resolves identically from local
+development and production. The server validates the host on every write
+(`isReceiptUrl`, `src/lib/receipts/url.ts`); this is access control, not
+formatting, because a bill is visible to everyone holding the group link and an
+unvalidated URL would render attacker-controlled content there.
+
+**NULL means the bill has no receipt.** Create and edit are both full replaces,
+so an omitted `receiptUrl` in the request body is how a receipt is removed —
+there is no delete endpoint. Removal nulls the column and **leaves the blob in
+storage**. That does not violate §6 invariant 4 ("nothing is ever deleted"),
+which governs accounting entities whose disappearance would corrupt a balance;
+a receipt is an attachment and removing it changes no money. It also keeps
+removal a pure Postgres write, so it cannot fail while Blob is unreachable.
 
 ### 3.7 `split`
 

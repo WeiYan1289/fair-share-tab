@@ -152,6 +152,40 @@ Per-account rate limiting (60s cooldown, 5/24h) is DB-backed against
 what this feature's abuse resistance rests on. See `docs/data-model.md`
 §3.11.
 
+**13. Receipts are optional, compressed, and never load-bearing.** A bill may
+carry one receipt image in `bill.receipt_url`. Four things about it are
+correctness requirements, not preferences:
+
+- **Never call `list()` or `head()` from `@vercel/blob`.** Both are billed
+  operations against a Hobby allowance that, once exceeded, blocks Blob
+  entirely for 30 days. The URL lives on the `Bill` row and that is the only
+  lookup path.
+- **Compression is mandatory.** `compressReceipt` downscales to a 1600px JPEG
+  in the browser and throws rather than falling back to the original bytes.
+  Without it every quota figure divides by roughly 13.
+- **Fail soft in both directions.** An upload failure still saves the bill; a
+  read failure hides the receipt block entirely. Nothing in the money path —
+  bills, splits, balances, settlement — may depend on Blob being reachable, so
+  a total outage costs the app nothing but receipts. `ReceiptThumbnail` needs
+  both an `onError` handler *and* a mount-time `complete && naturalWidth === 0`
+  check: the `<img>` is server-rendered, so a load that fails before hydration
+  fires its error event with no listener attached and leaves a broken icon on
+  screen. That was a real bug, not a hypothetical.
+- **Receipts render on the bill detail view only**, never in the event
+  dashboard's bill list — a thumbnail per row multiplies data transfer by the
+  length of the list.
+
+Removing a receipt nulls the column and leaves the blob in storage. That is not
+a violation of rule 4, which governs accounting entities whose disappearance
+would corrupt a balance; a receipt is an attachment and removing it changes no
+money. It also means removal cannot fail while Blob is unreachable.
+
+Settled and archived need no receipt-specific code: `receiptUrl` travels in the
+same request body as every other bill field, so rules 10 and 4 already cover it.
+
+See `docs/data-model.md` §3.6, `docs/system-design.md` §5 "Receipts", and
+Screen Spec P5-01 / P5-03.
+
 ## Architecture notes
 
 - The **settlement engine is a pure module** with no framework or DB imports. It takes
