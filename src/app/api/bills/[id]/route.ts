@@ -81,6 +81,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         splitMethod: input.splitMethod,
         category: input.category,
         note: input.note,
+        // Full replace, not a patch: an absent receiptUrl means the bill
+        // has no receipt. This is the removal path -- no DELETE endpoint.
+        // The blob itself is left in storage (spec §3.3), which also means
+        // removal cannot fail while Blob is unreachable.
+        receiptUrl: input.receiptUrl ?? null,
       },
     });
 

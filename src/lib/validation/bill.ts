@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isReceiptUrl } from "@/lib/receipts/url";
 
 const baseBillFields = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -7,6 +8,11 @@ const baseBillFields = z.object({
   payerId: z.string().uuid(),
   category: z.string().trim().min(1).optional(),
   note: z.string().trim().min(1).optional(),
+  // Optional receipt image. Absent means the bill has no receipt -- create
+  // and edit are both full replaces, so this doubles as the removal path
+  // and needs no DELETE endpoint. The host check is access control: see
+  // src/lib/receipts/url.ts.
+  receiptUrl: z.string().refine(isReceiptUrl, "Not a valid receipt URL").optional(),
 });
 
 const equalSplitFields = z.object({
