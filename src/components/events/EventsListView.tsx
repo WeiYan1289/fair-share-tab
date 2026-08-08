@@ -10,9 +10,9 @@ import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmMo
 import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
 import { cn } from "@/lib/cn";
 import { colorForSeed } from "@/lib/constants";
-import { formatMoney } from "@/lib/format";
+import { formatDateRange, formatMoney } from "@/lib/format";
 import { CreateEventModal } from "./CreateEventModal";
-import { RenameEventModal } from "./RenameEventModal";
+import { EditEventModal } from "./EditEventModal";
 import { ArchiveEventModal } from "./ArchiveEventModal";
 import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-aria-components";
 import { Archive, ChevronRight, Link as LinkIcon, MoreVertical, Pencil } from "lucide-react";
@@ -21,6 +21,10 @@ interface EventSummary {
   id: string;
   name: string;
   currency: string;
+  /** ISO yyyy-mm-dd, or null when the event has no dates set. Only the edit
+   * modal reads these -- the card itself doesn't show dates. */
+  startDate: string | null;
+  endDate: string | null;
   status: "active" | "archived";
   memberCount: number;
   totalSpend: number;
@@ -54,7 +58,7 @@ export function EventsListView({
   const [showShare, setShowShare] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
-  const [renameEventTarget, setRenameEventTarget] = useState<EventSummary | null>(null);
+  const [editEventTarget, setEditEventTarget] = useState<EventSummary | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<EventSummary | null>(null);
   const canEdit = viewerRole === "editor";
   const activeEvents = events.filter((e) => e.status === "active");
@@ -178,7 +182,7 @@ export function EventsListView({
                   groupId={groupId}
                   event={event}
                   canEdit={canEdit}
-                  onRequestRename={setRenameEventTarget}
+                  onRequestEdit={setEditEventTarget}
                   onRequestArchive={setArchiveTarget}
                 />
               ))}
@@ -211,13 +215,17 @@ export function EventsListView({
       {showCreateEvent && (
         <CreateEventModal groupId={groupId} onClose={() => setShowCreateEvent(false)} />
       )}
-      {renameEventTarget && (
-        <RenameEventModal
-          eventId={renameEventTarget.id}
-          currentName={renameEventTarget.name}
-          onClose={() => setRenameEventTarget(null)}
-          onRenamed={() => {
-            setRenameEventTarget(null);
+      {editEventTarget && (
+        <EditEventModal
+          eventId={editEventTarget.id}
+          currentName={editEventTarget.name}
+          currentStartDate={editEventTarget.startDate}
+          currentEndDate={editEventTarget.endDate}
+          currentCurrency={editEventTarget.currency}
+          hasBills={editEventTarget.settlementState !== "empty"}
+          onClose={() => setEditEventTarget(null)}
+          onSaved={() => {
+            setEditEventTarget(null);
             router.refresh();
           }}
         />
@@ -308,17 +316,18 @@ function EventCard({
   groupId,
   event,
   canEdit,
-  onRequestRename,
+  onRequestEdit,
   onRequestArchive,
 }: {
   groupId: string;
   event: EventSummary;
   canEdit: boolean;
-  onRequestRename: (event: EventSummary) => void;
+  onRequestEdit: (event: EventSummary) => void;
   onRequestArchive: (event: EventSummary) => void;
 }) {
   const color = colorForSeed(event.id);
   const letter = event.name.trim().charAt(0).toUpperCase() || "?";
+  const dateRange = formatDateRange(event.startDate, event.endDate);
   const status = STATUS_COPY[event.settlementState];
   const statusValue =
     event.settlementState === "unsettled"
@@ -355,7 +364,12 @@ function EventCard({
             <p className="truncate text-[15px] font-bold text-ink sm:text-[17px] dark:text-dark-text">
               {event.name}
             </p>
-            <p className="text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
+            {/* Dates lead, same order and separator as the event dashboard's
+                own meta line, so the card and the screen it opens agree.
+                Dates are optional, so the member count carries the line
+                alone when there are none. */}
+            <p className="truncate text-[11px] text-muted sm:text-[13px] dark:text-dark-muted">
+              {dateRange && `${dateRange} · `}
               {event.memberCount} member{event.memberCount === 1 ? "" : "s"}
             </p>
           </div>
@@ -392,15 +406,15 @@ function EventCard({
               <Menu
                 className="outline-none"
                 onAction={(key: Key) => {
-                  if (key === "rename") onRequestRename(event);
+                  if (key === "edit") onRequestEdit(event);
                   if (key === "archive") onRequestArchive(event);
                 }}
               >
                 <MenuItem
-                  id="rename"
+                  id="edit"
                   className="flex cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-semibold text-ink outline-none data-[focused]:bg-ink/6 dark:text-dark-text dark:data-[focused]:bg-white/8"
                 >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Rename
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
                 </MenuItem>
                 <MenuItem
                   id="archive"

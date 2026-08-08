@@ -123,7 +123,7 @@ function EventBalanceSection({ event, memberName }: { event: MemberBalanceEventV
   return (
     <div>
       <p className="mb-1 text-[11.5px] font-bold tracking-wide text-muted-2 uppercase">
-        {event.net > 0 ? "Owed to" : "Owed by"} {memberName} · {event.name}
+        {memberName} {event.net > 0 ? "gets back" : "needs to pay"} · {event.name}
       </p>
       <p className={netColor}>
         {event.net > 0 ? "+" : "-"}

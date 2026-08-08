@@ -35,6 +35,12 @@ export const updateEventSchema = z
     // null clears a previously-set date; undefined leaves it untouched.
     startDate: z.iso.date().nullable().optional(),
     endDate: z.iso.date().nullable().optional(),
+    // Accepted only while the event has no bills -- every stored amount is an
+    // integer in the current currency's minor unit (CLAUDE.md rule 1), so
+    // reinterpreting them under a different currency is a silent 100x error
+    // between a 2-decimal and a 0-decimal currency. The route enforces the
+    // no-bills condition; the schema only says the field exists.
+    currency: z.enum(CURRENCY_CODES).optional(),
     status: eventStatusSchema.optional(),
   })
   .refine(
@@ -42,6 +48,7 @@ export const updateEventSchema = z
       data.name !== undefined ||
       data.startDate !== undefined ||
       data.endDate !== undefined ||
+      data.currency !== undefined ||
       data.status !== undefined,
     { message: "At least one field must be provided" },
   )

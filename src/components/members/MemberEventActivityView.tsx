@@ -100,7 +100,7 @@ export function MemberEventActivityView({
               {net !== 0 && (
                 <div className="mt-5 border-t border-ink/8 pt-4 sm:mt-6 dark:border-white/8">
                   <p className="mb-1 text-[11.5px] font-bold tracking-wide text-muted-2 uppercase">
-                    {net > 0 ? "Owed to" : "Owed by"} {member.name} in this event
+                    {member.name} {net > 0 ? "gets back" : "needs to pay"} in this event
                   </p>
                   <p
                     className={`num text-[22px] sm:text-[28px] ${net > 0 ? "text-emerald dark:text-mint" : "text-coral"}`}

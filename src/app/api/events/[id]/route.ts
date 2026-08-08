@@ -100,13 +100,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
   }
 
-  const { name, startDate, endDate, status } = parsed.data;
+  // Currency is fixed for the lifetime of an event that holds any money.
+  // Bill amounts are integers in the minor unit of THIS currency (CLAUDE.md
+  // rule 1), so a switch would reinterpret every stored amount rather than
+  // convert it -- 3000 means RM 30.00 under MYR and ¥3,000 under JPY, a 100x
+  // error that writes cleanly and is undetectable afterwards. An event with
+  // no bills has nothing to reinterpret, which is the only safe window.
+  // Checked here and not just in the UI: hiding the picker is not the gate.
+  if (parsed.data.currency !== undefined && parsed.data.currency !== existing.currency) {
+    const billCount = await prisma.bill.count({ where: { eventId } });
+    if (billCount > 0) {
+      return NextResponse.json(
+        { error: "This event already has bills, so its currency can no longer be changed" },
+        { status: 409 },
+      );
+    }
+  }
+
+  const { name, startDate, endDate, currency, status } = parsed.data;
   const event = await prisma.event.update({
     where: { id: eventId },
     data: {
       ...(name !== undefined && { name }),
       ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
       ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+      ...(currency !== undefined && { currency }),
       ...(status !== undefined && {
         status,
         archivedAt: status === "archived" ? new Date() : null,
@@ -120,6 +138,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       name: event.name,
       startDate: event.startDate,
       endDate: event.endDate,
+      currency: event.currency,
       status: event.status,
     },
   });

@@ -44,6 +44,11 @@ export default async function EventsPage({
         id: event.id,
         name: event.name,
         currency: event.currency,
+        // Sliced, not toISOString()-then-parsed on the client: these are
+        // date-only values stored at UTC midnight, and re-deriving them
+        // through a local Date would shift the day west of UTC.
+        startDate: event.startDate?.toISOString().slice(0, 10) ?? null,
+        endDate: event.endDate?.toISOString().slice(0, 10) ?? null,
         status: event.status,
         memberCount: event.memberCount,
         totalSpend: event.totalSpend,

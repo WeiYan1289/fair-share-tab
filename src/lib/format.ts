@@ -15,14 +15,25 @@ export function formatMoney(amount: number, currencyCode: string = DEFAULT_CURRE
   return `${symbol}${minorUnit === 0 ? "" : " "}${display}`;
 }
 
-/** e.g. "Mar 12 – Mar 20" or just "Mar 12" when only one date is set. */
+/** e.g. "12 Mar – 20 Mar" or just "12 Mar" when only one date is set.
+ *
+ * Event dates are date-only values stored at UTC midnight, so they are parsed
+ * from their y-m-d parts rather than handed to `new Date(iso)` -- that would
+ * anchor them to UTC and render the previous day for any viewer west of UTC.
+ * Accepts either "2026-03-12" or a full ISO timestamp; only the date half is
+ * ever read. */
 export function formatDateRange(
   startDate: string | null,
   endDate: string | null,
 ): string | null {
   if (!startDate && !endDate) return null;
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-MY", { month: "short", day: "numeric" });
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-MY", {
+      day: "numeric",
+      month: "short",
+    });
+  };
   if (startDate && endDate) return `${fmt(startDate)} – ${fmt(endDate)}`;
   return fmt(startDate ?? endDate!);
 }

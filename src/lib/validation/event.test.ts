@@ -66,10 +66,25 @@ describe("createEventSchema", () => {
 });
 
 describe("updateEventSchema", () => {
-  it("does not accept a currency field (currency is locked after creation)", () => {
+  // Currency used to be stripped here, which made the schema the lock. It
+  // isn't anymore: the edit-event modal may change currency while an event
+  // has no bills, and the "no bills" part is a database question the schema
+  // cannot answer. The lock now lives in the PATCH route, which counts bills
+  // and 409s. This test only pins that the field survives parsing -- if it
+  // ever gets stripped again the route's check becomes unreachable and the
+  // whole feature silently no-ops.
+  it("passes currency through for the route to authorize", () => {
     const result = updateEventSchema.safeParse({ name: "Renamed Trip", currency: "USD" });
     expect(result.success).toBe(true);
-    expect(result.data).not.toHaveProperty("currency");
+    expect(result.data).toHaveProperty("currency", "USD");
+  });
+
+  it("rejects a currency outside the curated list", () => {
+    expect(updateEventSchema.safeParse({ currency: "XYZ" }).success).toBe(false);
+  });
+
+  it("accepts a currency change as the only field", () => {
+    expect(updateEventSchema.safeParse({ currency: "JPY" }).success).toBe(true);
   });
 
   it("still requires at least one field", () => {

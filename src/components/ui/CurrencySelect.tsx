@@ -7,18 +7,23 @@ import { CURRENCIES, getCurrencyMeta } from "@/lib/currency";
 interface CurrencySelectProps {
   value: string;
   onChange: (code: string) => void;
+  /** Used by the edit-event modal once an event holds bills -- the currency
+   * is fixed from that point on (see the PATCH route, which is the actual
+   * gate). Purely visual here. */
+  isDisabled?: boolean;
 }
 
-export function CurrencySelect({ value, onChange }: CurrencySelectProps) {
+export function CurrencySelect({ value, onChange, isDisabled }: CurrencySelectProps) {
   const selected = getCurrencyMeta(value);
 
   return (
     <Select
       selectedKey={value}
       onSelectionChange={(key) => onChange(key as string)}
+      isDisabled={isDisabled}
       aria-label="Currency"
     >
-      <Button className="flex w-full items-center gap-2 rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
+      <Button className="flex w-full items-center gap-2 rounded-md border border-ink/14 bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-forest data-[disabled]:cursor-not-allowed data-[disabled]:opacity-55 dark:border-white/14 dark:bg-dark-bg dark:text-dark-text">
         <span className={`fi fi-${selected.country} rounded-[3px]`} aria-hidden="true" />
         <span className="font-bold">{selected.code}</span>
         <span className="truncate text-muted-2">{selected.label}</span>

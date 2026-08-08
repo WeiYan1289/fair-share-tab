@@ -26,6 +26,10 @@ describe("isRestoreOnlyEventPatch", () => {
     expect(isRestoreOnlyEventPatch({ status: "active", endDate: "2026-01-31" })).toBe(false);
   });
 
+  it("is false when a currency rides along with status:active", () => {
+    expect(isRestoreOnlyEventPatch({ status: "active", currency: "JPY" })).toBe(false);
+  });
+
   it("is false for status:archived", () => {
     expect(isRestoreOnlyEventPatch({ status: "archived" })).toBe(false);
   });

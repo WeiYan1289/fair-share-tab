@@ -42,7 +42,8 @@ export function isRestoreOnlyEventPatch(data: UpdateEventInput): boolean {
     data.status === "active" &&
     data.name === undefined &&
     data.startDate === undefined &&
-    data.endDate === undefined
+    data.endDate === undefined &&
+    data.currency === undefined
   );
 }
 
