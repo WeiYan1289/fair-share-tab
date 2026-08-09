@@ -263,12 +263,14 @@ cannot run through the pooler.
 
 ## Environment
 
-`.env.local` (gitignored):
+`.env.local` (gitignored). `.env.example` is the annotated list and the
+source of truth — copy it rather than reconstructing the set from here,
+since a partial list in two places is how a variable goes missing.
 
-```
-DATABASE_URL=            # Supabase pooled connection string
-DIRECT_URL=              # Supabase direct connection (for migrations)
-SUPABASE_SERVICE_KEY=    # server-side only, never exposed to the client
-```
+Required to run: `DATABASE_URL` (pooled), `DIRECT_URL` (direct, for
+migrations), `SESSION_SECRET`. Password reset adds `MAILER` / `APP_URL`
+(plus `RESEND_API_KEY` and `EMAIL_FROM` when `MAILER=resend`), and
+receipts add `BLOB_READ_WRITE_TOKEN` — which no code here names, because
+the `@vercel/blob` SDK reads it from the environment itself.
 
 Supabase and Vercel both in Singapore (`ap-southeast-1`).
