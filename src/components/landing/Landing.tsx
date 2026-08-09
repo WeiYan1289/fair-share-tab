@@ -6,36 +6,15 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
-import { Check } from "lucide-react";
-
-// Five payers settling up with three receivers in just five transfers —
-// deliberately more people than the old 3-payer mock, to show the
-// settlement engine collapsing a genuinely tangled bill history down to a
-// handful of transfers. Amounts are hand-picked so a greedy max-debtor/
-// max-creditor match (the real algorithm, see docs/system-design.md §4.4)
-// produces exactly this set: AR->PS 500, KM->JI 250, HZ->SM 100,
-// DV->JI 100, NF->SM 50 — each side sums to 1000.
-const PAYERS = [
-  { initials: "AR", color: "#B5654A", top: "8%", amount: "RM 500" },
-  { initials: "KM", color: "#7A5C9E", top: "26%", amount: "RM 250" },
-  { initials: "HZ", color: "#3E7C86", top: "44%", amount: "RM 100" },
-  { initials: "DV", color: "#B98A2E", top: "62%", amount: "RM 100" },
-  { initials: "NF", color: "#6B7280", top: "80%", amount: "RM 50" },
-];
-
-const RECEIVERS = [
-  { initials: "PS", color: "#2F7FB8", top: "15%" },
-  { initials: "JI", color: "#1F9E68", top: "50%" },
-  { initials: "SM", color: "#B54A6A", top: "85%" },
-];
+import { SettleUpHero } from "@/components/landing/SettleUpHero";
 
 // Screen Spec P1-01. The only landing view — shown to every visitor
 // regardless of device history, since access is granted purely by opening a
 // group's link. Kept to a single, uncluttered hero moment -- the
-// step-by-step explainer, the no-password disclosure, and the fuller
-// visitor-vs-member comparison live on /tutorial instead, one quiet link
-// away. "Log in" in the header is the only nod here that an account is
-// optional — everything else stays exactly as focused as before.
+// step-by-step explainer, the role comparison, and the no-password
+// disclosure all live on /tutorial instead, one quiet link away. A row of
+// feature blurbs was tried here and cut: it turned the page into a second
+// pitch, and "See how it works" already leads to the real explanation.
 export function Landing() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -85,115 +64,7 @@ export function Landing() {
           </div>
 
           <div className="lg:flex-1">
-            <div className="relative rounded-lg border border-ink/8 bg-white p-6 shadow-[0_24px_48px_-20px_rgba(19,46,40,0.22)] dark:border-white/8 dark:bg-dark-card">
-              <p className="mb-2 text-[11px] font-extrabold tracking-wide text-muted-2 uppercase">
-                Settle up — the signature moment
-              </p>
-              <div className="relative aspect-[420/300]">
-                <svg
-                  viewBox="0 0 420 300"
-                  className="absolute inset-0 h-full w-full overflow-visible"
-                >
-                  <defs>
-                    <marker
-                      id="heroArrow"
-                      markerWidth="8"
-                      markerHeight="8"
-                      refX="6"
-                      refY="4"
-                      orient="auto"
-                    >
-                      <path
-                        d="M0,0 L8,4 L0,8 Z"
-                        className="fill-ink dark:fill-dark-text"
-                        fillOpacity="0.4"
-                      />
-                    </marker>
-                  </defs>
-                  {/* AR -> PS */}
-                  <path
-                    d="M80,24 Q212,10 345,45"
-                    fill="none"
-                    className="stroke-ink dark:stroke-dark-text"
-                    strokeOpacity="0.16"
-                    strokeWidth="2.5"
-                    markerEnd="url(#heroArrow)"
-                  />
-                  {/* KM -> JI */}
-                  <path
-                    d="M80,78 Q212,70 345,150"
-                    fill="none"
-                    className="stroke-ink dark:stroke-dark-text"
-                    strokeOpacity="0.16"
-                    strokeWidth="2.5"
-                    markerEnd="url(#heroArrow)"
-                  />
-                  {/* HZ -> SM */}
-                  <path
-                    d="M80,132 Q212,150 345,255"
-                    fill="none"
-                    className="stroke-ink dark:stroke-dark-text"
-                    strokeOpacity="0.16"
-                    strokeWidth="2.5"
-                    markerEnd="url(#heroArrow)"
-                  />
-                  {/* DV -> JI */}
-                  <path
-                    d="M80,186 Q212,200 345,150"
-                    fill="none"
-                    className="stroke-ink dark:stroke-dark-text"
-                    strokeOpacity="0.16"
-                    strokeWidth="2.5"
-                    markerEnd="url(#heroArrow)"
-                  />
-                  {/* NF -> SM */}
-                  <path
-                    d="M80,240 Q212,260 345,255"
-                    fill="none"
-                    className="stroke-ink dark:stroke-dark-text"
-                    strokeOpacity="0.16"
-                    strokeWidth="2.5"
-                    markerEnd="url(#heroArrow)"
-                  />
-                </svg>
-
-                {PAYERS.map((person) => (
-                  <div
-                    key={person.initials}
-                    className="absolute left-[8%] flex aspect-square w-[9%] min-w-9 -translate-y-1/2 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ top: person.top, backgroundColor: person.color }}
-                  >
-                    {person.initials}
-                  </div>
-                ))}
-
-                {RECEIVERS.map((person) => (
-                  <div
-                    key={person.initials}
-                    className="absolute right-[6%] flex aspect-square w-[13%] min-w-11 -translate-y-1/2 items-center justify-center rounded-full text-[15px] font-bold text-white ring-4 ring-mint-tint dark:ring-mint/18"
-                    style={{ top: person.top, backgroundColor: person.color }}
-                  >
-                    {person.initials}
-                  </div>
-                ))}
-
-                {PAYERS.map((person) => (
-                  <div
-                    key={`${person.initials}-amount`}
-                    className="num absolute left-[41%] -translate-y-1/2 rounded-full border border-ink/10 bg-white px-2.5 py-1 text-xs text-ink shadow-[0_6px_14px_-6px_rgba(19,46,40,0.3)] dark:border-white/12 dark:bg-dark-bg dark:text-dark-text"
-                    style={{ top: person.top }}
-                  >
-                    {person.amount}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-1.5 flex items-center gap-1.5 rounded-[11px] bg-mint-tint px-3.5 py-2.5 dark:bg-mint/16">
-                <Check className="h-3.5 w-3.5 text-emerald dark:text-mint" aria-hidden="true" />
-                <span className="text-[12.5px] font-bold text-emerald dark:text-mint">
-                  5 transfers settle everyone
-                </span>
-              </div>
-            </div>
+            <SettleUpHero />
           </div>
         </div>
       </div>

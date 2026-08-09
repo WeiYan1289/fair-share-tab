@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Check, Minus } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -36,7 +37,7 @@ const STEPS = [
     tint: "bg-gold-tint dark:bg-gold/16",
     color: "text-gold",
     title: "Log bills",
-    body: "Add bills as they come up — who paid, how much, and how it's split. Split evenly or type exact amounts, bill by bill.",
+    body: "Add bills as they come up — who paid, how much, and how it's split. Split evenly or type exact amounts, and attach the receipt if you want the proof on file.",
     href: "/tutorial/bill",
     screenshot: { src: "/tutorial/add-bill-equal.png", mobileSrc: "/tutorial/mobile/add-bill-equal.png" },
   },
@@ -51,10 +52,61 @@ const STEPS = [
   },
 ];
 
+// Three ways into a group, in widening order of what they can do. Every
+// figure here is enforced server-side, not just hidden in the UI:
+// - viewer/editor come from the share link's role (requireSession's
+//   `role: "editor"` gate),
+// - the owner-only rows are the earliest editor GroupMembership
+//   (getGroupOwner, src/lib/account.ts) — group rename/archive/restore
+//   live on /api/account/groups/[groupId], and replacing an already-shared
+//   link is gated by canRegenerateOrCreateLink on actorType "member".
+// If any of those rules change, this table is wrong and must change with it.
+const ROLES = [
+  {
+    key: "viewer",
+    name: "View-only link",
+    caption: "No sign-up",
+    chip: "bg-sky-tint text-sky-text dark:bg-sky/16 dark:text-sky",
+  },
+  {
+    key: "editor",
+    name: "Editor link",
+    caption: "No sign-up",
+    chip: "bg-gold-tint text-gold dark:bg-gold/16 dark:text-gold",
+  },
+  {
+    key: "owner",
+    name: "Account",
+    caption: "Free, optional",
+    chip: "bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint",
+  },
+] as const;
+
+type RoleKey = (typeof ROLES)[number]["key"];
+
+// Phrased to continue the "Can they…" column header, so each row reads as a
+// finished question instead of a bare noun phrase.
+const ABILITIES: { label: string; can: RoleKey[] }[] = [
+  { label: "see every event, bill and balance", can: ["viewer", "editor", "owner"] },
+  { label: "add and edit bills, members and events", can: ["editor", "owner"] },
+  { label: "settle up an event", can: ["editor", "owner"] },
+  { label: "rename, archive or restore the group", can: ["owner"] },
+  { label: "replace a link that's already been shared", can: ["owner"] },
+  { label: "hold more than one group at a time", can: ["owner"] },
+];
+
 const GOOD_TO_KNOW = [
   {
-    title: "No passwords, ever",
-    body: "Access is by link only. Anyone holding a group's link can view it, and — unless it's a view-only link — add and edit bills too. That's what makes it fast to set up on a trip, but the link is the door key: only share it with people you trust.",
+    title: "The link is the key",
+    body: "There's no password to get anything wrong, which also means the link is the whole lock. Send the view-only one to anybody who just needs to look.",
+  },
+  {
+    title: "One event, one currency",
+    body: "Each event picks its own currency and settles on its own, so there's never a conversion to argue about — and JPY and KRW are handled without decimals.",
+  },
+  {
+    title: "Settling is final",
+    body: "Confirming a settle-up locks those bills read-only for good. That's what makes the history worth trusting, so you're asked to confirm the payments really happened.",
   },
   {
     title: "Nobody's ever deleted",
@@ -69,6 +121,12 @@ export function TutorialView() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const router = useRouter();
   const embedded = useSearchParams().get("embedded") === "1";
+
+  // `from=tutorial` is what lets the detail page send the reader back with
+  // router.back() instead of a fresh push, which is the only way the App
+  // Router replays the scroll position they left this page at.
+  const walkthroughHref = (href: string) =>
+    embedded ? `${href}?embedded=1&from=tutorial` : `${href}?from=tutorial`;
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
@@ -124,8 +182,8 @@ export function TutorialView() {
           Four steps from &ldquo;who paid for this?&rdquo; to everyone settled.
         </h1>
         <p className="mb-8 max-w-[520px] text-[14px] leading-relaxed text-muted sm:mb-14 sm:text-[15px] dark:text-dark-muted">
-          No spreadsheets, no math in a group chat. Here&apos;s the whole flow, and what
-          makes it safe to use with people you trust.
+          No spreadsheets, no math in a group chat. Here&apos;s the whole flow, who can do
+          what, and what makes it safe to use with people you trust.
         </p>
 
         <div className="mb-10 flex flex-col gap-8 sm:mb-16 sm:gap-14">
@@ -155,68 +213,62 @@ export function TutorialView() {
                     {step.body}
                   </p>
                 </div>
-                {/* Embedded mode strips these deliberately. The detail pages
-                    (TutorialDetailView) have no embedded awareness — they show
-                    a "Log in" button, an account CTA footer, and a "← Back to
-                    tutorial" that lands on the non-embedded /tutorial — so
-                    linking out would strand someone who tapped "?" inside
-                    their own group with no way back. */}
-                {!embedded && (
-                  <Link href={step.href} className="mt-3 block max-w-[420px]">
-                    {/* Same white/dark-card mat + shadow as TutorialDetailView's
-                        full-size screenshots -- the thumbnail's own bg-cream
-                        background otherwise disappears into this page's
-                        identical background in light mode. */}
-                    <div className="mx-auto max-w-[65%] rounded-lg bg-white p-1.5 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:mx-0 sm:max-w-none dark:bg-dark-card dark:shadow-[0_16px_32px_-18px_rgba(0,0,0,0.55)]">
-                      <picture>
-                        <source media="(min-width: 640px)" srcSet={step.screenshot.src} />
-                        <img
-                          src={step.screenshot.mobileSrc}
-                          alt={`${step.title} in FairShareTab`}
-                          loading="lazy"
-                          className="h-auto w-full rounded-md"
-                        />
-                      </picture>
-                    </div>
-                    <span className="mt-2 inline-block text-[13px] font-bold text-link dark:text-mint">
-                      See the full walkthrough →
-                    </span>
-                  </Link>
-                )}
+                {/* Embedded mode gets these too -- TutorialDetailView carries
+                    the flag through, dropping its own Log in button and
+                    account CTA and keeping Back inside the tutorial. */}
+                <Link href={walkthroughHref(step.href)} className="mt-3 block max-w-[420px]">
+                  {/* Same white/dark-card mat + shadow as the walkthroughs'
+                      full-size screenshots -- the thumbnail's own bg-cream
+                      background otherwise disappears into this page's
+                      identical background in light mode. */}
+                  <div className="mx-auto max-w-[65%] rounded-lg bg-white p-1.5 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:mx-0 sm:max-w-none dark:bg-dark-card dark:shadow-[0_16px_32px_-18px_rgba(0,0,0,0.55)]">
+                    <picture>
+                      <source media="(min-width: 640px)" srcSet={step.screenshot.src} />
+                      <img
+                        src={step.screenshot.mobileSrc}
+                        alt={`${step.title} in FairShareTab`}
+                        loading="lazy"
+                        className="h-auto w-full rounded-md"
+                      />
+                    </picture>
+                  </div>
+                  <span className="mt-2 inline-block text-[13px] font-bold text-link dark:text-mint">
+                    See the full walkthrough →
+                  </span>
+                </Link>
               </div>
             </div>
           ))}
         </div>
 
         <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
+          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
+            Who can do what
+          </p>
+          <p className="mb-6 max-w-[560px] text-[13px] leading-relaxed text-muted sm:mb-8 sm:text-[14px] dark:text-dark-muted">
+            You get into a group by opening a link, and the link you were sent decides what
+            you can change. An account is separate and entirely optional — it&apos;s what
+            makes you the group&apos;s owner, and lets you keep more than one.
+          </p>
+          <RoleMatrix />
+        </div>
+
+        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
           <p className="mb-4 text-[12px] font-bold tracking-wide text-muted-2 uppercase sm:mb-7">
             Good to know
           </p>
-          <div className="flex flex-col gap-4 sm:gap-7">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
             {GOOD_TO_KNOW.map((item) => (
               <div key={item.title} className="rounded-lg bg-white p-4 sm:p-6 dark:bg-dark-card">
                 <p className="mb-1 text-[14px] font-bold text-ink sm:mb-1.5 sm:text-[14.5px] dark:text-dark-text">
                   {item.title}
                 </p>
-                <p className="max-w-[540px] text-[13px] leading-relaxed text-muted sm:text-[13.5px] dark:text-dark-muted">
+                <p className="text-[13px] leading-relaxed text-muted sm:text-[13.5px] dark:text-dark-muted">
                   {item.body}
                 </p>
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
-          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
-            Two ways in
-          </p>
-          <p className="max-w-[560px] text-[13px] leading-relaxed text-muted sm:text-[14px] dark:text-dark-muted">
-            An account is entirely optional — a link is still all it takes to visit a group,
-            with no email or password, though it limits you to one group per browser.
-            Registering lets you create and jump between as many groups as you like, and
-            suggests the view-only link first when you share — full edit access is still one
-            tap away either way.
-          </p>
         </div>
 
         {!embedded && (
@@ -245,5 +297,109 @@ export function TutorialView() {
         <CreateGroupModal onClose={() => setShowCreateGroup(false)} />
       )}
     </div>
+  );
+}
+
+// Desktop reads as one itemized table -- the ability is the line item and
+// the three ways in are the columns, which is the only layout where "what
+// changes between them" is a single eye movement. Below sm that table would
+// need a horizontal scroller to stay legible, so mobile gets the same data
+// transposed into one card per role instead.
+function RoleMatrix() {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-lg bg-white sm:block dark:bg-dark-card">
+        <table className="w-full border-collapse text-left">
+          <caption className="sr-only">
+            What each way into a group can do
+          </caption>
+          <thead>
+            <tr className="border-b border-ink/8 dark:border-white/10">
+              <th scope="col" className="w-[46%] px-6 py-4 align-bottom text-[13px] font-bold text-muted-2">
+                Can they&hellip;
+              </th>
+              {ROLES.map((role) => (
+                <th key={role.key} scope="col" className="px-3 py-4 text-center align-bottom">
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-1 text-[12px] font-bold ${role.chip}`}
+                  >
+                    {role.name}
+                  </span>
+                  <span className="mt-1.5 block text-[11px] font-bold text-muted-2">
+                    {role.caption}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ABILITIES.map((ability) => (
+              <tr
+                key={ability.label}
+                className="border-b border-ink/6 last:border-0 dark:border-white/6"
+              >
+                <th
+                  scope="row"
+                  className="px-6 py-3.5 text-[13.5px] font-normal text-ink dark:text-dark-text"
+                >
+                  {ability.label}
+                </th>
+                {ROLES.map((role) => (
+                  <td key={role.key} className="px-3 py-3.5 text-center">
+                    <AbilityMark allowed={ability.can.includes(role.key)} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-4 sm:hidden">
+        {ROLES.map((role) => (
+          <div key={role.key} className="rounded-lg bg-white p-4 dark:bg-dark-card">
+            <div className="mb-3 flex items-baseline gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${role.chip}`}>
+                {role.name}
+              </span>
+              <span className="text-[11px] font-bold text-muted-2">{role.caption}</span>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {ABILITIES.map((ability) => {
+                const allowed = ability.can.includes(role.key);
+                return (
+                  <li key={ability.label} className="flex items-start gap-2.5">
+                    <AbilityMark allowed={allowed} />
+                    <span
+                      className={
+                        allowed
+                          ? "text-[13px] leading-snug text-ink dark:text-dark-text"
+                          : "text-[13px] leading-snug text-muted-2"
+                      }
+                    >
+                      {ability.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function AbilityMark({ allowed }: { allowed: boolean }) {
+  return allowed ? (
+    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mint-tint dark:bg-mint/16">
+      <Check className="h-3 w-3 text-emerald dark:text-mint" strokeWidth={3} aria-hidden="true" />
+      <span className="sr-only">Yes</span>
+    </span>
+  ) : (
+    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink/5 dark:bg-white/8">
+      <Minus className="h-3 w-3 text-muted-2" strokeWidth={3} aria-hidden="true" />
+      <span className="sr-only">No</span>
+    </span>
   );
 }
