@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { collectBillParticipants } from "./bill-participants";
+import { describe, it, expect } from "vitest";
+import { collectBillParticipants, selectBillParticipants } from "./bill-participants";
+
+const members = [
+  { id: "m1", name: "Melody", avatarColor: "#a" },
+  { id: "m2", name: "Alice", avatarColor: "#b" },
+  { id: "m3", name: "Eric", avatarColor: "#c" },
+];
 
 describe("collectBillParticipants", () => {
   it("returns nobody for an event with no bills", () => {
@@ -38,5 +44,41 @@ describe("collectBillParticipants", () => {
     const ids = collectBillParticipants([{ payerId: "a", splits: [{ memberId: "b" }] }]);
 
     expect(ids.size).toBe(2);
+  });
+});
+
+describe("selectBillParticipants", () => {
+  it("keeps members with a positive share", () => {
+    const splits = [
+      { memberId: "m1", shareAmount: 100 },
+      { memberId: "m2", shareAmount: 100 },
+    ];
+    expect(selectBillParticipants(splits, members)).toEqual([members[0], members[1]]);
+  });
+
+  it("excludes members whose share is 0 (display-only zero exclusion)", () => {
+    const splits = [
+      { memberId: "m1", shareAmount: 100 },
+      { memberId: "m2", shareAmount: 0 },
+      { memberId: "m3", shareAmount: 50 },
+    ];
+    expect(selectBillParticipants(splits, members)).toEqual([members[0], members[2]]);
+  });
+
+  it("returns canonical member order regardless of split order", () => {
+    const splits = [
+      { memberId: "m3", shareAmount: 50 },
+      { memberId: "m1", shareAmount: 100 },
+    ];
+    expect(selectBillParticipants(splits, members)).toEqual([members[0], members[2]]);
+  });
+
+  it("handles the tiny-total equal split (1,0,0) — only the first survives", () => {
+    const splits = [
+      { memberId: "m1", shareAmount: 1 },
+      { memberId: "m2", shareAmount: 0 },
+      { memberId: "m3", shareAmount: 0 },
+    ];
+    expect(selectBillParticipants(splits, members)).toEqual([members[0]]);
   });
 });

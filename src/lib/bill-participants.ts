@@ -1,3 +1,10 @@
+/** A member as rendered in a participant avatar strip. */
+export interface ParticipantMember {
+  id: string;
+  name: string;
+  avatarColor: string;
+}
+
 /**
  * Every member who appears anywhere in an event's bills, as payer or as a
  * split participant.
@@ -23,4 +30,24 @@ export function collectBillParticipants(
     }
   }
   return participants;
+}
+
+/**
+ * The members who actually owe money on a bill, in the event's canonical
+ * order. A split with shareAmount === 0 (a custom split that zeroes someone
+ * out) is excluded — this is display-only and never touches balances or
+ * settlement (CLAUDE.md rules 2/3/11).
+ *
+ * Edge case: a tiny-total equal split like RM 0.01 / 3 -> [1,0,0] leaves a
+ * single participant. That is correct, not a bug — a 0-share member is not
+ * financially participating.
+ */
+export function selectBillParticipants(
+  splits: { memberId: string; shareAmount: number }[],
+  orderedMembers: ParticipantMember[],
+): ParticipantMember[] {
+  const paying = new Set(
+    splits.filter((s) => s.shareAmount > 0).map((s) => s.memberId),
+  );
+  return orderedMembers.filter((m) => paying.has(m.id));
 }

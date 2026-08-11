@@ -7,8 +7,10 @@ import { ExitGroupButton } from "@/components/group/ExitGroupButton";
 import { MemberAccountControls } from "@/components/group/MemberAccountControls";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
+import { BillParticipants } from "@/components/bills/BillParticipants";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
+import type { ParticipantMember } from "@/lib/bill-participants";
 import { TransferGraph } from "./TransferGraph";
 import { TransferList } from "./TransferList";
 import { Check } from "lucide-react";
@@ -33,7 +35,7 @@ export interface SettleBill {
   id: string;
   title: string;
   payerName: string;
-  splitCount: number;
+  participants: ParticipantMember[];
   totalAmount: number;
 }
 
@@ -220,9 +222,7 @@ export function SettleUpFlow({
                         <p className="mt-0.5 truncate text-[10.5px] leading-tight text-muted-2">
                           Paid by {bill.payerName}
                         </p>
-                        <p className="text-[10.5px] leading-tight text-muted-2">
-                          {bill.splitCount}-way split
-                        </p>
+                        <BillParticipants participants={bill.participants} className="mt-0.5" />
                       </div>
                       <p className="num shrink-0 text-[17px] text-ink dark:text-dark-text">
                         {formatMoney(bill.totalAmount, currency)}

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 import { SettleUpFlow } from "@/components/settle/SettleUpFlow";
+import { selectBillParticipants } from "@/lib/bill-participants";
 
 // Screen Spec P6-01/P6-02/P6-03/P6-04. Preview is readable by any session;
 // the client component hides "Mark as settled" for viewer-role sessions
@@ -26,7 +27,10 @@ export default async function SettleUpPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      eventMembers: { include: { member: true } },
+      eventMembers: {
+        include: { member: true },
+        orderBy: { member: { createdAt: "asc" } },
+      },
       bills: {
         where: { status: "unsettled" },
         include: { splits: true, payer: { select: { name: true } } },
@@ -35,6 +39,12 @@ export default async function SettleUpPage({
     },
   });
   if (!event || event.groupId !== groupId) redirect(`/g/${groupId}/events`);
+
+  const orderedMembers = event.eventMembers.map(({ member }) => ({
+    id: member.id,
+    name: member.name,
+    avatarColor: member.avatarColor,
+  }));
 
   return (
     <SettleUpFlow
@@ -53,7 +63,7 @@ export default async function SettleUpPage({
         id: bill.id,
         title: bill.title,
         payerName: bill.payer.name,
-        splitCount: bill.splits.length,
+        participants: selectBillParticipants(bill.splits, orderedMembers),
         totalAmount: bill.totalAmount,
       }))}
     />

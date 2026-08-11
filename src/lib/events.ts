@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { collectBillParticipants } from "@/lib/bill-participants";
+import { collectBillParticipants, selectBillParticipants } from "@/lib/bill-participants";
 import { computeNetBalances } from "@/lib/settlement";
 import type { UpdateEventInput } from "@/lib/validation/event";
 
@@ -154,6 +154,12 @@ export async function getEventDetail(eventId: string, groupId: string) {
     })),
   );
 
+  const orderedMembers = event.eventMembers.map(({ member }) => ({
+    id: member.id,
+    name: member.name,
+    avatarColor: member.avatarColor,
+  }));
+
   return {
     id: event.id,
     groupId: event.groupId,
@@ -177,7 +183,7 @@ export async function getEventDetail(eventId: string, groupId: string) {
       title: bill.title,
       payerId: bill.payerId,
       payerName: bill.payer.name,
-      splitCount: bill.splits.length,
+      participants: selectBillParticipants(bill.splits, orderedMembers),
       totalAmount: bill.totalAmount,
       status: bill.status,
     })),

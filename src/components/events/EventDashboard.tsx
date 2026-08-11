@@ -9,6 +9,8 @@ import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmModal";
 import { MemberChip } from "@/components/members/MemberChip";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
+import { BillParticipants } from "@/components/bills/BillParticipants";
+import type { ParticipantMember } from "@/lib/bill-participants";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
 import { Eye, Link as LinkIcon, Pencil, Receipt, Trash2 } from "lucide-react";
@@ -27,7 +29,7 @@ interface EventBillView {
   title: string;
   payerId: string;
   payerName: string;
-  splitCount: number;
+  participants: ParticipantMember[];
   totalAmount: number;
   status: string;
 }
@@ -343,9 +345,7 @@ function BillRow({
           <p className="truncate text-[10.5px] leading-tight text-muted-2 sm:text-[12.5px] dark:text-dark-muted">
             Paid by {bill.payerName}
           </p>
-          <p className="text-[10.5px] leading-tight text-muted-2 sm:text-[12.5px] dark:text-dark-muted">
-            split {bill.splitCount} ways
-          </p>
+          <BillParticipants participants={bill.participants} className="mt-1" />
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <span
