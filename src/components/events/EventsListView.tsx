@@ -11,6 +11,7 @@ import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
 import { cn } from "@/lib/cn";
 import { colorForSeed } from "@/lib/constants";
 import { formatDateRange, formatMoney } from "@/lib/format";
+import type { GroupCombinedCurrency } from "@/lib/expenses";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal } from "./EditEventModal";
 import { ArchiveEventModal } from "./ArchiveEventModal";
@@ -41,6 +42,7 @@ interface EventsListViewProps {
   saveLinkToken: string | null;
   events: EventSummary[];
   members: ChipMember[];
+  combined: GroupCombinedCurrency[];
 }
 
 // Screen Spec P3-02 (populated) / P3-03 (empty state).
@@ -52,6 +54,7 @@ export function EventsListView({
   saveLinkToken,
   events,
   members,
+  combined,
 }: EventsListViewProps) {
   const router = useRouter();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
@@ -155,6 +158,19 @@ export function EventsListView({
           <EmptyState canEdit={canEdit} onCreate={() => setShowCreateEvent(true)} />
         ) : (
           <>
+            {combined.length > 0 && (
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2">
+                {combined.map((currency) => (
+                  <OverallPanel
+                    key={currency.currency}
+                    groupId={groupId}
+                    canEdit={canEdit}
+                    currency={currency}
+                  />
+                ))}
+              </div>
+            )}
+
             <div className="mb-6 flex items-end justify-between sm:mb-[30px]">
               <div>
                 <h1 className="num text-[22px] text-ink sm:text-[34px] dark:text-dark-text">
@@ -425,6 +441,114 @@ function EventCard({
               </Menu>
             </Popover>
           </MenuTrigger>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The combined cross-event position for one currency, shown above the event
+// grid (cross-event settlement design, "Event list -> Overall panel"). Plain
+// names, no "you" (rule 5); tabular-nums via .num; archived events are not
+// included, and the micro-copy says so (rule 11).
+// The combined cross-event position for one currency, shown above the event
+// grid (two-up on desktop). Leads with the *final settlement* -- the fewest
+// transfers that clear everyone across the covered events, the thing a user
+// most wants -- and tucks the per-member owes/owed breakdown behind a toggle
+// so two panels stay short enough to leave the events grid in view. Plain
+// names, no "you" (rule 5); tabular-nums via .num; archived events excluded,
+// and the micro-copy says so (rule 11).
+function OverallPanel({
+  groupId,
+  canEdit,
+  currency,
+}: {
+  groupId: string;
+  canEdit: boolean;
+  currency: GroupCombinedCurrency;
+}) {
+  const [showMembers, setShowMembers] = useState(false);
+
+  // Scoped by count ("· N events"), so it never claims to cover every event --
+  // that count-scoping is what keeps rule 11 satisfied without spelling out
+  // "active". eventCount is always >= 2 (the panel only shows for >= 2 events).
+  const settleSummary = `${currency.transferCount} transfer${
+    currency.transferCount === 1 ? "" : "s"
+  } to settle · ${currency.eventCount} event${currency.eventCount === 1 ? "" : "s"}`;
+
+  return (
+    <div className="rounded-lg border border-ink/7 bg-white p-4 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:p-4.5 dark:border-white/7 dark:bg-dark-card">
+      {/* Title + one-line settle summary stacked in the left column, on the
+          same row as the action. Both truncate with an ellipsis when the card
+          is narrow; the full text stays available on hover (title attr). */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className="truncate text-[14px] leading-tight font-bold text-ink sm:text-[15px] dark:text-dark-text"
+            title={`Overall · ${currency.currency}`}
+          >
+            Overall <span className="font-normal text-muted-2">·</span> {currency.currency}
+          </p>
+          <p className="truncate text-[10.5px] text-muted-2" title={settleSummary}>
+            {settleSummary}
+          </p>
+        </div>
+        {canEdit && (
+          <Link
+            href={`/g/${groupId}/settle?currency=${currency.currency}`}
+            className="shrink-0 rounded-md bg-forest px-3.5 py-2 text-[12px] font-bold whitespace-nowrap text-cream hover:bg-forest-hover dark:bg-dark-forest"
+          >
+            Settle up
+          </Link>
+        )}
+      </div>
+
+      {/* The final settlement -- the fewest transfers that clear everyone. */}
+      <div className="divide-y divide-ink/8 border-t border-ink/8 dark:divide-white/8 dark:border-white/8">
+        {currency.transfers.map((t) => (
+          <div
+            key={`${t.fromMemberId}-${t.toMemberId}`}
+            className="flex items-center justify-between gap-2 py-1.5"
+          >
+            <p className="min-w-0 truncate text-[12px] text-ink dark:text-dark-text">
+              <span className="font-bold">{t.fromName}</span>
+              <span className="mx-1 text-muted-2">→</span>
+              {t.toName}
+            </p>
+            <p className="num shrink-0 text-[12.5px] text-ink dark:text-dark-text">
+              {formatMoney(t.amount, currency.currency)}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowMembers((v) => !v)}
+        aria-expanded={showMembers}
+        className="mt-3 flex items-center gap-1 text-[11px] font-bold text-muted-2 hover:text-ink dark:hover:text-dark-text"
+      >
+        <span className="text-[10px]">{showMembers ? "▾" : "▸"}</span>
+        {showMembers ? "Hide member balances" : "Show member balances"}
+      </button>
+
+      {showMembers && (
+        <div className="mt-1.5 divide-y divide-ink/6 border-t border-ink/6 dark:divide-white/6 dark:border-white/6">
+          {currency.members.map((member) => (
+            <div key={member.memberId} className="flex items-center justify-between gap-3 py-1.5">
+              <p className="text-[12px] text-muted dark:text-dark-muted">{member.name}</p>
+              <p
+                className={cn(
+                  "num text-[12.5px]",
+                  member.net > 0 && "text-emerald dark:text-mint",
+                  member.net < 0 && "text-coral",
+                )}
+              >
+                {member.net > 0 ? "+" : "-"}
+                {formatMoney(Math.abs(member.net), currency.currency)}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>

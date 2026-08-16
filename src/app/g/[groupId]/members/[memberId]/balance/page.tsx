@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
-import { getMemberBalance } from "@/lib/expenses";
+import { getMemberBalance, getMemberCombinedBalance } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { MemberBalanceView } from "@/components/members/MemberBalanceView";
 
@@ -23,13 +23,14 @@ export default async function MemberBalancePage({
   }
   if (session.groupId !== groupId) redirect("/");
 
-  const [group, memberRow, balance] = await Promise.all([
+  const [group, memberRow, balance, combined] = await Promise.all([
     prisma.group.findUnique({ where: { id: groupId }, select: { name: true } }),
     prisma.member.findUnique({
       where: { id: memberId },
       select: { id: true, name: true, avatarColor: true, isActive: true, groupId: true },
     }),
     getMemberBalance(memberId, groupId),
+    getMemberCombinedBalance(memberId, groupId),
   ]);
   if (!group) redirect("/");
   if (!memberRow || memberRow.groupId !== groupId || !balance) redirect(`/g/${groupId}/events`);
@@ -42,6 +43,7 @@ export default async function MemberBalancePage({
       member={memberRow}
       events={balance.events}
       hasArchivedEvents={balance.hasArchivedEvents}
+      combined={combined}
     />
   );
 }
