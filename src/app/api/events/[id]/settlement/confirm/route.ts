@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       preview = await computeSettlementPreview(parsed.data.billIds, eventId, tx);
 
       const created = await tx.settlement.create({
-        data: { eventId, status: "confirmed" },
+        data: { groupId: event.groupId, eventId, status: "confirmed" },
       });
 
       await tx.settlementBill.createMany({

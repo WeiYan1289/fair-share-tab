@@ -67,3 +67,78 @@ export async function computeSettlementPreview(
 
   return { netBalances, transfers, billIds: uniqueBillIds };
 }
+
+/**
+ * The cross-event counterpart to computeSettlementPreview. Loads the given
+ * unsettled bills, then asserts server-side that they all belong to this
+ * group, that every covered event is active (not archived), and that they
+ * share exactly one currency -- the currency and archived guards live HERE,
+ * never in the client (CLAUDE.md rules 1, 7, 11). A settlement then spans
+ * multiple events; eventId is left null on the Settlement row and the covered
+ * events are derivable via SettlementBill -> Bill -> eventId.
+ *
+ * Takes an optional transaction client so confirm can run preview + write in
+ * one transaction, exactly like the event route.
+ */
+export async function computeGroupSettlementPreview(
+  billIds: string[],
+  groupId: string,
+  client: Prisma.TransactionClient = prisma,
+): Promise<{
+  netBalances: NetBalanceView[];
+  transfers: Transfer[];
+  billIds: string[];
+  eventIds: string[];
+  currency: string;
+}> {
+  const uniqueBillIds = [...new Set(billIds)];
+
+  const bills = await client.bill.findMany({
+    where: { id: { in: uniqueBillIds }, status: "unsettled" },
+    include: { splits: true, event: { select: { groupId: true, status: true, currency: true } } },
+  });
+
+  if (bills.length !== uniqueBillIds.length) {
+    throw new SettlementValidationError("billIds must all be unsettled bills");
+  }
+
+  for (const bill of bills) {
+    if (bill.event.groupId !== groupId) {
+      throw new SettlementValidationError("All bills must belong to this group");
+    }
+    if (bill.event.status !== "active") {
+      throw new SettlementValidationError("Archived events cannot be settled");
+    }
+  }
+
+  const currencies = new Set(bills.map((b) => b.event.currency));
+  if (currencies.size > 1) {
+    throw new SettlementValidationError("All bills must share one currency");
+  }
+  const currency = [...currencies][0];
+
+  const nets = computeNetBalances(
+    bills.map((bill) => ({
+      payerId: bill.payerId,
+      totalAmount: bill.totalAmount,
+      splits: bill.splits.map((split) => ({ memberId: split.memberId, shareAmount: split.shareAmount })),
+    })),
+  );
+  const transfers = simplifyDebts(nets);
+
+  const members = await client.member.findMany({
+    where: { id: { in: [...nets.keys()] } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(members.map((m) => [m.id, m.name]));
+
+  const netBalances: NetBalanceView[] = [...nets.entries()].map(([memberId, net]) => ({
+    memberId,
+    name: nameById.get(memberId) ?? "",
+    net,
+  }));
+
+  const eventIds = [...new Set(bills.map((b) => b.eventId))];
+
+  return { netBalances, transfers, billIds: uniqueBillIds, eventIds, currency };
+}
