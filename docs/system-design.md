@@ -169,8 +169,12 @@ net(member) = SUM(bill.total_amount WHERE bill.payer_id = member)
 
 `net > 0` → creditor (is owed). `net < 0` → debtor (owes). All nets sum to zero.
 
-This one function powers both single-bill settlement (pass one bill) and combined
-settlement (pass many). Same engine, different input set.
+This one function powers single-bill settlement (pass one bill), whole-event
+settlement (pass an event's bills), and **cross-event** settlement (pass the union of
+several same-currency events' bills). Same pure engine, different input set — the
+currency partition and event/group guards live in the calling service layer, never in
+the engine. A cross-event run is just "pass many bills spanning events"; because those
+bills are pre-partitioned to one currency, the nets stay meaningful.
 
 ### 4.2 Debt simplification
 
@@ -361,8 +365,17 @@ the upload's return value instead.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/events/{id}/settlement/preview` | Body `{ billIds[] }`. Returns net balances + simplified transfers. **Does not persist.** |
-| `POST` | `/api/events/{id}/settlement/confirm` | Persists the settlement, its transfers, and marks the included bills `settled`. One transaction. |
+| `POST` | `/api/events/{id}/settlement/preview` | Body `{ billIds[] }`. Returns net balances + simplified transfers for one event. **Does not persist.** |
+| `POST` | `/api/events/{id}/settlement/confirm` | Persists the settlement (`event_id` set), its transfers, and marks the included bills `settled`. One transaction. |
+| `POST` | `/api/groups/{id}/settlement/preview` | Body `{ billIds[] }`. **Cross-event**: nets the given unsettled bills across several same-currency events of the group. **Does not persist.** |
+| `POST` | `/api/groups/{id}/settlement/confirm` | Editor-only. Persists a cross-event settlement (`event_id` null, `group_id` set), its transfers, and marks every covered bill `settled`. One transaction. |
+
+The group routes mirror the event routes exactly (same body, same `assertSameOrigin`,
+same guarded `updateMany` race check). Their extra server-side guards live in
+`computeGroupSettlementPreview`: every bill's event must belong to the group, be
+**active** (not archived), and **all bills must share one currency** — otherwise
+`SettlementValidationError`. The client only ever offers one currency's events at a
+time, but the guard, not the UI, is the gate (`CLAUDE.md` rules 1, 7, 11).
 
 Preview response:
 
@@ -436,7 +449,9 @@ Client-side validation is UX. Server-side validation is correctness. Do both.
 - Names non-empty after trimming; `creatorName` required on group creation.
 - Event `currency` must be one of the curated codes; defaults to `MYR`; rejected on
   `PATCH` once the event has a bill.
-- Settlement includes only `unsettled` bills from the same event.
+- Settlement includes only `unsettled` bills. The event route requires them all from
+  one event; the group (cross-event) route requires them all from **active** events of
+  the group sharing **one currency**.
 - Mutating endpoints reject `role = 'viewer'`.
 - Editing or deleting a `settled` bill is rejected.
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSession, SessionError, ArchivedGroupError } from "@/lib/auth/require-session";
 import { listGroupEvents } from "@/lib/events";
+import { getGroupCombinedBalances } from "@/lib/expenses";
 import { listGroupMembers } from "@/lib/members";
 import { prisma } from "@/lib/prisma";
 import { EventsListView } from "@/components/events/EventsListView";
@@ -31,7 +32,11 @@ export default async function EventsPage({
   const group = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
   if (!group) redirect("/");
 
-  const [events, members] = await Promise.all([listGroupEvents(groupId), listGroupMembers(groupId)]);
+  const [events, members, combined] = await Promise.all([
+    listGroupEvents(groupId),
+    listGroupMembers(groupId),
+    getGroupCombinedBalances(groupId),
+  ]);
 
   return (
     <EventsListView
@@ -57,6 +62,7 @@ export default async function EventsPage({
         settlementState: event.settlementState,
       }))}
       members={members}
+      combined={combined}
     />
   );
 }

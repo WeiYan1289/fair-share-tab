@@ -196,8 +196,15 @@ Screen Spec P5-01 / P5-03.
   member's net exactly; only reroutes who pays whom.
 - Payer and participants are **independent** — someone can pay for a bill they aren't
   part of.
-- Settlement is **strictly event-scoped** — a settlement always covers bills from
-  exactly one event, guaranteeing a single currency by construction.
+- Settlement is **group-scoped, single-currency**. A settlement always belongs to a
+  group (`Settlement.groupId` non-null) and covers exactly one currency. It comes in
+  two shapes: **event-scoped** (`eventId` set — one event's bills, the original flow)
+  and **cross-event** (`eventId` null — the union of several same-currency events'
+  bills, netted once). The single-currency guarantee is by construction for the event
+  case and server-enforced for the cross-event case
+  (`computeGroupSettlementPreview`, which also rejects archived/foreign-group bills).
+  The pure engine is unchanged either way — cross-event just feeds it more bills,
+  pre-partitioned to one currency. Settlement never spans more than one currency.
 
 ## Conventions
 

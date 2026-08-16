@@ -1,24 +1,23 @@
 import { NextResponse } from "next/server";
 import { assertSameOrigin, CsrfError } from "@/lib/auth/assert-same-origin";
 import { requireSession, SessionError } from "@/lib/auth/require-session";
-import { ArchivedEventError, assertEventNotArchived } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import {
-  computeSettlementPreview,
+  computeGroupSettlementPreview,
   SettlementValidationError,
   type NetBalanceView,
 } from "@/lib/settlement-service";
 import { settlementBillsSchema } from "@/lib/validation/settlement";
 import type { Transfer } from "@/lib/settlement";
 
-// Persists the settlement, its transfers, and marks the included bills
-// settled -- one transaction (system-design.md §5, §6.4). Transfers are
-// always recomputed server-side from billIds; the client never supplies
-// transfer amounts directly, the same "never trust client money math"
-// pattern as bill splits (src/lib/bills.ts). Editor-only. Strictly
-// event-scoped: a settlement always covers exactly one event's bills.
+// Persists a cross-event settlement (groupId set, eventId null), its transfers,
+// and flips every covered bill to settled -- one transaction. Preview and
+// write share the transaction so a concurrent confirm or bill edit can't slip
+// into the gap; the guarded updateMany count check is the same race guard the
+// event route uses. Editor-only. All money math is recomputed server-side
+// from billIds, never trusted from the client.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id: eventId } = await params;
+  const { id: groupId } = await params;
 
   let session;
   try {
@@ -31,17 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     throw error;
   }
 
-  const event = await prisma.event.findUnique({ where: { id: eventId } });
-  if (!event || event.groupId !== session.groupId) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
-  try {
-    assertEventNotArchived(event, "This event is archived and cannot be settled");
-  } catch (error) {
-    if (error instanceof ArchivedEventError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
-    }
-    throw error;
+  if (session.groupId !== groupId) {
+    return NextResponse.json({ error: "Session does not match this group" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -51,16 +41,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   let settlement;
-  let preview: { netBalances: NetBalanceView[]; transfers: Transfer[]; billIds: string[] } | undefined;
+  let preview:
+    | { netBalances: NetBalanceView[]; transfers: Transfer[]; billIds: string[]; eventIds: string[]; currency: string }
+    | undefined;
   try {
-    // Preview and write share one transaction so a concurrent confirm (or a
-    // bill edit/delete) can't slip into the gap between reading "unsettled"
-    // bills and marking them settled -- see the guarded updateMany below.
     settlement = await prisma.$transaction(async (tx) => {
-      preview = await computeSettlementPreview(parsed.data.billIds, eventId, tx);
+      preview = await computeGroupSettlementPreview(parsed.data.billIds, groupId, tx);
 
       const created = await tx.settlement.create({
-        data: { groupId: event.groupId, eventId, status: "confirmed" },
+        data: { groupId, eventId: null, status: "confirmed" },
       });
 
       await tx.settlementBill.createMany({
@@ -104,6 +93,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     {
       settlement: {
         id: settlement.id,
+        groupId: settlement.groupId,
         eventId: settlement.eventId,
         status: settlement.status,
         createdAt: settlement.createdAt,

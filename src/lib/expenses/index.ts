@@ -6,6 +6,7 @@ import {
   type MemberBillLine,
   type MemberEventBalanceTransfer,
 } from "./aggregate";
+import { computeCombinedBalances, memberTransfersFrom } from "./combined";
 
 export interface MemberExpenseBillLine extends MemberBillLine {
   payerName: string;
@@ -268,4 +269,155 @@ export async function getMemberEventActivity(
     lines: expense.lines.map((line) => ({ ...line, payerName: payerNameByBillId.get(line.billId) ?? "" })),
     transfers: transfers.map((t) => ({ ...t, otherName: nameById.get(t.otherMemberId) ?? "" })),
   };
+}
+
+// Loads every active event in the group with its unsettled bills + splits,
+// shaped for the pure combined core. Shared by both cross-event query
+// functions so they run over exactly the same universe (spec: "same engine,
+// same universe, filtered view").
+async function loadCombinedEventInputs(groupId: string) {
+  const events = await prisma.event.findMany({
+    where: { groupId, status: "active" },
+    include: { bills: { where: { status: "unsettled" }, include: { splits: true } } },
+  });
+  return events.map((event) => ({
+    eventId: event.id,
+    currency: event.currency,
+    bills: event.bills.map((bill) => ({
+      payerId: bill.payerId,
+      totalAmount: bill.totalAmount,
+      splits: bill.splits.map((s) => ({ memberId: s.memberId, shareAmount: s.shareAmount })),
+    })),
+  }));
+}
+
+function currencyFirstSort(a: string, b: string): number {
+  if (a === DEFAULT_CURRENCY) return -1;
+  if (b === DEFAULT_CURRENCY) return 1;
+  return a.localeCompare(b);
+}
+
+export interface GroupCombinedTransfer {
+  fromMemberId: string;
+  fromName: string;
+  toMemberId: string;
+  toName: string;
+  amount: number;
+}
+
+export interface GroupCombinedCurrency {
+  currency: string;
+  eventCount: number;
+  transferCount: number;
+  /** The fewest transfers that settle everyone across the covered events --
+   * the "final settlement" the Overall panel leads with. */
+  transfers: GroupCombinedTransfer[];
+  /** Members with a non-zero combined position, creditors (owed) first. */
+  members: { memberId: string; name: string; net: number }[];
+}
+
+/**
+ * The combined "who owes whom across events" position for a group, one entry
+ * per qualifying currency (>= 2 active same-currency events carrying money).
+ * Feeds the event-list Overall panel and pre-scopes the cross-event settle
+ * flow. Only currencies with at least one outstanding transfer are returned --
+ * a currency whose combined nets all cancel needs no panel. Archived events
+ * are excluded (loaded status: "active" only) per CLAUDE.md rule 11.
+ */
+export async function getGroupCombinedBalances(groupId: string): Promise<GroupCombinedCurrency[]> {
+  const combined = computeCombinedBalances(await loadCombinedEventInputs(groupId));
+  const withMoney = combined.filter((c) => c.transfers.length > 0);
+  if (withMoney.length === 0) return [];
+
+  const memberIds = [...new Set(withMoney.flatMap((c) => [...c.memberNets.keys()]))];
+  const members = await prisma.member.findMany({
+    where: { id: { in: memberIds } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(members.map((m) => [m.id, m.name]));
+
+  return withMoney
+    .sort((a, b) => currencyFirstSort(a.currency, b.currency))
+    .map((c) => ({
+      currency: c.currency,
+      eventCount: c.eventCount,
+      transferCount: c.transfers.length,
+      transfers: c.transfers.map((t) => ({
+        fromMemberId: t.fromMemberId,
+        fromName: nameById.get(t.fromMemberId) ?? "",
+        toMemberId: t.toMemberId,
+        toName: nameById.get(t.toMemberId) ?? "",
+        amount: t.amount,
+      })),
+      members: [...c.memberNets.entries()]
+        .filter(([, net]) => net !== 0)
+        .sort((a, b) => b[1] - a[1]) // creditors (positive) first
+        .map(([memberId, net]) => ({ memberId, name: nameById.get(memberId) ?? "", net })),
+    }));
+}
+
+export interface MemberCombinedCurrency {
+  currency: string;
+  net: number;
+  /** Number of that currency's events this member has a position in. */
+  eventCount: number;
+  transfers: MemberBalanceTransfer[];
+}
+
+/**
+ * One member's combined cross-event position, per qualifying currency. Runs
+ * the SAME group-wide core as getGroupCombinedBalances (the transfers are
+ * group-wide; this only filters to the ones touching the member), then
+ * surfaces a currency only where the member has a non-zero position spanning
+ * >= 2 active events of that currency -- with a single event, the combined
+ * row would merely duplicate the existing per-event Balance row. Archived
+ * events excluded (rule 11).
+ */
+export async function getMemberCombinedBalance(
+  memberId: string,
+  groupId: string,
+): Promise<MemberCombinedCurrency[]> {
+  const member = await loadMember(memberId, groupId);
+  if (!member) return [];
+
+  const inputs = await loadCombinedEventInputs(groupId);
+  const byEventId = new Map(inputs.map((e) => [e.eventId, e]));
+  const combined = computeCombinedBalances(inputs);
+
+  const eligible = combined
+    .map((c) => {
+      const net = c.memberNets.get(memberId) ?? 0;
+      // Count only this currency's events the member is actually in.
+      const memberEventCount = c.eventIds.filter((eventId) => {
+        const event = byEventId.get(eventId)!;
+        return event.bills.some(
+          (b) => b.payerId === memberId || b.splits.some((s) => s.memberId === memberId),
+        );
+      }).length;
+      return { c, net, memberEventCount };
+    })
+    .filter(({ net, memberEventCount }) => net !== 0 && memberEventCount >= 2);
+
+  if (eligible.length === 0) return [];
+
+  const otherIds = [
+    ...new Set(eligible.flatMap(({ c }) => memberTransfersFrom(c.transfers, memberId).map((t) => t.otherMemberId))),
+  ];
+  const others = await prisma.member.findMany({
+    where: { id: { in: otherIds } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(others.map((m) => [m.id, m.name]));
+
+  return eligible
+    .sort((a, b) => currencyFirstSort(a.c.currency, b.c.currency))
+    .map(({ c, net, memberEventCount }) => ({
+      currency: c.currency,
+      net,
+      eventCount: memberEventCount,
+      transfers: memberTransfersFrom(c.transfers, memberId).map((t) => ({
+        ...t,
+        otherName: nameById.get(t.otherMemberId) ?? "",
+      })),
+    }));
 }
