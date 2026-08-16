@@ -448,10 +448,6 @@ function EventCard({
 }
 
 // The combined cross-event position for one currency, shown above the event
-// grid (cross-event settlement design, "Event list -> Overall panel"). Plain
-// names, no "you" (rule 5); tabular-nums via .num; archived events are not
-// included, and the micro-copy says so (rule 11).
-// The combined cross-event position for one currency, shown above the event
 // grid (two-up on desktop). Leads with the *final settlement* -- the fewest
 // transfers that clear everyone across the covered events, the thing a user
 // most wants -- and tucks the per-member owes/owed breakdown behind a toggle

@@ -148,7 +148,9 @@ export function MemberBalanceView({
               )}
 
               <p className="mb-1 text-[11.5px] font-bold tracking-wide text-muted-2 uppercase">
-                {member.name} {summaryNet > 0 ? "can receive" : "needs to pay"}
+                {summaryNet === 0
+                  ? `${member.name} is all square`
+                  : `${member.name} ${summaryNet > 0 ? "can receive" : "needs to pay"}`}
                 {currencies.length > 1 ? ` · ${selectedCurrency}` : ""}
               </p>
               <p
@@ -156,11 +158,22 @@ export function MemberBalanceView({
                   "num text-[28px] sm:text-[38px]",
                   summaryNet > 0 && "text-emerald dark:text-mint",
                   summaryNet < 0 && "text-coral",
+                  summaryNet === 0 && "text-muted-2",
                 )}
               >
-                {summaryNet > 0 ? "+" : "-"}
+                {summaryNet > 0 ? "+" : summaryNet < 0 ? "-" : ""}
                 {formatMoney(Math.abs(summaryNet), selectedCurrency)}
               </p>
+
+              {/* A zero summary across more than one event isn't "nothing owed"
+                  -- the positions cancel out. Say so, since the Combined
+                  transfers block is (correctly) omitted when the net is zero. */}
+              {summaryNet === 0 && eventsInCurrency.length > 1 && (
+                <p className="mt-1 text-[12px] text-muted dark:text-dark-muted">
+                  {member.name}&rsquo;s positions cancel out across these events — nothing to
+                  settle overall.
+                </p>
+              )}
 
               {/* Combined (>= 2 events): the netted "who this member pays /
                   receives from" -- the fewest transfers. With a single event
