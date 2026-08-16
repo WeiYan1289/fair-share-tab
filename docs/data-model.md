@@ -118,7 +118,8 @@ erDiagram
   }
   SETTLEMENT {
     uuid id PK
-    uuid event_id FK
+    uuid group_id FK
+    uuid event_id FK "nullable"
     string status
     timestamp created_at
   }
@@ -274,16 +275,30 @@ Unique constraint: `(bill_id, member_id)`.
 
 ### 3.8 `settlement`, `settlement_bill`, `transfer`
 
-A settlement is one "settle up" run. It is **strictly event-scoped** — a settlement
-always covers bills from exactly one event, which guarantees a single currency by
-construction. Cross-event settlement is not supported.
+A settlement is one "settle up" run. It is always **group-scoped** (`group_id` is
+non-null) and covers exactly one currency by construction. A settlement covers
+either one event or several:
+
+- **Event-scoped** (the original flow): `event_id` is set. The run covers unsettled
+  bills from that one event.
+- **Cross-event**: `event_id` is `NULL`. The run nets a member across several
+  same-currency events of the group and covers all their unsettled bills in one
+  set of transfers. The covered events are derivable via
+  `settlement_bill → bill → event_id`.
+
+Single-currency is guaranteed either way: an event-scoped run inherits its event's
+currency; a cross-event run is validated server-side to span exactly one currency
+(`computeGroupSettlementPreview`). `settlement_bill` records the exact bills a run
+covered in both cases, so which events a cross-event run touched is always
+recoverable even though `event_id` is null.
 
 `settlement`
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | Primary key. |
-| `event_id` | UUID (FK) | References `event.id`. |
+| `group_id` | UUID (FK) | References `group.id`. Non-null — every settlement belongs to a group. |
+| `event_id` | UUID (FK, nullable) | References `event.id`. Set for event-scoped runs, `NULL` for cross-event runs. |
 | `status` | enum | `draft` or `confirmed`. |
 | `created_at` | timestamp | Set on creation. |
 
@@ -503,11 +518,13 @@ so the owner is never an unnamed member. See `system-design.md` §5.
 
 ## 8. Relationships and delete behaviour
 
-- `group` → many `member`, `event`, `group_share_link`.
-- `event` → many `bill`, `settlement`; many `member` via `event_member`.
+- `group` → many `member`, `event`, `group_share_link`, `settlement`.
+- `event` → many `bill`, `settlement` (only the event-scoped ones); many `member`
+  via `event_member`.
 - `bill` → one `payer` (member), many `split`. **Deleting a bill cascades to its
   splits.**
-- `settlement` → many `transfer`; many `bill` via `settlement_bill`.
+- `settlement` → many `transfer`; many `bill` via `settlement_bill`. Belongs to one
+  `group` always, and to at most one `event` (null for cross-event runs).
 - Nothing else is ever hard-deleted: members deactivate, events archive, share links
   revoke.
 
@@ -595,7 +612,8 @@ the whole point of archiving rather than revoking.
 - **OAuth / social login** — email + password only.
 - **Changing an event's currency after its first bill, and cross-currency
   settlement** — an event's currency is fixed once money has been recorded against
-  it (§6 invariant 9), and settlement never spans more than one event/currency.
+  it (§6 invariant 9), and a settlement never spans more than one currency.
+  (Cross-*event* settlement within a single currency **is** supported — see §3.8.)
 - **Multiple payers per bill** — would need a `bill_payer` join table with amounts.
 - **Receipt image attachments.**
 - **Audit log of edits** — worth adding early if disputes become a problem.

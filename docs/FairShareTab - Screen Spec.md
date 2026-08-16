@@ -95,10 +95,10 @@ Once inside a group: the events list and creating an event.
 - **Route:** /g/:groupId/events
 - **Entered from:** opening a share link (direct or pasted at P1-01), or creating a new group (P2-01).
 - **Exits to:** P4-01 Event dashboard on selecting an event.
-- **Data read:** Group.events[] (name, member count, total spent, unsettled amount)
-- **Actions → writes:** Select an event card → opens its dashboard. + Create event → opens P3-04. + Add member (editor only) → creates a new group Member with no event attachment (does not open P4-04).
+- **Data read:** Group.events[] (name, member count, total spent, unsettled amount); combined cross-event balances per currency (the final settlement transfers + each member's combined net), for the Overall panel.
+- **Actions → writes:** Select an event card → opens its dashboard. + Create event → opens P3-04. + Add member (editor only) → creates a new group Member with no event attachment (does not open P4-04). Settle up across events (editor only, per currency) → opens P6-05.
 - **States:** Populated (this) / empty (P3-03)
-- **Notes:** Owner badge ("Owned by \<name\>") shown under the group name/switcher whenever the group has a registered owner; nothing shown for an unowned group.
+- **Notes:** Owner badge ("Owned by \<name\>") shown under the group name/switcher whenever the group has a registered owner; nothing shown for an unowned group. **Overall panel:** above the event grid (two-up on desktop, one per currency), shown for each currency in which **≥2 active events** carry unsettled money. Each card leads with the **final settlement** — the fewest transfers that clear everyone across those events — plus a small "Settle up" button; the per-member owes/owed breakdown is collapsed behind a "Show member balances" toggle so two cards stay short enough to keep the events grid in view. Micro-copy notes archived events aren't included. With 0 or 1 such event the per-event figure already is the combined answer, so no panel shows.
 
 ### P3-03 — Events list — empty state
 - **Route:** /g/:groupId/events, zero events
@@ -240,6 +240,15 @@ Reducing every unsettled bill in an event to the minimum set of transfers.
 - **Actions → writes:** Same as P6-02
 - **States:** Dark-mode counterpart of P6-02
 - **Notes:** Only the graph step has a dark variant designed — steps 1 and 3 don't yet.
+
+### P6-05 — Settle up across events (cross-event)
+- **Route:** /g/:groupId/settle?currency=:code
+- **Entered from:** P3-02 Events list → "Settle up across events" (editor only, one per qualifying currency in the Overall panel).
+- **Exits to:** P3-02 Events list on confirm, with every covered bill across the selected events now settled and locked (P5-03).
+- **Data read:** the group's **active** events in that currency carrying unsettled bills (name, unsettled bill ids, unsettled total/count); then the derived transfers[] from the group settlement preview.
+- **Actions → writes:** Select which events to include (all ticked by default) → Calculate posts the union of the selected events' unsettled bill ids to `/api/groups/:id/settlement/preview`. Mark as settled → confirm dialog with the same "these payments have been made in real life" acknowledgement as P6-03 → posts to `/api/groups/:id/settlement/confirm`, creating **one** settlement (`event_id` null) that settles every covered bill across all selected events in one transaction.
+- **States:** Select events (step 1) / transfer graph + list (step 2, reuses P6-02's graph and the desktop graph/list toggle; mobile is list-only) / confirm dialog (step 3). Viewers can preview but see a "Back to events" link instead of "Mark as settled".
+- **Notes:** Same currency only — the route is scoped to one `currency`, and the server rejects a bill set spanning currencies or archived events. Reached only when **≥2 active same-currency events** carry unsettled money (otherwise the per-event flow P6-01 already covers it). Irreversible, same as P6-03; no unsettle path.
 
 ## Part 7 — Cross-cutting states
 States that apply across multiple screens rather than belonging to one.
