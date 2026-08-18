@@ -7,6 +7,8 @@ import { Logo } from "@/components/ui/Logo";
 import { RestoreButton } from "@/components/ui/RestoreButton";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { LogOut } from "lucide-react";
 
 interface ArchivedGroupSummary {
@@ -120,6 +122,7 @@ function EmptyState() {
 
 function ArchivedGroupRow({ group }: { group: ArchivedGroupSummary }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
@@ -141,9 +144,17 @@ function ArchivedGroupRow({ group }: { group: ArchivedGroupSummary }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "active" }),
       });
-      if (!res.ok) throw new Error("restore failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setRestoreError("Couldn't restore — check your connection and try again.");
+        setRestoring(false);
+        return;
+      }
+      toast("Group restored");
       router.refresh();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setRestoreError("Couldn't restore — check your connection and try again.");
       setRestoring(false);
     }

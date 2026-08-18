@@ -8,6 +8,8 @@ import { ReceiptThumbnail } from "@/components/bills/ReceiptThumbnail";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { useReceiptUpload } from "@/lib/receipts/use-receipt-upload";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
@@ -52,6 +54,11 @@ interface BillFormProps {
    * way, but the two cases get different banner copy below -- one is a
    * property of the bill, the other of who's looking at it. */
   viewOnly?: boolean;
+  /** When true, render only the field stack -- no full-page wrapper and no
+   * header row (ThemeToggle + heading + close). The caller (AddBillModal)
+   * supplies the frame. Absent on the standalone /bills/new route, which is
+   * unchanged. */
+  embedded?: boolean;
 }
 
 function parseAmount(text: string, minorUnit: number): number {
@@ -80,8 +87,9 @@ export function BillForm(props: BillFormProps) {
   return <EditableBillForm {...props} />;
 }
 
-function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact }: BillFormProps) {
+function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact, embedded }: BillFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
   const { symbol, minorUnit } = getCurrencyMeta(currency);
 
@@ -214,6 +222,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
   // place and let the parent remount this form for the next entry, rather
   // than navigating to the event dashboard.
   function finishSave() {
+    toast(mode === "create" ? "Bill added" : "Bill updated");
     if (onSaved && mode === "create") {
       setSubmitting(false);
       onSaved();
@@ -258,6 +267,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         // must not render -- only use body.error when it's a string.
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? "Couldn't save that bill — check your connection and try again.");
         setSubmitting(false);
         return;
@@ -274,6 +284,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
     } catch {
       // A thrown error here is a transport failure, never a server
       // message -- its raw text is not user-facing copy.
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't save that bill — check your connection and try again.");
       setSubmitting(false);
     }
@@ -315,25 +326,8 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
     finishSave();
   }
 
-  return (
-    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[580px]">
-        <div className="mb-5.5 flex items-center justify-between">
-          <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
-            {mode === "create" ? "Add a bill" : "Edit bill"}
-          </h1>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              href={dashboardHref}
-              className="text-xl text-muted-2 dark:text-dark-muted"
-              aria-label="Close"
-            >
-              ×
-            </Link>
-          </div>
-        </div>
-
+  const fields = (
+    <>
         <div className="mb-4">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">What&apos;s it for?</label>
           <input
@@ -565,6 +559,32 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             {waitingForUpload ? "Uploading receipt…" : submitting ? "Saving…" : "Save bill"}
           </button>
         )}
+    </>
+  );
+
+  if (embedded) {
+    return fields;
+  }
+
+  return (
+    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
+      <div className="mx-auto max-w-[580px]">
+        <div className="mb-5.5 flex items-center justify-between">
+          <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
+            {mode === "create" ? "Add a bill" : "Edit bill"}
+          </h1>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href={dashboardHref}
+              className="text-xl text-muted-2 dark:text-dark-muted"
+              aria-label="Close"
+            >
+              ×
+            </Link>
+          </div>
+        </div>
+        {fields}
       </div>
     </div>
   );

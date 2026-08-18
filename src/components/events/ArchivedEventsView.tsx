@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GroupHeader } from "@/components/group/GroupHeader";
 import { RestoreButton } from "@/components/ui/RestoreButton";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { formatMoney } from "@/lib/format";
 
 interface ArchivedEventSummary {
@@ -103,6 +105,7 @@ function ArchivedEventRow({
   canRestore: boolean;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
@@ -124,9 +127,17 @@ function ArchivedEventRow({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "active" }),
       });
-      if (!res.ok) throw new Error("restore failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setRestoreError("Couldn't restore — check your connection and try again.");
+        setRestoring(false);
+        return;
+      }
+      toast("Event restored");
       router.refresh();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setRestoreError("Couldn't restore — check your connection and try again.");
       setRestoring(false);
     }

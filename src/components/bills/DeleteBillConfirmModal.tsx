@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { formatMoney } from "@/lib/format";
 
 interface DeleteBillConfirmModalProps {
@@ -22,6 +24,7 @@ export function DeleteBillConfirmModal({
   onClose,
   onDeleted,
 }: DeleteBillConfirmModalProps) {
+  const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,9 +33,17 @@ export function DeleteBillConfirmModal({
     setError(null);
     try {
       const res = await fetch(`/api/bills/${billId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("delete failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't delete that bill — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
+      toast("Bill deleted");
       onDeleted();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't delete that bill — check your connection and try again.");
       setSubmitting(false);
     }

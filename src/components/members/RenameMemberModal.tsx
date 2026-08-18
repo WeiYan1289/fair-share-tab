@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
 interface RenameMemberModalProps {
@@ -15,6 +17,7 @@ interface RenameMemberModalProps {
 // tap-to-edit on the name, which had no visible affordance that it was
 // tappable). Mirrors AddMemberModal's shell.
 export function RenameMemberModal({ memberId, currentName, onClose, onRenamed }: RenameMemberModalProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(currentName);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +39,17 @@ export function RenameMemberModal({ memberId, currentName, onClose, onRenamed }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
-      if (!res.ok) throw new Error("rename failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't rename — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
+      toast("Member renamed");
       onRenamed(trimmed);
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't rename — check your connection and try again.");
       setSubmitting(false);
     }

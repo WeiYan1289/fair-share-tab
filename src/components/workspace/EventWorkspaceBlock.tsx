@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BillForm } from "@/components/bills/BillForm";
 import { BillRow, type EventBillView } from "@/components/bills/BillRow";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
+import { AddBillModal } from "@/components/workspace/AddBillModal";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { ConfirmSettleModal } from "@/components/settle/ConfirmSettleModal";
 import type { SettleMember } from "@/components/settle/SettleUpFlow";
 import { previewTransfers } from "@/lib/settlement/preview-transfers";
 import { cn } from "@/lib/cn";
 import { formatDateRange, formatMoney } from "@/lib/format";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 
 export interface WorkspaceEventMember {
   id: string;
@@ -58,7 +60,9 @@ export function EventWorkspaceBlock({
   onToggleCollapse: () => void;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [formKey, setFormKey] = useState(0);
+  const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -87,41 +91,32 @@ export function EventWorkspaceBlock({
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? GENERIC_SETTLE_ERROR);
         setConfirming(false);
         return;
       }
+      toast("Settled up");
       setShowConfirm(false);
       setConfirming(false);
       router.refresh();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError(GENERIC_SETTLE_ERROR);
       setConfirming(false);
     }
   }
 
-  const addBillPanel = canEdit ? (
-    <div>
-      <p className="mb-3 text-[11px] font-bold tracking-wide text-muted-2 uppercase">Add a bill</p>
-      <div className="rounded-lg border border-ink/8 bg-cream/50 p-3.5 dark:border-white/8 dark:bg-dark-bg/40">
-        <BillForm
-          key={formKey}
-          compact
-          mode="create"
-          groupId={groupId}
-          eventId={event.id}
-          currency={event.currency}
-          members={event.members}
-          onSaved={() => {
-            setFormKey((k) => k + 1);
-            router.refresh();
-          }}
-        />
-      </div>
-    </div>
-  ) : (
-    <div />
-  );
+  const addBillChip = canEdit ? (
+    <button
+      type="button"
+      onClick={() => setAdding(true)}
+      className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-forest bg-mint-tint px-3.5 py-1.5 text-[12.5px] font-bold text-forest hover:bg-mint-tint/70 dark:border-mint dark:bg-mint/16 dark:text-mint"
+    >
+      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+      Add a bill
+    </button>
+  ) : null;
 
   return (
     <section className="rounded-lg border border-ink/7 bg-white px-4 py-3.5 sm:px-5 sm:py-4 dark:border-white/7 dark:bg-dark-card">
@@ -169,21 +164,26 @@ export function EventWorkspaceBlock({
         <div
           className={cn(
             "mt-4 grid grid-cols-1 gap-5 border-t border-ink/8 pt-4 dark:border-white/8",
-            event.bills.length === 0
-              ? "lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
-              : "lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)_minmax(0,260px)]",
+            event.bills.length > 0 && "lg:grid-cols-[minmax(0,1fr)_minmax(0,260px)]",
           )}
         >
-          {/* Left — add a bill (editor only, mirrors the dashboard gate). */}
-          {addBillPanel}
-
-          {/* Center — bills. */}
+          {/* Center — bills. The add-a-bill entry point lives here now: a chip
+              in the header when bills exist, centered in the empty state when
+              they don't. */}
           <div>
-            <p className="mb-3 text-[11px] font-bold tracking-wide text-muted-2 uppercase">Bills</p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-bold tracking-wide text-muted-2 uppercase">Bills</p>
+              {event.bills.length > 0 && addBillChip}
+            </div>
             {event.bills.length === 0 ? (
-              <p className="rounded-md bg-cream px-4 py-8 text-center text-[13px] text-muted dark:bg-dark-bg dark:text-dark-muted">
-                No bills yet — add one on the left to start splitting.
-              </p>
+              <div className="flex flex-col items-center gap-3 rounded-md bg-cream px-4 py-8 text-center dark:bg-dark-bg">
+                <p className="text-[13px] text-muted dark:text-dark-muted">
+                  {canEdit
+                    ? "No bills yet — add your first to start splitting."
+                    : "No bills yet."}
+                </p>
+                {addBillChip}
+              </div>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {event.bills.map((bill) => (
@@ -292,6 +292,20 @@ export function EventWorkspaceBlock({
         </div>
       )}
 
+      {adding && (
+        <AddBillModal
+          groupId={groupId}
+          eventId={event.id}
+          currency={event.currency}
+          members={event.members}
+          formKey={formKey}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setFormKey((k) => k + 1);
+            router.refresh();
+          }}
+        />
+      )}
       {deleteTarget && (
         <DeleteBillConfirmModal
           billId={deleteTarget.id}

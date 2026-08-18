@@ -7,6 +7,8 @@ import { ExitGroupButton } from "@/components/group/ExitGroupButton";
 import { MemberAccountControls } from "@/components/group/MemberAccountControls";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { TransferGraph } from "./TransferGraph";
@@ -46,6 +48,7 @@ export function CrossEventSettleFlow({
   events,
 }: CrossEventSettleFlowProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const eventsHref = `/g/${groupId}/events`;
   const canConfirm = viewerRole === "editor";
 
@@ -110,13 +113,16 @@ export function CrossEventSettleFlow({
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? GENERIC_CONFIRM_ERROR);
         setConfirming(false);
         return;
       }
+      toast("Settled up");
       router.push(eventsHref);
       router.refresh();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError(GENERIC_CONFIRM_ERROR);
       setConfirming(false);
     }

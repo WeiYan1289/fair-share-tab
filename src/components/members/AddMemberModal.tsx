@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
 interface NewMember {
@@ -29,6 +31,7 @@ interface AddMemberModalProps {
 // POST /api/groups/{id}/members instead, which creates the member with no
 // event attachment at all.
 export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps) {
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,10 +54,18 @@ export function AddMemberModal({ scope, onClose, onAdded }: AddMemberModalProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
-      if (!res.ok) throw new Error("create failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't add that member — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
       const data = await res.json();
+      toast("Member added");
       onAdded({ ...data.member, balance: 0 });
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't add that member — check your connection and try again.");
       setSubmitting(false);
     }

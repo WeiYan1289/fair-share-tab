@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { CurrencySelect } from "@/components/ui/CurrencySelect";
 import { EventDateRangeField } from "@/components/ui/EventDateRangeField";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 
 interface EditEventModalProps {
   eventId: string;
@@ -40,6 +42,7 @@ export function EditEventModal({
   onClose,
   onSaved,
 }: EditEventModalProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(currentName);
   const [currency, setCurrency] = useState(currentCurrency);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(
@@ -72,15 +75,20 @@ export function EditEventModal({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(typeof body?.error === "string" ? body.error : "save failed");
+        toast(describeApiError(res.status, body), "error");
+        setError(
+          typeof body?.error === "string"
+            ? body.error
+            : "Couldn't save — check your connection and try again.",
+        );
+        setSubmitting(false);
+        return;
       }
+      toast("Event updated");
       onSaved();
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message !== "save failed"
-          ? err.message
-          : "Couldn't save — check your connection and try again.",
-      );
+    } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
+      setError("Couldn't save — check your connection and try again.");
       setSubmitting(false);
     }
   }

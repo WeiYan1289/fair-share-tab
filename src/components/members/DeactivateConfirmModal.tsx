@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 
 interface DeactivateConfirmModalProps {
   memberId: string;
@@ -18,6 +20,7 @@ export function DeactivateConfirmModal({
   onClose,
   onDeactivated,
 }: DeactivateConfirmModalProps) {
+  const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,9 +33,17 @@ export function DeactivateConfirmModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: false }),
       });
-      if (!res.ok) throw new Error("deactivate failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't deactivate — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
+      toast("Member deactivated");
       onDeactivated();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't deactivate — check your connection and try again.");
       setSubmitting(false);
     }

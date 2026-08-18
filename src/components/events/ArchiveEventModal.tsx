@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { formatMoney } from "@/lib/format";
 
 interface ArchiveEventModalProps {
@@ -21,6 +23,7 @@ interface ArchiveEventModalProps {
 // unsettled bills exist the modal says exactly what disappears. Restore
 // needs no modal — it is non-destructive.
 export function ArchiveEventModal({ event, onClose, onArchived }: ArchiveEventModalProps) {
+  const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasUnsettled = event.unsettledCount > 0;
@@ -34,9 +37,17 @@ export function ArchiveEventModal({ event, onClose, onArchived }: ArchiveEventMo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "archived" }),
       });
-      if (!res.ok) throw new Error("archive failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't archive — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
+      toast("Event archived");
       onArchived();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't archive — check your connection and try again.");
       setSubmitting(false);
     }
