@@ -215,6 +215,24 @@ Screen Spec P5-01 / P5-03.
 - Wrap multi-row writes (bill + splits, settlement + transfers + bill status) in a
   transaction.
 - Reference screens by their Screen Spec ID in commits and comments.
+- **User-facing actions signal through the app-wide toast system**, not inline
+  notices alone. Call `useToast()` from `src/components/ui/toast/ToastProvider.tsx`
+  (mounted once in `src/app/layout.tsx`): `toast(message)` on success,
+  `toast(describeApiError(res.status, body), "error")` in a `!res.ok` branch, and
+  `toast(NETWORK_ERROR_MESSAGE, "error")` in a transport `catch`. `describeApiError`
+  (`src/components/ui/toast/error-message.ts`) renders `"{status} · {server
+  message}"`, so reuse the `body` the call site already parsed — never read the
+  `Response` twice. Keep existing inline error copy; the toast is an added global
+  signal, not a replacement. Before a `window.location.href` full reload (create /
+  restore group), use `queueToast(...)` (sessionStorage) so the toast survives the
+  reload instead of the live `toast()`. Toasts use design tokens only. Auth forms
+  (login/register/forgot/reset) are deliberately excluded.
+- **The desktop workspace adds bills through a modal, not an inline column.** The
+  `Add a bill` chip opens `AddBillModal`, which renders `BillForm` with the
+  `embedded` prop — that prop strips the form's full-page wrapper and header
+  (ThemeToggle + heading + close) so the modal owns the frame. The standalone
+  `/bills/new` route renders `BillForm` **without** `embedded` and must stay
+  byte-for-byte unchanged when touching that component.
 - **Vitest covers pure/isolable logic only** — crypto/signing helpers, Zod schemas,
   the settlement engine, and small decision predicates (e.g. `src/lib/auth/
   share-link-access.ts`). There is no route-handler or component test harness.
