@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
@@ -76,6 +78,7 @@ export function MemberChip({
   onReactivated,
 }: MemberChipProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [renaming, setRenaming] = useState(false);
   const [reactivating, setReactivating] = useState(false);
   const balance = useCountUp(member.balance ?? 0);
@@ -93,7 +96,15 @@ export function MemberChip({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: true }),
       });
-      if (res.ok) onReactivated(member.id);
+      if (res.ok) {
+        toast("Member reactivated");
+        onReactivated(member.id);
+      } else {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+      }
+    } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
     } finally {
       setReactivating(false);
     }

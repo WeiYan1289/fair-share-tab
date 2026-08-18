@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { BillRow, type EventBillView } from "@/components/bills/BillRow";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
 import { AddBillModal } from "@/components/workspace/AddBillModal";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { ConfirmSettleModal } from "@/components/settle/ConfirmSettleModal";
 import type { SettleMember } from "@/components/settle/SettleUpFlow";
 import { previewTransfers } from "@/lib/settlement/preview-transfers";
@@ -58,6 +60,7 @@ export function EventWorkspaceBlock({
   onToggleCollapse: () => void;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [formKey, setFormKey] = useState(0);
   const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
@@ -88,14 +91,17 @@ export function EventWorkspaceBlock({
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? GENERIC_SETTLE_ERROR);
         setConfirming(false);
         return;
       }
+      toast("Settled up");
       setShowConfirm(false);
       setConfirming(false);
       router.refresh();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError(GENERIC_SETTLE_ERROR);
       setConfirming(false);
     }

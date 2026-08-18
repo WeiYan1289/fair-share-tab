@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
+import { queueToast } from "@/components/ui/toast/pending-toast";
 import { cn } from "@/lib/cn";
 import { MAX_MEMBER_NAME_LENGTH } from "@/lib/constants";
 
@@ -26,6 +29,7 @@ interface CreateGroupModalProps {
 // a router push: the server just set a fresh session cookie for the new
 // group and the events page needs it.
 export function CreateGroupModal({ onClose, asMember = false }: CreateGroupModalProps) {
+  const { toast } = useToast();
   const [groupName, setGroupName] = useState("");
   const [yourName, setYourName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
@@ -83,16 +87,24 @@ export function CreateGroupModal({ onClose, asMember = false }: CreateGroupModal
         if (res.status === 403) {
           setCapBlocked(true);
           setSubmitting(false);
+          toast("403 · Group limit reached", "error");
           return;
         }
-        throw new Error("create failed");
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't create the group — check your connection and try again.");
+        setSubmitting(false);
+        return;
       }
       const data = await res.json();
 
+      // Full-page reload ahead -- stash the toast so it survives.
+      queueToast("Group created");
       window.location.href = asMember
         ? `/g/${data.group.id}/events`
         : `/g/${data.group.id}/events?savelink=${data.shareLink.token}`;
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't create the group — check your connection and try again.");
       setSubmitting(false);
     }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { formatMoney } from "@/lib/format";
 import type { SettleMember, Transfer } from "@/components/settle/SettleUpFlow";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { Check } from "lucide-react";
 
 export interface SettleModalEvent {
@@ -38,6 +40,7 @@ export function WorkspaceSettleModal({
   onClose: () => void;
   onSettled: () => void;
 }) {
+  const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(events.map((e) => e.id)));
   const [step, setStep] = useState<"select" | "confirm">("select");
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -96,12 +99,15 @@ export function WorkspaceSettleModal({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
         setError(typeof body?.error === "string" ? body.error : GENERIC_CONFIRM_ERROR);
         setConfirming(false);
         return;
       }
+      toast("Settled up");
       onSettled();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError(GENERIC_CONFIRM_ERROR);
       setConfirming(false);
     }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CurrencySelect } from "@/components/ui/CurrencySelect";
 import { EventDateRangeField } from "@/components/ui/EventDateRangeField";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
 
 interface CreateEventModalProps {
@@ -20,6 +22,7 @@ interface CreateEventModalProps {
 // specific people get added afterward from the event dashboard.
 export function CreateEventModal({ groupId, onClose, onCreated }: CreateEventModalProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
@@ -44,14 +47,22 @@ export function CreateEventModal({ groupId, onClose, onCreated }: CreateEventMod
           endDate: dateRange?.end,
         }),
       });
-      if (!res.ok) throw new Error("create failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't create the event — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
       const data = await res.json();
+      toast("Event created");
       if (onCreated) {
         onCreated(data.event.id);
         return;
       }
       router.push(`/g/${groupId}/events/${data.event.id}`);
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't create the event — check your connection and try again.");
       setSubmitting(false);
     }

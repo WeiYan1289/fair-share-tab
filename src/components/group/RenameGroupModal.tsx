@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 
 interface RenameGroupModalProps {
   groupId: string;
@@ -15,6 +17,7 @@ interface RenameGroupModalProps {
 // server gate is owner-only (getGroupOwner) — a 403 here surfaces as the
 // generic error line.
 export function RenameGroupModal({ groupId, currentName, onClose, onRenamed }: RenameGroupModalProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(currentName);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +40,8 @@ export function RenameGroupModal({ groupId, currentName, onClose, onRenamed }: R
         body: JSON.stringify({ name: trimmed }),
       });
       if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
         setError(
           res.status === 403
             ? "Only the group owner can rename this group."
@@ -45,8 +50,10 @@ export function RenameGroupModal({ groupId, currentName, onClose, onRenamed }: R
         setSubmitting(false);
         return;
       }
+      toast("Group renamed");
       onRenamed(trimmed);
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't rename — check your connection and try again.");
       setSubmitting(false);
     }

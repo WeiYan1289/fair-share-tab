@@ -8,6 +8,8 @@ import { ReceiptThumbnail } from "@/components/bills/ReceiptThumbnail";
 import { InitialsAvatar } from "@/components/ui/InitialsAvatar";
 import { useReceiptUpload } from "@/lib/receipts/use-receipt-upload";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import { getCurrencyMeta } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
@@ -87,6 +89,7 @@ export function BillForm(props: BillFormProps) {
 
 function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact, embedded }: BillFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
   const { symbol, minorUnit } = getCurrencyMeta(currency);
 
@@ -219,6 +222,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
   // place and let the parent remount this form for the next entry, rather
   // than navigating to the event dashboard.
   function finishSave() {
+    toast(mode === "create" ? "Bill added" : "Bill updated");
     if (onSaved && mode === "create") {
       setSubmitting(false);
       onSaved();
@@ -263,6 +267,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         // must not render -- only use body.error when it's a string.
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? "Couldn't save that bill — check your connection and try again.");
         setSubmitting(false);
         return;
@@ -279,6 +284,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
     } catch {
       // A thrown error here is a transport failure, never a server
       // message -- its raw text is not user-facing copy.
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't save that bill — check your connection and try again.");
       setSubmitting(false);
     }

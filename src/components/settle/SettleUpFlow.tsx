@@ -8,6 +8,8 @@ import { MemberAccountControls } from "@/components/group/MemberAccountControls"
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
 import { BillParticipants } from "@/components/bills/BillParticipants";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import type { ParticipantMember } from "@/lib/bill-participants";
@@ -73,6 +75,7 @@ export function SettleUpFlow({
   bills,
 }: SettleUpFlowProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
   const canConfirm = viewerRole === "editor";
 
@@ -150,15 +153,18 @@ export function SettleUpFlow({
         // fall through to the generic copy rather than render as [object].
         const body = await res.json().catch(() => null);
         const message = typeof body?.error === "string" ? body.error : null;
+        toast(describeApiError(res.status, body), "error");
         setError(message ?? GENERIC_CONFIRM_ERROR);
         setConfirming(false);
         return;
       }
+      toast("Settled up");
       router.push(dashboardHref);
       router.refresh();
     } catch {
       // A thrown error here is a transport failure, never a server
       // message -- its raw text ("Failed to fetch") is not user-facing copy.
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError(GENERIC_CONFIRM_ERROR);
       setConfirming(false);
     }

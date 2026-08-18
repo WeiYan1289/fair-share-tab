@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 
 interface ArchiveGroupModalProps {
   group: { groupId: string; name: string };
@@ -12,6 +14,7 @@ interface ArchiveGroupModalProps {
 // Owner-only (server-enforced). Copy leads with the consequence that
 // matters: every share link goes dormant until restore.
 export function ArchiveGroupModal({ group, onClose, onArchived }: ArchiveGroupModalProps) {
+  const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,9 +27,17 @@ export function ArchiveGroupModal({ group, onClose, onArchived }: ArchiveGroupMo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "archived" }),
       });
-      if (!res.ok) throw new Error("archive failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+        setError("Couldn't archive — check your connection and try again.");
+        setSubmitting(false);
+        return;
+      }
+      toast("Group archived");
       onArchived();
     } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
       setError("Couldn't archive — check your connection and try again.");
       setSubmitting(false);
     }

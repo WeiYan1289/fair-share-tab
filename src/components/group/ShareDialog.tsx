@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import type { z } from "zod";
 import NextLink from "next/link";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toast/ToastProvider";
+import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
 import { cn } from "@/lib/cn";
 import type { shareLinkRoleSchema } from "@/lib/validation/group";
 import { Check, Link } from "lucide-react";
@@ -47,6 +49,7 @@ const ROLE_COPY: Record<LinkRole, { label: string; description: string }> = {
 // touched. Modal on desktop, bottom sheet on mobile via responsive classes
 // on one markup.
 export function ShareDialog({ groupId, groupName, actorType, onClose }: ShareDialogProps) {
+  const { toast } = useToast();
   const isMember = actorType === "member";
   // A visitor (anonymous, editor-role — this dialog is already editor-only,
   // see the file comment) can only ever copy the editable link, never the
@@ -154,15 +157,23 @@ export function ShareDialog({ groupId, groupName, actorType, onClose }: ShareDia
   async function handleRegenerateConfirm() {
     if (!confirmRole) return;
     setRegenerating(true);
-    const res = await fetch(`/api/groups/${groupId}/links/regenerate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: confirmRole }),
-    });
-    if (res.ok) {
-      const data: { link: LinkInfo } = await res.json();
-      setLinks((prev) => ({ ...prev, [confirmRole]: data.link }));
-      setCopiedRole((current) => (current === confirmRole ? null : current));
+    try {
+      const res = await fetch(`/api/groups/${groupId}/links/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: confirmRole }),
+      });
+      if (res.ok) {
+        const data: { link: LinkInfo } = await res.json();
+        setLinks((prev) => ({ ...prev, [confirmRole]: data.link }));
+        setCopiedRole((current) => (current === confirmRole ? null : current));
+        toast("Share link regenerated");
+      } else {
+        const body = await res.json().catch(() => null);
+        toast(describeApiError(res.status, body), "error");
+      }
+    } catch {
+      toast(NETWORK_ERROR_MESSAGE, "error");
     }
     setRegenerating(false);
     setConfirmRole(null);

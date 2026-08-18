@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Work_Sans } from "next/font/google";
+import { ToastProvider } from "@/components/ui/toast/ToastProvider";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -57,7 +58,7 @@ export default function RootLayout({
       <body
         className={`${instrumentSerif.variable} ${workSans.variable} antialiased`}
       >
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );
