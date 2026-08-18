@@ -52,6 +52,11 @@ interface BillFormProps {
    * way, but the two cases get different banner copy below -- one is a
    * property of the bill, the other of who's looking at it. */
   viewOnly?: boolean;
+  /** When true, render only the field stack -- no full-page wrapper and no
+   * header row (ThemeToggle + heading + close). The caller (AddBillModal)
+   * supplies the frame. Absent on the standalone /bills/new route, which is
+   * unchanged. */
+  embedded?: boolean;
 }
 
 function parseAmount(text: string, minorUnit: number): number {
@@ -80,7 +85,7 @@ export function BillForm(props: BillFormProps) {
   return <EditableBillForm {...props} />;
 }
 
-function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact }: BillFormProps) {
+function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact, embedded }: BillFormProps) {
   const router = useRouter();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
   const { symbol, minorUnit } = getCurrencyMeta(currency);
@@ -315,25 +320,8 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
     finishSave();
   }
 
-  return (
-    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[580px]">
-        <div className="mb-5.5 flex items-center justify-between">
-          <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
-            {mode === "create" ? "Add a bill" : "Edit bill"}
-          </h1>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              href={dashboardHref}
-              className="text-xl text-muted-2 dark:text-dark-muted"
-              aria-label="Close"
-            >
-              ×
-            </Link>
-          </div>
-        </div>
-
+  const fields = (
+    <>
         <div className="mb-4">
           <label className="mb-1.5 block text-xs font-bold text-muted-2">What&apos;s it for?</label>
           <input
@@ -565,6 +553,32 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             {waitingForUpload ? "Uploading receipt…" : submitting ? "Saving…" : "Save bill"}
           </button>
         )}
+    </>
+  );
+
+  if (embedded) {
+    return fields;
+  }
+
+  return (
+    <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
+      <div className="mx-auto max-w-[580px]">
+        <div className="mb-5.5 flex items-center justify-between">
+          <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
+            {mode === "create" ? "Add a bill" : "Edit bill"}
+          </h1>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href={dashboardHref}
+              className="text-xl text-muted-2 dark:text-dark-muted"
+              aria-label="Close"
+            >
+              ×
+            </Link>
+          </div>
+        </div>
+        {fields}
       </div>
     </div>
   );
