@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { CreateGroupModal } from "./CreateGroupModal";
+import { PendingOverlay } from "@/components/ui/PendingOverlay";
 import { ChevronDown, Plus } from "lucide-react";
 
 interface GroupSummary {
@@ -28,6 +29,7 @@ export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherPr
   const [open, setOpen] = useState(false);
   const [groups, setGroups] = useState<GroupSummary[] | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherPr
 
   return (
     <div ref={containerRef} className={cn("relative min-w-0", className)}>
+      {pendingId && <PendingOverlay />}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -109,7 +112,12 @@ export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherPr
                     </span>
                   </Link>
                 ) : (
-                  <form key={group.groupId} method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
+                  <form
+                    key={group.groupId}
+                    method="POST"
+                    action={`/api/account/groups/${group.groupId}/enter`}
+                    onSubmit={() => setPendingId(group.groupId)}
+                  >
                     <button
                       type="submit"
                       className="flex w-full items-center justify-between gap-2 truncate rounded px-2.5 py-2 text-left text-[13px] text-ink hover:bg-cream dark:text-dark-text dark:hover:bg-white/8"

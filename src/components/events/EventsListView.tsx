@@ -11,7 +11,8 @@ import { MemberChip, type ChipMember } from "@/components/members/MemberChip";
 import { cn } from "@/lib/cn";
 import { colorForSeed } from "@/lib/constants";
 import { formatDateRange, formatMoney } from "@/lib/format";
-import type { GroupCombinedCurrency } from "@/lib/expenses";
+import { setGroupView } from "@/lib/view-cookie";
+import type { GroupCurrencyOverview } from "@/lib/expenses";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal } from "./EditEventModal";
 import { ArchiveEventModal } from "./ArchiveEventModal";
@@ -42,7 +43,7 @@ interface EventsListViewProps {
   saveLinkToken: string | null;
   events: EventSummary[];
   members: ChipMember[];
-  combined: GroupCombinedCurrency[];
+  overviews: GroupCurrencyOverview[];
 }
 
 // Screen Spec P3-02 (populated) / P3-03 (empty state).
@@ -54,7 +55,7 @@ export function EventsListView({
   saveLinkToken,
   events,
   members,
-  combined,
+  overviews,
 }: EventsListViewProps) {
   const router = useRouter();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
@@ -66,6 +67,11 @@ export function EventsListView({
   const canEdit = viewerRole === "editor";
   const activeEvents = events.filter((e) => e.status === "active");
   const archivedEvents = events.filter((e) => e.status === "archived");
+
+  function goToWorkspace() {
+    setGroupView("workspace");
+    router.push(`/g/${groupId}/workspace`);
+  }
 
   async function handleRename(memberId: string, name: string) {
     await fetch(`/api/members/${memberId}`, {
@@ -90,28 +96,41 @@ export function EventsListView({
       <div className="mx-auto max-w-[1160px]">
         <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
 
-        {(actorType === "member" || canEdit) && (
-          <div className="mb-4 flex items-center gap-3">
-            {actorType === "member" && (
-              <Link
-                href="/account/groups"
-                className="text-[13px] font-bold text-link dark:text-mint"
+        <div className="mb-4 flex items-center gap-3">
+          {actorType === "member" && (
+            <Link
+              href="/account/groups"
+              className="text-[13px] font-bold text-link dark:text-mint"
+            >
+              ← All groups
+            </Link>
+          )}
+          <div className="ml-auto flex items-center gap-2.5">
+            {/* Desktop-only: switch to the one-page workspace and remember it. */}
+            <div className="hidden overflow-hidden rounded-md border border-ink/16 lg:inline-flex dark:border-white/16">
+              <span className="bg-forest px-3.5 py-2 text-[12.5px] font-bold text-cream dark:bg-dark-forest">
+                Classic
+              </span>
+              <button
+                type="button"
+                onClick={goToWorkspace}
+                className="px-3.5 py-2 text-[12.5px] font-bold text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text"
               >
-                ← All groups
-              </Link>
-            )}
+                One-page
+              </button>
+            </div>
             {canEdit && (
               <button
                 type="button"
                 onClick={() => setShowShare(true)}
                 title="Copy or send this group's link — the only way back in without an account"
-                className="ml-auto flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-dark-text"
+                className="flex items-center gap-1.5 rounded-md border border-ink/14 bg-white px-4 py-2 text-[12.5px] font-bold text-ink dark:border-white/14 dark:bg-dark-card dark:text-dark-text"
               >
                 <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" /> Share
               </button>
             )}
           </div>
-        )}
+        </div>
 
         {members.length > 0 && (
           <>
@@ -158,16 +177,18 @@ export function EventsListView({
           <EmptyState canEdit={canEdit} onCreate={() => setShowCreateEvent(true)} />
         ) : (
           <>
-            {combined.length > 0 && (
+            {overviews.some((o) => o.transfers.length > 0) && (
               <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2">
-                {combined.map((currency) => (
-                  <OverallPanel
-                    key={currency.currency}
-                    groupId={groupId}
-                    canEdit={canEdit}
-                    currency={currency}
-                  />
-                ))}
+                {overviews
+                  .filter((o) => o.transfers.length > 0)
+                  .map((overview) => (
+                    <OverallPanel
+                      key={overview.currency}
+                      groupId={groupId}
+                      canEdit={canEdit}
+                      overview={overview}
+                    />
+                  ))}
               </div>
             )}
 
@@ -457,20 +478,23 @@ function EventCard({
 function OverallPanel({
   groupId,
   canEdit,
-  currency,
+  overview,
 }: {
   groupId: string;
   canEdit: boolean;
-  currency: GroupCombinedCurrency;
+  overview: GroupCurrencyOverview;
 }) {
   const [showMembers, setShowMembers] = useState(false);
 
-  // Scoped by count ("· N events"), so it never claims to cover every event --
-  // that count-scoping is what keeps rule 11 satisfied without spelling out
-  // "active". eventCount is always >= 2 (the panel only shows for >= 2 events).
-  const settleSummary = `${currency.transferCount} transfer${
-    currency.transferCount === 1 ? "" : "s"
-  } to settle · ${currency.eventCount} event${currency.eventCount === 1 ? "" : "s"}`;
+  // "· N events" scopes the claim to what's covered, never "every event"
+  // (rule 11). One event -> settle that event; several -> cross-event settle.
+  const settleSummary = `${overview.transfers.length} transfer${
+    overview.transfers.length === 1 ? "" : "s"
+  } to settle · ${overview.eventCount} event${overview.eventCount === 1 ? "" : "s"}`;
+  const settleHref =
+    overview.eventCount === 1
+      ? `/g/${groupId}/events/${overview.eventIds[0]}/settle`
+      : `/g/${groupId}/settle?currency=${overview.currency}`;
 
   return (
     <div className="rounded-lg border border-ink/7 bg-white p-4 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:p-4.5 dark:border-white/7 dark:bg-dark-card">
@@ -481,9 +505,9 @@ function OverallPanel({
         <div className="min-w-0">
           <p
             className="truncate text-[14px] leading-tight font-bold text-ink sm:text-[15px] dark:text-dark-text"
-            title={`Overall · ${currency.currency}`}
+            title={`Overall · ${overview.currency}`}
           >
-            Overall <span className="font-normal text-muted-2">·</span> {currency.currency}
+            Overall <span className="font-normal text-muted-2">·</span> {overview.currency}
           </p>
           <p className="truncate text-[10.5px] text-muted-2" title={settleSummary}>
             {settleSummary}
@@ -491,17 +515,17 @@ function OverallPanel({
         </div>
         {canEdit && (
           <Link
-            href={`/g/${groupId}/settle?currency=${currency.currency}`}
+            href={settleHref}
             className="shrink-0 rounded-md bg-forest px-3.5 py-2 text-[12px] font-bold whitespace-nowrap text-cream hover:bg-forest-hover dark:bg-dark-forest"
           >
-            Settle up
+            {overview.eventCount === 1 ? "Settle up" : "Settle all"}
           </Link>
         )}
       </div>
 
       {/* The final settlement -- the fewest transfers that clear everyone. */}
       <div className="divide-y divide-ink/8 border-t border-ink/8 dark:divide-white/8 dark:border-white/8">
-        {currency.transfers.map((t) => (
+        {overview.transfers.map((t) => (
           <div
             key={`${t.fromMemberId}-${t.toMemberId}`}
             className="flex items-center justify-between gap-2 py-1.5"
@@ -512,7 +536,7 @@ function OverallPanel({
               {t.toName}
             </p>
             <p className="num shrink-0 text-[12.5px] text-ink dark:text-dark-text">
-              {formatMoney(t.amount, currency.currency)}
+              {formatMoney(t.amount, overview.currency)}
             </p>
           </div>
         ))}
@@ -530,7 +554,7 @@ function OverallPanel({
 
       {showMembers && (
         <div className="mt-1.5 divide-y divide-ink/6 border-t border-ink/6 dark:divide-white/6 dark:border-white/6">
-          {currency.members.map((member) => (
+          {overview.members.map((member) => (
             <div key={member.memberId} className="flex items-center justify-between gap-3 py-1.5">
               <p className="text-[12px] text-muted dark:text-dark-muted">{member.name}</p>
               <p
@@ -541,7 +565,7 @@ function OverallPanel({
                 )}
               >
                 {member.net > 0 ? "+" : "-"}
-                {formatMoney(Math.abs(member.net), currency.currency)}
+                {formatMoney(Math.abs(member.net), overview.currency)}
               </p>
             </div>
           ))}

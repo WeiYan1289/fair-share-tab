@@ -40,6 +40,13 @@ interface BillFormProps {
   currency: string;
   members: FormMember[];
   initialBill?: InitialBill;
+  /** When provided (create mode only), called after a successful create
+   * instead of navigating to the dashboard -- the desktop workspace's
+   * embedded add-bill panel refreshes in place and remounts the form. */
+  onSaved?: () => void;
+  /** Denser split UI for the desktop workspace's narrow add-bill column.
+   * Absent on the standalone /bills/new route, which is unchanged. */
+  compact?: boolean;
   /** True for two independent reasons: the bill is settled (immutable
    * regardless of role), or the caller isn't an editor. Read-only either
    * way, but the two cases get different banner copy below -- one is a
@@ -73,7 +80,7 @@ export function BillForm(props: BillFormProps) {
   return <EditableBillForm {...props} />;
 }
 
-function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill }: BillFormProps) {
+function EditableBillForm({ mode, groupId, eventId, currency, members, initialBill, onSaved, compact }: BillFormProps) {
   const router = useRouter();
   const dashboardHref = `/g/${groupId}/events/${eventId}`;
   const { symbol, minorUnit } = getCurrencyMeta(currency);
@@ -203,6 +210,19 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         };
   }
 
+  // Embedded in the desktop workspace (create mode + onSaved): refresh in
+  // place and let the parent remount this form for the next entry, rather
+  // than navigating to the event dashboard.
+  function finishSave() {
+    if (onSaved && mode === "create") {
+      setSubmitting(false);
+      onSaved();
+      return;
+    }
+    router.push(dashboardHref);
+    router.refresh();
+  }
+
   async function handleSave() {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -250,8 +270,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         return;
       }
 
-      router.push(dashboardHref);
-      router.refresh();
+      finishSave();
     } catch {
       // A thrown error here is a transport failure, never a server
       // message -- its raw text is not user-facing copy.
@@ -293,8 +312,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
       return;
     }
 
-    router.push(dashboardHref);
-    router.refresh();
+    finishSave();
   }
 
   return (
@@ -380,12 +398,13 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
           )}
         </div>
 
-        <div className="mb-5 flex w-fit gap-1 rounded-md bg-app-bg p-1 dark:bg-dark-card">
+        <div className={cn("flex w-fit gap-1 rounded-md bg-app-bg p-1 dark:bg-dark-card", compact ? "mb-3.5" : "mb-5")}>
           <button
             type="button"
             onClick={() => setSplitMethod("equal")}
             className={cn(
-              "rounded-[10px] px-4.5 py-2.5 text-[13.5px] font-bold",
+              "rounded-[10px] font-bold",
+              compact ? "px-3 py-1.5 text-[12.5px]" : "px-4.5 py-2.5 text-[13.5px]",
               splitMethod === "equal"
                 ? "bg-forest text-cream dark:bg-dark-forest"
                 : "text-muted dark:text-dark-muted",
@@ -397,7 +416,8 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
             type="button"
             onClick={switchToCustom}
             className={cn(
-              "rounded-[10px] px-4.5 py-2.5 text-[13.5px] font-bold",
+              "rounded-[10px] font-bold",
+              compact ? "px-3 py-1.5 text-[12.5px]" : "px-4.5 py-2.5 text-[13.5px]",
               splitMethod === "custom"
                 ? "bg-forest text-cream dark:bg-dark-forest"
                 : "text-muted dark:text-dark-muted",
@@ -408,19 +428,19 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
         </div>
 
         {splitMethod === "equal" ? (
-          <div className="mb-5 rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
+          <div className={cn("rounded-md border border-ink/8 bg-white dark:border-white/8 dark:bg-dark-card", compact ? "mb-3.5 px-3 py-3" : "mb-5 px-4.5 py-4")}>
             {[...splitBetween].map((id) => {
               const member = memberById.get(id)!;
               const share = equalShares?.find((s) => s.memberId === id);
               return (
-                <div key={id} className="flex items-center justify-between py-1.5">
+                <div key={id} className={cn("flex items-center justify-between", compact ? "py-1" : "py-1.5")}>
                   <div className="flex items-center gap-2.5">
-                    <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
-                    <span className="text-[13.5px] text-ink dark:text-dark-text">
+                    <InitialsAvatar name={member.name} color={member.avatarColor} size={compact ? 20 : 24} />
+                    <span className={cn("text-ink dark:text-dark-text", compact ? "text-[12.5px]" : "text-[13.5px]")}>
                       {member.name}
                     </span>
                   </div>
-                  <span className="num text-[15px] text-ink dark:text-dark-text">
+                  <span className={cn("num text-ink dark:text-dark-text", compact ? "text-[13.5px]" : "text-[15px]")}>
                     {share ? formatMoney(share.shareAmount, currency) : "—"}
                   </span>
                 </div>
@@ -445,14 +465,14 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
           </div>
         ) : (
           <div className="mb-5">
-            <div className="mb-3.5 rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
+            <div className={cn("mb-3.5 rounded-md border border-ink/8 bg-white dark:border-white/8 dark:bg-dark-card", compact ? "px-3 py-3" : "px-4.5 py-4")}>
               {[...splitBetween].map((id) => {
                 const member = memberById.get(id)!;
                 return (
-                  <div key={id} className="flex items-center justify-between py-1.5">
+                  <div key={id} className={cn("flex items-center justify-between", compact ? "py-1" : "py-1.5")}>
                     <div className="flex items-center gap-2.5">
-                      <InitialsAvatar name={member.name} color={member.avatarColor} size={24} />
-                      <span className="text-[13.5px] text-ink dark:text-dark-text">
+                      <InitialsAvatar name={member.name} color={member.avatarColor} size={compact ? 20 : 24} />
+                      <span className={cn("text-ink dark:text-dark-text", compact ? "text-[12.5px]" : "text-[13.5px]")}>
                         {member.name}
                       </span>
                     </div>
@@ -521,10 +541,7 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  router.push(dashboardHref);
-                  router.refresh();
-                }}
+                onClick={finishSave}
                 className="rounded-md border border-ink/16 px-5 py-2.5 text-[13.5px] font-bold text-ink dark:border-white/16 dark:text-dark-text"
               >
                 Done

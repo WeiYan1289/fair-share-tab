@@ -9,6 +9,7 @@ import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { RenameGroupModal } from "@/components/group/RenameGroupModal";
 import { ArchiveGroupModal } from "@/components/group/ArchiveGroupModal";
 import { TutorialButton } from "@/components/ui/TutorialButton";
+import { PendingOverlay } from "@/components/ui/PendingOverlay";
 import { cn } from "@/lib/cn";
 import { colorForSeed } from "@/lib/constants";
 import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover, type Key } from "react-aria-components";
@@ -193,6 +194,7 @@ function GroupCard({
 }) {
   const color = colorForSeed(group.groupId);
   const letter = group.name.trim().charAt(0).toUpperCase() || "?";
+  const [pending, setPending] = useState(false);
 
   // GroupCard only ever renders active groups now -- archived groups live
   // on the dedicated read-only screen (T4), reached via the "Archived
@@ -206,7 +208,11 @@ function GroupCard({
   // EventsListView.tsx).
   return (
     <div className="relative">
-      <form method="POST" action={`/api/account/groups/${group.groupId}/enter`}>
+      <form
+        method="POST"
+        action={`/api/account/groups/${group.groupId}/enter`}
+        onSubmit={() => setPending(true)}
+      >
         <button
           type="submit"
           className="block w-full rounded-lg border border-ink/7 bg-white p-4 text-left shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(19,46,40,0.24)] sm:p-6 dark:border-white/7 dark:bg-dark-card"
@@ -232,6 +238,7 @@ function GroupCard({
             </div>
           </div>
         </button>
+        {pending && <PendingOverlay />}
       </form>
 
       {group.isOwner && (

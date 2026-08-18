@@ -6,7 +6,7 @@ import {
   type MemberBillLine,
   type MemberEventBalanceTransfer,
 } from "./aggregate";
-import { computeCombinedBalances, memberTransfersFrom } from "./combined";
+import { computeCombinedBalances, computeCurrencyOverviews, memberTransfersFrom } from "./combined";
 
 export interface MemberExpenseBillLine extends MemberBillLine {
   payerName: string;
@@ -419,5 +419,57 @@ export async function getMemberCombinedBalance(
         ...t,
         otherName: nameById.get(t.otherMemberId) ?? "",
       })),
+    }));
+}
+
+export interface GroupCurrencyOverview {
+  currency: string;
+  /** Active events in this currency that carry unsettled money -- one means
+   * "settle this event", several means "settle across events". */
+  eventIds: string[];
+  eventCount: number;
+  unsettledTotal: number;
+  /** The fewest transfers that clear everyone in this currency. */
+  transfers: GroupCombinedTransfer[];
+  /** Members with a non-zero position, creditors (owed) first. */
+  members: { memberId: string; name: string; net: number }[];
+}
+
+/**
+ * Per-currency overall position for the desktop group workspace's member
+ * section. Unlike getGroupCombinedBalances (the classic Overall panel, which
+ * hides single-event currencies), this returns EVERY currency that has
+ * outstanding money -- so a lone USD event still shows up. Archived events are
+ * excluded (loaded status: "active" only) per CLAUDE.md rule 11.
+ */
+export async function getGroupCurrencyOverviews(groupId: string): Promise<GroupCurrencyOverview[]> {
+  const overviews = computeCurrencyOverviews(await loadCombinedEventInputs(groupId));
+  if (overviews.length === 0) return [];
+
+  const memberIds = [...new Set(overviews.flatMap((o) => [...o.memberNets.keys()]))];
+  const members = await prisma.member.findMany({
+    where: { id: { in: memberIds } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(members.map((m) => [m.id, m.name]));
+
+  return overviews
+    .sort((a, b) => currencyFirstSort(a.currency, b.currency))
+    .map((o) => ({
+      currency: o.currency,
+      eventIds: o.eventIds,
+      eventCount: o.eventCount,
+      unsettledTotal: o.unsettledTotal,
+      transfers: o.transfers.map((t) => ({
+        fromMemberId: t.fromMemberId,
+        fromName: nameById.get(t.fromMemberId) ?? "",
+        toMemberId: t.toMemberId,
+        toName: nameById.get(t.toMemberId) ?? "",
+        amount: t.amount,
+      })),
+      members: [...o.memberNets.entries()]
+        .filter(([, net]) => net !== 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([memberId, net]) => ({ memberId, name: nameById.get(memberId) ?? "", net })),
     }));
 }
