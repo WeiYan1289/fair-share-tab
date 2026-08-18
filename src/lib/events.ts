@@ -154,6 +154,18 @@ export async function getEventDetail(eventId: string, groupId: string) {
     })),
   );
 
+  // Per-member spend across ALL bills (settled + unsettled): `share` is what
+  // their portions total, `paid` is what they fronted. Feeds the desktop
+  // workspace's per-member spent breakdown.
+  const shareByMember = new Map<string, number>();
+  const paidByMember = new Map<string, number>();
+  for (const bill of event.bills) {
+    paidByMember.set(bill.payerId, (paidByMember.get(bill.payerId) ?? 0) + bill.totalAmount);
+    for (const split of bill.splits) {
+      shareByMember.set(split.memberId, (shareByMember.get(split.memberId) ?? 0) + split.shareAmount);
+    }
+  }
+
   const orderedMembers = event.eventMembers.map(({ member }) => ({
     id: member.id,
     name: member.name,
@@ -176,6 +188,8 @@ export async function getEventDetail(eventId: string, groupId: string) {
       isActive: member.isActive,
       createdAt: member.createdAt,
       balance: balances.get(member.id) ?? 0,
+      share: shareByMember.get(member.id) ?? 0,
+      paid: paidByMember.get(member.id) ?? 0,
       inAnyBill: participants.has(member.id),
     })),
     bills: event.bills.map((bill) => ({

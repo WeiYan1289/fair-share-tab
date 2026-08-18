@@ -62,5 +62,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ gro
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, groupSession, SESSION_COOKIE_OPTIONS);
 
-  return NextResponse.redirect(new URL(`/g/${groupId}/events`, request.url), { status: 303 });
+  // Route desktop workspace-users straight to the one-page view so the switch
+  // doesn't blink through /events -> /workspace. Viewport (fst_vw) and the view
+  // preference (fst_group_view) are cookies set client-side; one-page is the
+  // desktop default, so an unset preference that isn't "classic" means workspace.
+  const desktop = cookieStore.get("fst_vw")?.value === "d";
+  const prefersClassic = cookieStore.get("fst_group_view")?.value === "classic";
+  const view = desktop && !prefersClassic ? "workspace" : "events";
+
+  return NextResponse.redirect(new URL(`/g/${groupId}/${view}`, request.url), { status: 303 });
 }

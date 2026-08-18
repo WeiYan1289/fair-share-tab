@@ -31,6 +31,18 @@ const themeInitScript = `
   } catch (e) {}
 `;
 
+// Records the viewport in a cookie on every page load so the server can route a
+// group switch straight to the one-page workspace (desktop) or the classic
+// list (mobile) without an /events -> /workspace URL blink. Runs before paint;
+// worst case (a first-ever visit before the cookie exists) the events page's
+// own pre-paint script still handles the redirect.
+const viewportCookieScript = `
+  try {
+    var d = matchMedia("(min-width:1024px)").matches ? "d" : "m";
+    document.cookie = "fst_vw=" + d + "; path=/; max-age=31536000; SameSite=Lax";
+  } catch (e) {}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,6 +52,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: viewportCookieScript }} />
       </head>
       <body
         className={`${instrumentSerif.variable} ${workSans.variable} antialiased`}

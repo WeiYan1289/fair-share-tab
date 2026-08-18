@@ -62,6 +62,48 @@ export function computeCombinedBalances(events: CombinedEventInput[]): CombinedC
   return results;
 }
 
+export interface CurrencyOverview {
+  currency: string;
+  /** Active events in this currency that carry unsettled money. */
+  eventIds: string[];
+  eventCount: number;
+  unsettledTotal: number;
+  memberNets: Map<string, number>;
+  transfers: Transfer[];
+}
+
+/**
+ * Like computeCombinedBalances, but WITHOUT the ">= 2 events" gate: it returns
+ * one entry per currency that has any unsettled money, single-event currencies
+ * included. The desktop group workspace's member section uses this so a lone
+ * USD event still shows an overall position (its combined view just equals that
+ * one event). Still never sums across currencies (rule 1).
+ */
+export function computeCurrencyOverviews(events: CombinedEventInput[]): CurrencyOverview[] {
+  const byCurrency = new Map<string, CombinedEventInput[]>();
+  for (const event of events) {
+    if (event.bills.length === 0) continue;
+    const list = byCurrency.get(event.currency) ?? [];
+    list.push(event);
+    byCurrency.set(event.currency, list);
+  }
+
+  const results: CurrencyOverview[] = [];
+  for (const [currency, currencyEvents] of byCurrency) {
+    const allBills = currencyEvents.flatMap((e) => e.bills);
+    const memberNets = computeNetBalances(allBills);
+    results.push({
+      currency,
+      eventIds: currencyEvents.map((e) => e.eventId),
+      eventCount: currencyEvents.length,
+      unsettledTotal: allBills.reduce((sum, b) => sum + b.totalAmount, 0),
+      memberNets,
+      transfers: simplifyDebts(memberNets),
+    });
+  }
+  return results;
+}
+
 /**
  * Keeps only the transfers touching `memberId`, expressed from their side --
  * the same reduction computeMemberEventBalance does per event, extracted so

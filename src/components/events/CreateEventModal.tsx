@@ -10,12 +10,15 @@ import { DEFAULT_CURRENCY } from "@/lib/currency";
 interface CreateEventModalProps {
   groupId: string;
   onClose: () => void;
+  /** When provided, called with the new event id instead of navigating to it --
+   * the desktop workspace stays on the page and refreshes in place. */
+  onCreated?: (eventId: string) => void;
 }
 
 // Screen Spec P3-04. Members are never chosen here — every active group
 // member is included by default server-side (system-design.md §5); trip-
 // specific people get added afterward from the event dashboard.
-export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
+export function CreateEventModal({ groupId, onClose, onCreated }: CreateEventModalProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
@@ -43,6 +46,10 @@ export function CreateEventModal({ groupId, onClose }: CreateEventModalProps) {
       });
       if (!res.ok) throw new Error("create failed");
       const data = await res.json();
+      if (onCreated) {
+        onCreated(data.event.id);
+        return;
+      }
       router.push(`/g/${groupId}/events/${data.event.id}`);
     } catch {
       setError("Couldn't create the event — check your connection and try again.");
