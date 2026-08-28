@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BillParticipants } from "@/components/bills/BillParticipants";
 import type { ParticipantMember } from "@/lib/bill-participants";
 import { formatMoney } from "@/lib/format";
@@ -20,17 +19,17 @@ export interface EventBillView {
 // action is delegated to the parent via onRequestDelete.
 export function BillRow({
   bill,
-  groupId,
-  eventId,
   currency,
   canEdit,
+  onRequestEdit,
   onRequestDelete,
 }: {
   bill: EventBillView;
-  groupId: string;
-  eventId: string;
   currency: string;
   canEdit: boolean;
+  /** Opens the bill in a modal (edit, or read-only for settled bills / viewers)
+   * so leaving it never navigates away from the dashboard/workspace. */
+  onRequestEdit: () => void;
   onRequestDelete: () => void;
 }) {
   const settled = bill.status === "settled";
@@ -76,34 +75,22 @@ export function BillRow({
                 either way). Pencil/Trash stay editor-only, since they lead
                 to the real write path. */}
             {settled ? (
-              <Link
-                href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-                title="View bill details"
-                aria-label="View bill details"
-              >
+              <button type="button" onClick={onRequestEdit} title="View bill details" aria-label="View bill details">
                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-              </Link>
+              </button>
             ) : canEdit ? (
               <>
-                <Link
-                  href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-                  title="Edit bill"
-                  aria-label="Edit bill"
-                >
+                <button type="button" onClick={onRequestEdit} title="Edit bill" aria-label="Edit bill">
                   <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                </Link>
+                </button>
                 <button type="button" onClick={onRequestDelete} aria-label="Delete bill">
                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                 </button>
               </>
             ) : (
-              <Link
-                href={`/g/${groupId}/events/${eventId}/bills/${bill.id}/edit`}
-                title="View bill details"
-                aria-label="View bill details"
-              >
+              <button type="button" onClick={onRequestEdit} title="View bill details" aria-label="View bill details">
                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-              </Link>
+              </button>
             )}
           </div>
         </div>

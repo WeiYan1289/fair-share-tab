@@ -1,7 +1,16 @@
 "use client";
 
 import { BillForm } from "@/components/bills/BillForm";
-import type { WorkspaceEventMember } from "@/components/workspace/EventWorkspaceBlock";
+
+// The subset of a member the bill form needs. Both the workspace's
+// WorkspaceEventMember and the dashboard's EventMemberView satisfy it.
+export interface BillModalMember {
+  id: string;
+  name: string;
+  avatarColor: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 // Add-bill modal for the desktop group workspace. Wraps the embedded BillForm
 // (no page chrome) in the codebase's standard modal frame. On a successful
@@ -20,7 +29,7 @@ export function AddBillModal({
   groupId: string;
   eventId: string;
   currency: string;
-  members: WorkspaceEventMember[];
+  members: BillModalMember[];
   formKey: number;
   onClose: () => void;
   onSaved: () => void;

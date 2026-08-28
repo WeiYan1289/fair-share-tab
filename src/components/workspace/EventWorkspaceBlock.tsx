@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BillRow, type EventBillView } from "@/components/bills/BillRow";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
+import { EditBillModal } from "@/components/bills/EditBillModal";
 import { AddBillModal } from "@/components/workspace/AddBillModal";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
@@ -63,6 +64,7 @@ export function EventWorkspaceBlock({
   const { toast } = useToast();
   const [formKey, setFormKey] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [editBillId, setEditBillId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -190,10 +192,9 @@ export function EventWorkspaceBlock({
                   <BillRow
                     key={bill.id}
                     bill={bill}
-                    groupId={groupId}
-                    eventId={event.id}
                     currency={event.currency}
                     canEdit={canEdit}
+                    onRequestEdit={() => setEditBillId(bill.id)}
                     onRequestDelete={() => setDeleteTarget(bill)}
                   />
                 ))}
@@ -302,6 +303,19 @@ export function EventWorkspaceBlock({
           onClose={() => setAdding(false)}
           onSaved={() => {
             setFormKey((k) => k + 1);
+            router.refresh();
+          }}
+        />
+      )}
+      {editBillId && (
+        <EditBillModal
+          groupId={groupId}
+          eventId={event.id}
+          billId={editBillId}
+          canEdit={canEdit}
+          onClose={() => setEditBillId(null)}
+          onSaved={() => {
+            setEditBillId(null);
             router.refresh();
           }}
         />

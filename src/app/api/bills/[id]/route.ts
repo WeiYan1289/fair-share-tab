@@ -15,6 +15,71 @@ async function loadBillForGroup(billId: string, groupId: string) {
   return bill;
 }
 
+// Loads one bill for the edit/view modal (the desktop workspace and event
+// dashboard open editing in a modal rather than navigating to the standalone
+// /bills/{id}/edit page). Mirrors that page's server logic: the same members
+// set (active event members plus anyone this bill already references, even if
+// deactivated -- CLAUDE.md rule 4), and the same `viewOnly` rule (settled, or
+// not an editor). Read-only for any role, so no editor gate here.
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: billId } = await params;
+
+  let session;
+  try {
+    session = await requireSession();
+  } catch (error) {
+    if (error instanceof SessionError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+
+  const bill = await prisma.bill.findUnique({
+    where: { id: billId },
+    include: { splits: true, event: { select: { groupId: true, currency: true } } },
+  });
+  if (!bill || bill.event.groupId !== session.groupId) {
+    return NextResponse.json({ error: "Bill not found" }, { status: 404 });
+  }
+
+  const eventMembers = await prisma.eventMember.findMany({
+    where: { eventId: bill.eventId, member: { isActive: true } },
+    include: { member: true },
+    orderBy: { member: { createdAt: "asc" } },
+  });
+
+  const referencedIds = new Set([bill.payerId, ...bill.splits.map((s) => s.memberId)]);
+  const activeIds = new Set(eventMembers.map((em) => em.memberId));
+  const extraIds = [...referencedIds].filter((id) => !activeIds.has(id));
+  const extraMembers = extraIds.length
+    ? await prisma.member.findMany({ where: { id: { in: extraIds } } })
+    : [];
+
+  const members = [...eventMembers.map(({ member }) => member), ...extraMembers].map((m) => ({
+    id: m.id,
+    name: m.name,
+    avatarColor: m.avatarColor,
+    isActive: m.isActive,
+    createdAt: m.createdAt.toISOString(),
+  }));
+
+  return NextResponse.json({
+    currency: bill.event.currency,
+    viewOnly: bill.status === "settled" || session.role !== "editor",
+    members,
+    bill: {
+      id: bill.id,
+      title: bill.title,
+      totalAmount: bill.totalAmount,
+      payerId: bill.payerId,
+      splitMethod: bill.splitMethod,
+      status: bill.status,
+      receiptUrl: bill.receiptUrl,
+      splits: bill.splits.map((s) => ({ memberId: s.memberId, shareAmount: s.shareAmount })),
+    },
+  });
+}
+
 // Edits a bill. This is a full replace of title/amount/payer/split
 // configuration, not a partial patch -- system-design.md §5 gives one shared
 // body shape for create and edit, and every field is revalidated exactly as

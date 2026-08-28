@@ -81,6 +81,7 @@ export function BillForm(props: BillFormProps) {
         bill={props.initialBill}
         members={props.members}
         currency={props.currency}
+        embedded={props.embedded}
       />
     );
   }
@@ -223,7 +224,12 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
   // than navigating to the event dashboard.
   function finishSave() {
     toast(mode === "create" ? "Bill added" : "Bill updated");
-    if (onSaved && mode === "create") {
+    // A modal caller (add-bill and edit-bill on the dashboard/workspace) passes
+    // onSaved and handles closing + refreshing in place — no navigation, so
+    // editing from the one-page workspace no longer bounces to the classic
+    // dashboard. The standalone /bills/new and /bills/{id}/edit pages pass no
+    // onSaved and navigate as before.
+    if (onSaved) {
       setSubmitting(false);
       onSaved();
       return;
@@ -642,15 +648,91 @@ function ReadOnlyBillView({
   bill,
   members,
   currency,
+  embedded,
 }: {
   dashboardHref: string;
   bill: InitialBill;
   members: FormMember[];
   currency: string;
+  /** When embedded (the dashboard/workspace opens a bill in a modal), drop the
+   * full-page wrapper, ThemeToggle, title and Close — the modal owns those. */
+  embedded?: boolean;
 }) {
   const memberById = new Map(members.map((m) => [m.id, m]));
   const payer = memberById.get(bill.payerId);
   const settled = bill.status === "settled";
+
+  const body = (
+    <>
+      <div className="mb-5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
+        <Eye className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+        <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
+          {settled ? (
+            <>
+              This bill is <strong className="text-ink dark:text-dark-text">settled</strong> — view
+              only.
+            </>
+          ) : (
+            <>
+              You can view this bill, but only an{" "}
+              <strong className="text-ink dark:text-dark-text">editor</strong> can change it.
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="mb-4.5">
+        <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
+        <p className="num text-[22px] text-ink dark:text-dark-text">
+          {formatMoney(bill.totalAmount, currency)}
+        </p>
+      </div>
+
+      {payer && (
+        <div className="mb-4.5">
+          <label className="mb-1.5 block text-xs font-bold text-muted-2">Paid by</label>
+          <div className="flex items-center gap-2.5">
+            <InitialsAvatar name={payer.name} color={payer.avatarColor} size={26} />
+            <span className="text-[14px] text-ink dark:text-dark-text">{payer.name}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-5">
+        <label className="mb-2 block text-xs font-bold text-muted-2">
+          Split {bill.splitMethod === "equal" ? "equally" : ""}
+        </label>
+        <div className="rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
+          {bill.splits.map((split) => {
+            const member = memberById.get(split.memberId);
+            return (
+              <div key={split.memberId} className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-2.5">
+                  <InitialsAvatar
+                    name={member?.name ?? "?"}
+                    color={member?.avatarColor ?? "#8A9490"}
+                    size={24}
+                  />
+                  <span className="text-[13.5px] text-ink dark:text-dark-text">
+                    {member?.name ?? "Removed member"}
+                  </span>
+                </div>
+                <span className="num text-[15px] text-ink dark:text-dark-text">
+                  {formatMoney(split.shareAmount, currency)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Absent entirely when there is no receipt -- no "No receipt"
+          empty state, and no block at all if the image fails to load. */}
+      {bill.receiptUrl && <ReceiptThumbnail url={bill.receiptUrl} />}
+    </>
+  );
+
+  if (embedded) return body;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cream px-5 py-8 dark:bg-dark-bg">
@@ -660,78 +742,10 @@ function ReadOnlyBillView({
           <Eye className="h-5 w-5 text-ink dark:text-dark-text" aria-hidden="true" />
           <h1 className="num text-[22px] text-ink dark:text-dark-text">{bill.title}</h1>
         </div>
-        <div className="mb-5 flex items-center gap-2.5 rounded-md bg-cream px-4.5 py-4 dark:bg-dark-bg">
-          {settled ? (
-            <>
-              <Eye className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-              <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-                This bill is <strong className="text-ink dark:text-dark-text">settled</strong> —
-                view only.
-              </p>
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-              <p className="text-[13px] leading-relaxed text-muted dark:text-dark-muted">
-                You can view this bill, but only an{" "}
-                <strong className="text-ink dark:text-dark-text">editor</strong> can change it.
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="mb-4.5">
-          <label className="mb-1.5 block text-xs font-bold text-muted-2">Total amount</label>
-          <p className="num text-[22px] text-ink dark:text-dark-text">
-            {formatMoney(bill.totalAmount, currency)}
-          </p>
-        </div>
-
-        {payer && (
-          <div className="mb-4.5">
-            <label className="mb-1.5 block text-xs font-bold text-muted-2">Paid by</label>
-            <div className="flex items-center gap-2.5">
-              <InitialsAvatar name={payer.name} color={payer.avatarColor} size={26} />
-              <span className="text-[14px] text-ink dark:text-dark-text">{payer.name}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="mb-5">
-          <label className="mb-2 block text-xs font-bold text-muted-2">
-            Split {bill.splitMethod === "equal" ? "equally" : ""}
-          </label>
-          <div className="rounded-md border border-ink/8 bg-white px-4.5 py-4 dark:border-white/8 dark:bg-dark-card">
-            {bill.splits.map((split) => {
-              const member = memberById.get(split.memberId);
-              return (
-                <div key={split.memberId} className="flex items-center justify-between py-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <InitialsAvatar
-                      name={member?.name ?? "?"}
-                      color={member?.avatarColor ?? "#8A9490"}
-                      size={24}
-                    />
-                    <span className="text-[13.5px] text-ink dark:text-dark-text">
-                      {member?.name ?? "Removed member"}
-                    </span>
-                  </div>
-                  <span className="num text-[15px] text-ink dark:text-dark-text">
-                    {formatMoney(split.shareAmount, currency)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Absent entirely when there is no receipt -- no "No receipt"
-            empty state, and no block at all if the image fails to load. */}
-        {bill.receiptUrl && <ReceiptThumbnail url={bill.receiptUrl} />}
-
+        {body}
         <Link
           href={dashboardHref}
-          className="block rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
+          className="mt-1 block rounded-md bg-cream py-3.5 text-center text-sm font-bold text-ink dark:bg-dark-bg dark:text-dark-text"
         >
           Close
         </Link>
