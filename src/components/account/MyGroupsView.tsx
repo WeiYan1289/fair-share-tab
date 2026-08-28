@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SiteHeader } from "@/components/ui/SiteHeader";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { RenameGroupModal } from "@/components/group/RenameGroupModal";
 import { ArchiveGroupModal } from "@/components/group/ArchiveGroupModal";
@@ -46,35 +46,31 @@ export function MyGroupsView({ email, groups }: MyGroupsViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[1160px]">
-        <div className="mb-8 flex items-center justify-between sm:mb-10">
-          <Logo size={26} wordmarkClassName="text-base sm:text-lg" />
-          <div className="flex items-center gap-2 sm:gap-4">
-            <span className="hidden max-w-[160px] truncate text-[12.5px] text-muted sm:inline dark:text-dark-muted">
-              {email}
-            </span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              aria-label="Log out"
-              title="Log out"
-              className="flex h-7 w-7 items-center justify-center text-muted hover:text-ink sm:hidden dark:text-dark-muted dark:hover:text-dark-text"
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="hidden text-[12.5px] font-bold text-muted hover:text-ink sm:inline dark:text-dark-muted dark:hover:text-dark-text"
-            >
-              Log out
-            </button>
-            <TutorialButton />
-            <ThemeToggle />
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <SiteHeader innerClassName="max-w-[1160px] px-5 sm:px-9">
+        <span className="hidden max-w-[160px] truncate text-[12.5px] text-cream/70 sm:inline">
+          {email}
+        </span>
+        <button
+          type="button"
+          onClick={handleLogout}
+          aria-label="Log out"
+          title="Log out"
+          className="flex h-7 w-7 items-center justify-center text-cream/80 hover:text-cream sm:hidden"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="hidden text-[12.5px] font-bold text-cream/85 hover:text-cream sm:inline"
+        >
+          Log out
+        </button>
+        <TutorialButton className="text-cream/80 hover:text-cream dark:text-cream/80 dark:hover:text-cream" />
+        <ThemeToggle />
+      </SiteHeader>
+      <div className="mx-auto max-w-[1160px] px-5 py-6 sm:px-9 sm:py-9">
         {activeGroups.length === 0 && archivedGroups.length === 0 ? (
           <EmptyState onCreate={() => setShowCreateGroup(true)} />
         ) : (

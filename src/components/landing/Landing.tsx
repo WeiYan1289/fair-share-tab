@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SiteHeader, HeaderLoginLink } from "@/components/ui/SiteHeader";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { SettleUpHero } from "@/components/landing/SettleUpHero";
 import { Receipt, Coins, Scale, Archive, Eye, Lock, type LucideIcon } from "lucide-react";
@@ -140,41 +140,29 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
-      {/* Nav sits on forest so the cream page below reads as the content
-          surface, and so the primary CTA is visible before any scroll. */}
-      <div className="bg-forest px-4 dark:bg-dark-card sm:px-6">
-        <div className="mx-auto flex h-15 max-w-[1000px] items-center justify-between gap-2 py-3.5">
-          <Logo
-            size={24}
-            wordmarkClassName="text-[15px] [&>span:first-child]:text-cream [&>span:last-child]:text-mint sm:text-[16.5px]"
-          />
-          <div className="flex items-center gap-3 sm:gap-5">
-            <a href="#how" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
-              How it works
-            </a>
-            <a href="#maths" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
-              The maths
-            </a>
-            <a href="#faq" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
-              FAQ
-            </a>
-            <Link
-              href="/login"
-              className="flex h-[30px] shrink-0 items-center text-[12px] font-bold whitespace-nowrap text-cream/85 hover:text-cream sm:rounded-full sm:border sm:border-white/22 sm:px-3.5"
-            >
-              Log in
-            </Link>
-            <button
-              type="button"
-              onClick={() => setShowCreateGroup(true)}
-              className="shrink-0 rounded-full bg-mint px-3.5 py-1.5 text-[12px] font-bold whitespace-nowrap text-dark-bg transition-opacity hover:opacity-90 sm:px-4 sm:py-2"
-            >
-              Create a group
-            </button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </div>
+      {/* Header on forest so the cream page below reads as the content
+          surface. The primary CTA lives in the hero on mobile, so it's
+          dropped from the header there to keep it uncrowded. */}
+      <SiteHeader logoHref="/">
+        <a href="#how" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
+          How it works
+        </a>
+        <a href="#maths" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
+          The maths
+        </a>
+        <a href="#faq" className="hidden text-[12.5px] font-bold text-cream/70 hover:text-cream sm:block">
+          FAQ
+        </a>
+        <HeaderLoginLink />
+        <button
+          type="button"
+          onClick={() => setShowCreateGroup(true)}
+          className="hidden shrink-0 rounded-full bg-mint px-4 py-2 text-[12px] font-bold whitespace-nowrap text-dark-bg transition-opacity hover:opacity-90 sm:inline-flex"
+        >
+          Create a group
+        </button>
+        <ThemeToggle />
+      </SiteHeader>
 
       <div className="mx-auto max-w-[1000px] px-6 pt-11 pb-14 sm:px-10">
         {/* Hero */}
@@ -217,51 +205,34 @@ export function Landing() {
             continues into the app rather than presenting a finished poster.
             The phone overlays it so the mobile layout is visible without a
             second section. */}
-        <div className="relative mb-11">
-          {/* Phones get the actual phone view of the app, bleeding off the
-              bottom of its frame — not a shrunken desktop dashboard. */}
-          <div className="rounded-t-lg border border-b-0 border-ink/8 bg-white p-2 pb-0 sm:hidden dark:border-white/8 dark:bg-dark-card">
-            <div className="max-h-[360px] overflow-hidden rounded-t-md bg-cream dark:bg-dark-bg">
-              <img
-                src="/home/hero-mobile.png"
-                alt="An event dashboard on a phone, showing members and balances"
-                className="block w-full dark:hidden"
-              />
-              <img
-                src="/home/hero-mobile-dark.png"
-                alt="An event dashboard on a phone, showing members and balances"
-                className="hidden w-full dark:block"
-              />
-            </div>
+        {/* A fully-framed screenshot of the app — rounded on all four corners
+            with a white/dark-card mat, so it reads as one clean product shot
+            rather than a cropped slice. Phones get the actual phone view; wider
+            screens get the event dashboard. */}
+        <div className="mb-11">
+          <div className="overflow-hidden rounded-lg border border-ink/8 bg-white p-2 shadow-[0_22px_48px_-26px_rgba(19,46,40,0.24)] sm:hidden dark:border-white/8 dark:bg-dark-card dark:shadow-[0_22px_48px_-26px_rgba(0,0,0,0.62)]">
+            <img
+              src="/home/hero-mobile.png"
+              alt="An event dashboard on a phone, showing members and balances"
+              className="block w-full rounded-md dark:hidden"
+            />
+            <img
+              src="/home/hero-mobile-dark.png"
+              alt="An event dashboard on a phone, showing members and balances"
+              className="hidden w-full rounded-md dark:block"
+            />
           </div>
-          {/* Desktop: the wide dashboard band with a phone overlaid. */}
-          <div className="hidden rounded-t-lg border border-b-0 border-ink/8 bg-white p-3 pb-0 sm:block dark:border-white/8 dark:bg-dark-card">
-            <div className="h-[300px] overflow-hidden rounded-t-md bg-cream dark:bg-dark-bg">
-              <img
-                src="/home/hero-dashboard.png"
-                alt="An event dashboard showing members, balances and bills"
-                className="block w-full dark:hidden"
-              />
-              <img
-                src="/home/hero-dashboard-dark.png"
-                alt="An event dashboard showing members, balances and bills"
-                className="hidden w-full dark:block"
-              />
-            </div>
-          </div>
-          <div className="absolute right-6 -bottom-4 hidden w-[168px] overflow-hidden rounded-[22px] border-[6px] border-ink bg-ink shadow sm:block dark:border-dark-bg dark:bg-dark-bg">
-            <div className="relative h-[280px] overflow-hidden rounded-2xl">
-              <img
-                src="/home/hero-phone.png"
-                alt="Settling up on a phone"
-                className="absolute inset-0 block h-full w-full object-cover object-top dark:hidden"
-              />
-              <img
-                src="/home/hero-phone-dark.png"
-                alt="Settling up on a phone"
-                className="absolute inset-0 hidden h-full w-full object-cover object-top dark:block"
-              />
-            </div>
+          <div className="hidden overflow-hidden rounded-lg border border-ink/8 bg-white p-2.5 shadow-[0_22px_48px_-26px_rgba(19,46,40,0.24)] sm:block dark:border-white/8 dark:bg-dark-card dark:shadow-[0_22px_48px_-26px_rgba(0,0,0,0.62)]">
+            <img
+              src="/home/hero-dashboard.png"
+              alt="An event dashboard showing members, balances and bills"
+              className="block w-full rounded-md dark:hidden"
+            />
+            <img
+              src="/home/hero-dashboard-dark.png"
+              alt="An event dashboard showing members, balances and bills"
+              className="hidden w-full rounded-md dark:block"
+            />
           </div>
         </div>
 

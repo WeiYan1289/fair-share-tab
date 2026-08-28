@@ -573,16 +573,15 @@ function EditableBillForm({ mode, groupId, eventId, currency, members, initialBi
           <h1 className="num text-2xl text-ink sm:text-[26px] dark:text-dark-text">
             {mode === "create" ? "Add a bill" : "Edit bill"}
           </h1>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              href={dashboardHref}
-              className="text-xl text-muted-2 dark:text-dark-muted"
-              aria-label="Close"
-            >
-              ×
-            </Link>
-          </div>
+          {/* No theme toggle here — it distracts from the form's content, and
+              the × close is the only control this focused screen needs. */}
+          <Link
+            href={dashboardHref}
+            className="text-xl text-muted-2 dark:text-dark-muted"
+            aria-label="Close"
+          >
+            ×
+          </Link>
         </div>
         {fields}
       </div>

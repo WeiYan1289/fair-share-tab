@@ -7,6 +7,7 @@ import { ExitGroupButton } from "@/components/group/ExitGroupButton";
 import { MemberAccountControls } from "@/components/group/MemberAccountControls";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { TutorialButton } from "@/components/ui/TutorialButton";
+import { SiteHeader, HeaderBackLink } from "@/components/ui/SiteHeader";
 import { BillParticipants } from "@/components/bills/BillParticipants";
 import { useToast } from "@/components/ui/toast/ToastProvider";
 import { describeApiError, NETWORK_ERROR_MESSAGE } from "@/components/ui/toast/error-message";
@@ -172,21 +173,20 @@ export function SettleUpFlow({
 
   if (step === "select") {
     return (
-      <div className="min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
-        <div className="mx-auto max-w-[620px]">
-          <div className="mb-4 flex items-center justify-between">
-            <Link
-              href={dashboardHref}
-              className="block text-[13px] font-bold text-link dark:text-mint"
-            >
-              ← {eventName}
-            </Link>
-            <div className="flex items-center gap-3">
-              {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
-              <TutorialButton />
-              <ThemeToggle />
-            </div>
-          </div>
+      <div className="min-h-screen bg-cream dark:bg-dark-bg">
+        <SiteHeader
+          left={<HeaderBackLink href={dashboardHref}>← {eventName}</HeaderBackLink>}
+          innerClassName="max-w-[620px] px-5 sm:px-9"
+        >
+          {actorType === "member" ? (
+            <MemberAccountControls tone="forest" />
+          ) : (
+            <ExitGroupButton tone="forest" />
+          )}
+          <TutorialButton className="text-cream/80 hover:text-cream dark:text-cream/80 dark:hover:text-cream" />
+          <ThemeToggle />
+        </SiteHeader>
+        <div className="mx-auto max-w-[620px] px-5 py-8 sm:px-9">
           <h1 className="num mb-1.5 text-[19px] leading-snug text-ink sm:text-[28px] dark:text-dark-text">
             Settle up — {eventName}
           </h1>
@@ -263,22 +263,20 @@ export function SettleUpFlow({
   }
 
   return (
-    <div className="relative min-h-screen bg-cream px-5 py-8 sm:px-9 dark:bg-dark-bg">
-      <div className="mx-auto mb-4 flex max-w-[900px] items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setStep("select")}
-          className="text-[13px] font-bold text-link dark:text-mint"
-        >
-          ← Back
-        </button>
-        <div className="flex items-center gap-3">
-          {actorType === "member" ? <MemberAccountControls /> : <ExitGroupButton />}
-          <TutorialButton />
-          <ThemeToggle />
-        </div>
-      </div>
-      <div className="mx-auto flex max-w-[900px] flex-col items-center">
+    <div className="relative min-h-screen bg-cream dark:bg-dark-bg">
+      <SiteHeader
+        left={<HeaderBackLink onClick={() => setStep("select")}>← Back</HeaderBackLink>}
+        innerClassName="max-w-[900px] px-5 sm:px-9"
+      >
+        {actorType === "member" ? (
+          <MemberAccountControls tone="forest" />
+        ) : (
+          <ExitGroupButton tone="forest" />
+        )}
+        <TutorialButton className="text-cream/80 hover:text-cream dark:text-cream/80 dark:hover:text-cream" />
+        <ThemeToggle />
+      </SiteHeader>
+      <div className="mx-auto flex max-w-[900px] flex-col items-center px-5 py-8 sm:px-9">
         <h1 className="num mb-1.5 text-center text-[20px] leading-snug text-ink sm:text-[30px] dark:text-dark-text">
           Here&apos;s the simplest way to settle up
         </h1>

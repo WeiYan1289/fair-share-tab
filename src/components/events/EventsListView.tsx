@@ -92,9 +92,9 @@ export function EventsListView({
   }, [saveLinkToken, groupId, router]);
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+      <div className="mx-auto max-w-[1160px] px-5 py-6 sm:px-9 sm:py-9">
 
         <div className="mb-4 flex items-center gap-3">
           {actorType === "member" && (

@@ -18,6 +18,9 @@ interface GroupSwitcherProps {
   groupName: string;
   /** e.g. "justify-self-center" when used inside GroupHeader's desktop grid. */
   className?: string;
+  /** "forest" recolours the trigger to sit on GroupHeader's forest band. The
+   * dropdown itself is always a white/dark-card popover. */
+  tone?: "light" | "forest";
 }
 
 // Replaces GroupHeader's plain group-name text for a logged-in member
@@ -25,7 +28,8 @@ interface GroupSwitcherProps {
 // group they're in, plus a quick "+ Create new group" — instead of only
 // reachable via the standalone /account/groups page. Not shown for a
 // visitor, who has nothing to switch to (still exactly today's design).
-export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherProps) {
+export function GroupSwitcher({ groupId, groupName, className, tone = "light" }: GroupSwitcherProps) {
+  const forest = tone === "forest";
   const [open, setOpen] = useState(false);
   const [groups, setGroups] = useState<GroupSummary[] | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -62,10 +66,18 @@ export function GroupSwitcher({ groupId, groupName, className }: GroupSwitcherPr
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-[13.5px] font-bold text-ink hover:bg-ink/5 dark:text-dark-text dark:hover:bg-white/8"
+        className={cn(
+          "flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-[13.5px] font-bold",
+          forest
+            ? "text-cream hover:bg-white/10"
+            : "text-ink hover:bg-ink/5 dark:text-dark-text dark:hover:bg-white/8",
+        )}
       >
         <span className="min-w-0 truncate">{groupName}</span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-2" aria-hidden="true" />
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 shrink-0", forest ? "text-cream/60" : "text-muted-2")}
+          aria-hidden="true"
+        />
       </button>
 
       {open && (
