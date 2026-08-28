@@ -43,7 +43,29 @@ const RAW_DEBTS = PAYERS.flatMap((payer, i) =>
   ),
 );
 
+// The same five settled transfers as a list — the phone can't read a
+// crossing-lines graph at 340px wide, so mobile gets the settle-up result the
+// way the app itself shows it: one clean row per payment.
+const SETTLED_TRANSFERS = [
+  { from: PAYERS[0], to: RECEIVERS[0], amount: "RM 500" },
+  { from: PAYERS[1], to: RECEIVERS[1], amount: "RM 250" },
+  { from: PAYERS[2], to: RECEIVERS[2], amount: "RM 100" },
+  { from: PAYERS[3], to: RECEIVERS[1], amount: "RM 100" },
+  { from: PAYERS[4], to: RECEIVERS[2], amount: "RM 50" },
+];
+
 const COLLAPSE_DELAY_MS = 1100;
+
+function Avatar({ initials, color }: { initials: string; color: string }) {
+  return (
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+      style={{ backgroundColor: color }}
+    >
+      {initials}
+    </span>
+  );
+}
 
 // The landing page's one moment: the product is the collapse, so the hero
 // performs it rather than describing it. Everything is settled state under
@@ -51,12 +73,22 @@ const COLLAPSE_DELAY_MS = 1100;
 // server — the tangle is additive, never a prerequisite for reading the page.
 export function SettleUpHero() {
   const [settled, setSettled] = useState(true);
+  // Mobile list rows cascade in on mount; defaults to shown so the content is
+  // there without JS and under reduced motion.
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setEntered(true);
+      return;
+    }
     setSettled(false);
+    const enter = window.setTimeout(() => setEntered(true), 40);
     const timer = window.setTimeout(() => setSettled(true), COLLAPSE_DELAY_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(enter);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -64,7 +96,8 @@ export function SettleUpHero() {
       <p className="mb-2 text-[11px] font-extrabold tracking-wide text-muted-2 uppercase">
         Settle up — the signature moment
       </p>
-      <div className="relative aspect-[420/300]">
+      {/* Desktop: the animated collapse graph. */}
+      <div className="relative hidden aspect-[420/300] sm:block">
         <svg viewBox="0 0 420 300" className="absolute inset-0 h-full w-full overflow-visible">
           <defs>
             <marker id="heroArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
@@ -139,6 +172,34 @@ export function SettleUpHero() {
             }}
           >
             {person.amount}
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile: the settled transfers as a readable list, not a cramped
+          graph — the rows cascade in as the "signature moment". */}
+      <div className="flex flex-col gap-1.5 sm:hidden">
+        {SETTLED_TRANSFERS.map((t, i) => (
+          <div
+            key={`${t.from.initials}-${t.to.initials}`}
+            className="flex items-center justify-between rounded-[11px] bg-cream px-3 py-2 dark:bg-dark-bg"
+            style={{
+              opacity: entered ? 1 : 0,
+              transform: `translateY(${entered ? 0 : 6}px)`,
+              transition: "opacity .5s ease, transform .5s ease",
+              transitionDelay: `${i * 70}ms`,
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <Avatar initials={t.from.initials} color={t.from.color} />
+              <span className="text-muted-2" aria-hidden="true">
+                →
+              </span>
+              <Avatar initials={t.to.initials} color={t.to.color} />
+            </div>
+            <span className="num text-[13px] font-bold text-ink dark:text-dark-text">
+              {t.amount}
+            </span>
           </div>
         ))}
       </div>

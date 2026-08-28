@@ -243,6 +243,29 @@ export function TutorialView() {
 
         <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
           <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
+            On a bigger screen
+          </p>
+          <h2 className="num mb-3 text-[20px] leading-[1.3] text-ink sm:mb-4 sm:text-[27px] sm:leading-[1.25] dark:text-dark-text">
+            The whole group on one page
+          </h2>
+          <p className="mb-6 max-w-[540px] text-[14px] leading-relaxed text-muted sm:mb-8 sm:text-[15px] dark:text-dark-muted">
+            On a laptop, switch to the <strong className="font-bold text-ink dark:text-dark-text">One-page</strong> view
+            with the Classic / One-page toggle: every event, its bills, balances and a live settle-up preview sit
+            together, so you can add a bill or square up without ever leaving the page. Every change is confirmed with a
+            quick toast, and the classic one-screen-at-a-time flow is always a tap away — including on your phone.
+          </p>
+          <div className="rounded-lg bg-white p-2 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:p-2.5 dark:bg-dark-card dark:shadow-[0_16px_32px_-18px_rgba(0,0,0,0.55)]">
+            <img
+              src="/tutorial/workspace.png"
+              alt="The one-page desktop workspace showing a group's events, bills, balances and a live settle-up preview"
+              loading="lazy"
+              className="h-auto w-full rounded-md"
+            />
+          </div>
+        </div>
+
+        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
+          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
             Who can do what
           </p>
           <p className="mb-6 max-w-[560px] text-[13px] leading-relaxed text-muted sm:mb-8 sm:text-[14px] dark:text-dark-muted">
