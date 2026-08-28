@@ -59,9 +59,9 @@ export function MemberEventActivityView({
   const backHref = `/g/${groupId}/events/${event.id}`;
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[720px]">
-        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+      <div className="mx-auto max-w-[720px] px-5 py-6 sm:px-9 sm:py-9">
 
         <Link href={backHref} className="mb-4 block text-[13px] font-bold text-link dark:text-mint">
           ← Back to {event.name}

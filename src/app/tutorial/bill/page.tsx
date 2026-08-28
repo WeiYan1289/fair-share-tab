@@ -11,7 +11,7 @@ export default function TutorialBillPage() {
         steps={[
           {
             title: "Split a bill evenly",
-            body: "Enter what it's for, the total, who paid, and who it's split between — FairShareTab handles the rounding for you, down to the cent. Add a photo of the receipt while you're there if you want the proof attached; it's optional, and a failed upload never costs you the bill.",
+            body: "Enter what it's for, the total, who paid, and who it's split between — FairShareTab handles the rounding for you, down to the cent. Add a photo of the receipt while you're there if you want the proof attached; it's optional, and a failed upload never costs you the bill. On the one-page desktop workspace the same form opens right in a modal from the Add a bill button, so the list stays in view behind it.",
             screenshot: {
               src: "/tutorial/add-bill-equal.png",
               mobileSrc: "/tutorial/mobile/add-bill-equal.png",

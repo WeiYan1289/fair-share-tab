@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { HelpCircle } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 // Icon-only at every breakpoint — unlike Log out (which gains a text label
 // on sm+), there's no natural short label for "how this app works" that's
@@ -10,13 +11,16 @@ import { HelpCircle } from "lucide-react";
 // Links to the same /tutorial content used from the landing page, with
 // ?embedded=1 telling TutorialView to drop the marketing chrome (Log in,
 // Create group/account) and swap "Back home" for a real back-to-previous-page control.
-export function TutorialButton() {
+export function TutorialButton({ className }: { className?: string }) {
   return (
     <Link
       href="/tutorial?embedded=1"
       aria-label="How it works"
       title="How it works"
-      className="flex h-7 w-7 items-center justify-center text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text"
+      className={cn(
+        "flex h-7 w-7 items-center justify-center text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+        className,
+      )}
     >
       <HelpCircle className="h-4 w-4" aria-hidden="true" />
     </Link>

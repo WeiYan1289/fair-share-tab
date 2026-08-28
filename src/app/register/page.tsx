@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SiteHeader } from "@/components/ui/SiteHeader";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { getCurrentUserId } from "@/lib/auth/require-user-session";
 
@@ -18,13 +17,10 @@ export default async function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <SiteHeader innerClassName="max-w-[420px] px-6">
+        <ThemeToggle />
+      </SiteHeader>
       <div className="mx-auto max-w-[420px] px-6 py-10 sm:py-14">
-        <div className="mb-10 flex items-center justify-between">
-          <Link href="/">
-            <Logo size={24} wordmarkClassName="text-base" />
-          </Link>
-          <ThemeToggle />
-        </div>
         <RegisterForm />
       </div>
     </div>

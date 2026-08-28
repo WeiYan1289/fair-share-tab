@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Minus } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SiteHeader, HeaderLoginLink } from "@/components/ui/SiteHeader";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 
 const STEPS = [
@@ -130,28 +130,14 @@ export function TutorialView() {
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <SiteHeader
+        logoHref={embedded ? null : "/"}
+        innerClassName="max-w-[720px] px-6 sm:px-10"
+      >
+        {!embedded && <HeaderLoginLink />}
+        <ThemeToggle />
+      </SiteHeader>
       <div className="mx-auto max-w-[720px] px-6 py-10 sm:px-10 sm:py-14">
-        <div className="mb-5 flex items-center justify-between sm:mb-6">
-          {embedded ? (
-            <Logo size={24} wordmarkClassName="text-base" />
-          ) : (
-            <Link href="/">
-              <Logo size={24} wordmarkClassName="text-base" />
-            </Link>
-          )}
-          <div className="flex items-center gap-3.5">
-            {!embedded && (
-              <Link
-                href="/login"
-                className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
-              >
-                Log in
-              </Link>
-            )}
-            <ThemeToggle />
-          </div>
-        </div>
-
         {/* Own row, like every other "back to where you were" link in the
             app (EventDashboard's "← All events", MemberExpenseView's
             "← Back"), instead of crammed into the logo/controls row above --
@@ -239,6 +225,29 @@ export function TutorialView() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">
+          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-muted-2 uppercase">
+            On a bigger screen
+          </p>
+          <h2 className="num mb-3 text-[20px] leading-[1.3] text-ink sm:mb-4 sm:text-[27px] sm:leading-[1.25] dark:text-dark-text">
+            The whole group on one page
+          </h2>
+          <p className="mb-6 max-w-[540px] text-[14px] leading-relaxed text-muted sm:mb-8 sm:text-[15px] dark:text-dark-muted">
+            On a laptop, switch to the <strong className="font-bold text-ink dark:text-dark-text">One-page</strong> view
+            with the Classic / One-page toggle: every event, its bills, balances and a live settle-up preview sit
+            together, so you can add a bill or square up without ever leaving the page. Every change is confirmed with a
+            quick toast, and the classic one-screen-at-a-time flow is always a tap away — including on your phone.
+          </p>
+          <div className="rounded-lg bg-white p-2 shadow-[0_16px_32px_-18px_rgba(19,46,40,0.18)] sm:p-2.5 dark:bg-dark-card dark:shadow-[0_16px_32px_-18px_rgba(0,0,0,0.55)]">
+            <img
+              src="/tutorial/workspace.png"
+              alt="The one-page desktop workspace showing a group's events, bills, balances and a live settle-up preview"
+              loading="lazy"
+              className="h-auto w-full rounded-md"
+            />
+          </div>
         </div>
 
         <div className="mb-10 border-t border-ink/8 pt-8 sm:mb-16 sm:pt-12 dark:border-white/10">

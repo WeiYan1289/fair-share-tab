@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dedupedFetchJson } from "@/lib/dedupe-fetch";
+import { cn } from "@/lib/cn";
 
 interface GroupContext {
   hasOwner: boolean;
@@ -14,7 +15,13 @@ interface GroupContext {
 // line (session-persistence-and-ownership design §1). Renders nothing for
 // an unowned group and nothing while loading; there's no useful interim
 // state worth showing, and an "unclaimed" label would only nag.
-export function GroupOwnerBadge({ groupId }: { groupId: string }) {
+export function GroupOwnerBadge({
+  groupId,
+  tone = "light",
+}: {
+  groupId: string;
+  tone?: "light" | "forest";
+}) {
   const [context, setContext] = useState<GroupContext | null>(null);
 
   useEffect(() => {
@@ -30,7 +37,12 @@ export function GroupOwnerBadge({ groupId }: { groupId: string }) {
   if (!context?.hasOwner || !context.ownerName) return null;
 
   return (
-    <p className="truncate text-[11px] text-muted-2 dark:text-dark-muted">
+    <p
+      className={cn(
+        "truncate text-[11px]",
+        tone === "forest" ? "text-cream/60" : "text-muted-2 dark:text-dark-muted",
+      )}
+    >
       Owned by {context.ownerName}
     </p>
   );

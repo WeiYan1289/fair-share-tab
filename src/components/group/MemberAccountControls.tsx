@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { dedupedFetchJson } from "@/lib/dedupe-fetch";
+import { cn } from "@/lib/cn";
+
+// `forest` recolours for GroupHeader's forest band; `light` (default) keeps
+// the muted-on-cream look the settle-flow headers use.
+type HeaderTone = "light" | "forest";
 
 // Every in-group page (events list, event dashboard, settle-up, member
 // screens) shows this, but until now only /account/groups itself showed
@@ -17,7 +22,8 @@ import { dedupedFetchJson } from "@/lib/dedupe-fetch";
 // sm+ there's room for the full email + text button. One component adapts
 // everywhere it's used, including SettleUpFlow's header, which doesn't go
 // through GroupHeader at all.
-export function MemberAccountControls() {
+export function MemberAccountControls({ tone = "light" }: { tone?: HeaderTone }) {
+  const forest = tone === "forest";
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,7 +44,12 @@ export function MemberAccountControls() {
   return (
     <div className="flex items-center gap-2 sm:gap-3">
       {email && (
-        <span className="hidden max-w-[160px] truncate text-[12px] text-muted sm:inline dark:text-dark-muted">
+        <span
+          className={cn(
+            "hidden max-w-[160px] truncate text-[12px] sm:inline",
+            forest ? "text-cream/70" : "text-muted dark:text-dark-muted",
+          )}
+        >
           {email}
         </span>
       )}
@@ -47,14 +58,24 @@ export function MemberAccountControls() {
         onClick={handleLogout}
         aria-label="Log out"
         title="Log out"
-        className="flex h-7 w-7 items-center justify-center text-muted hover:text-ink sm:hidden dark:text-dark-muted dark:hover:text-dark-text"
+        className={cn(
+          "flex h-7 w-7 items-center justify-center sm:hidden",
+          forest
+            ? "text-cream/80 hover:text-cream"
+            : "text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+        )}
       >
         <LogOut className="h-4 w-4" aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={handleLogout}
-        className="hidden text-[12px] font-bold text-muted hover:text-ink sm:inline dark:text-dark-muted dark:hover:text-dark-text"
+        className={cn(
+          "hidden text-[12px] font-bold sm:inline",
+          forest
+            ? "text-cream/85 hover:text-cream"
+            : "text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+        )}
       >
         Log out
       </button>

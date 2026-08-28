@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SiteHeader, HeaderLoginLink } from "@/components/ui/SiteHeader";
 import { CreateGroupModal } from "@/components/group/CreateGroupModal";
 import { ScreenshotFrame, type TutorialScreenshot } from "@/components/tutorial/ScreenshotFrame";
 import { cn } from "@/lib/cn";
@@ -75,28 +75,14 @@ export function TutorialDetailView({ eyebrow, title, intro, steps }: TutorialDet
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <SiteHeader
+        logoHref={embedded ? null : "/"}
+        innerClassName="max-w-[720px] px-6 sm:px-10"
+      >
+        {!embedded && <HeaderLoginLink />}
+        <ThemeToggle />
+      </SiteHeader>
       <div className="mx-auto max-w-[720px] px-6 py-10 sm:px-10 sm:py-14">
-        <div className="mb-5 flex items-center justify-between sm:mb-6">
-          {embedded ? (
-            <Logo size={24} wordmarkClassName="text-base" />
-          ) : (
-            <Link href="/">
-              <Logo size={24} wordmarkClassName="text-base" />
-            </Link>
-          )}
-          <div className="flex items-center gap-3.5">
-            {!embedded && (
-              <Link
-                href="/login"
-                className="flex h-9 items-center rounded-full border border-ink/14 bg-white px-4 text-[12.5px] font-bold text-ink transition-colors hover:bg-cream-hover dark:border-white/14 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-bg"
-              >
-                Log in
-              </Link>
-            )}
-            <ThemeToggle />
-          </div>
-        </div>
-
         <div className="mb-8 sm:mb-14">
           {cameFromOverview ? (
             <button

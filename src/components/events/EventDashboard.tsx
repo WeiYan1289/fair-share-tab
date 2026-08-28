@@ -9,6 +9,8 @@ import { AddMemberModal } from "@/components/members/AddMemberModal";
 import { DeactivateConfirmModal } from "@/components/members/DeactivateConfirmModal";
 import { MemberChip } from "@/components/members/MemberChip";
 import { DeleteBillConfirmModal } from "@/components/bills/DeleteBillConfirmModal";
+import { EditBillModal } from "@/components/bills/EditBillModal";
+import { AddBillModal } from "@/components/workspace/AddBillModal";
 import { BillRow, type EventBillView } from "@/components/bills/BillRow";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { useCountUp } from "@/lib/useCountUp";
@@ -63,6 +65,9 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<EventBillView | null>(null);
+  const [showAddBill, setShowAddBill] = useState(false);
+  const [addBillKey, setAddBillKey] = useState(0);
+  const [editBillId, setEditBillId] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const totalSpend = useCountUp(event.totalSpend);
 
@@ -78,9 +83,9 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
   const dateRange = formatDateRange(event.startDate, event.endDate);
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[1160px]">
-        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+      <div className="mx-auto max-w-[1160px] px-5 py-6 sm:px-9 sm:py-9">
 
         <div className="mb-3 flex items-center justify-between">
           <Link
@@ -190,29 +195,29 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
                 Settle up
               </Link>
               {canEdit && (
-                <Link
-                  href={`/g/${groupId}/events/${event.id}/bills/new`}
+                <button
+                  type="button"
+                  onClick={() => setShowAddBill(true)}
                   className="rounded-md bg-forest px-5 py-2.5 text-[13.5px] font-bold text-cream shadow-[0_8px_18px_-6px_rgba(22,58,46,0.5)] hover:bg-forest-hover dark:bg-dark-forest"
                 >
                   + Add bill
-                </Link>
+                </button>
               )}
             </div>
           )}
         </div>
 
         {event.bills.length === 0 ? (
-          <EmptyBillsState canEdit={canEdit} groupId={groupId} eventId={event.id} />
+          <EmptyBillsState canEdit={canEdit} onAdd={() => setShowAddBill(true)} />
         ) : (
           <div className="flex flex-col gap-2.5">
             {event.bills.map((bill) => (
               <BillRow
                 key={bill.id}
                 bill={bill}
-                groupId={groupId}
-                eventId={event.id}
                 currency={event.currency}
                 canEdit={canEdit}
+                onRequestEdit={() => setEditBillId(bill.id)}
                 onRequestDelete={() => setDeleteTarget(bill)}
               />
             ))}
@@ -237,6 +242,33 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
           onClose={() => setDeactivateTarget(null)}
           onDeactivated={() => {
             setDeactivateTarget(null);
+            router.refresh();
+          }}
+        />
+      )}
+      {showAddBill && (
+        <AddBillModal
+          groupId={groupId}
+          eventId={event.id}
+          currency={event.currency}
+          members={event.members}
+          formKey={addBillKey}
+          onClose={() => setShowAddBill(false)}
+          onSaved={() => {
+            setAddBillKey((k) => k + 1);
+            router.refresh();
+          }}
+        />
+      )}
+      {editBillId && (
+        <EditBillModal
+          groupId={groupId}
+          eventId={event.id}
+          billId={editBillId}
+          canEdit={canEdit}
+          onClose={() => setEditBillId(null)}
+          onSaved={() => {
+            setEditBillId(null);
             router.refresh();
           }}
         />
@@ -266,15 +298,7 @@ export function EventDashboard({ groupId, groupName, viewerRole, actorType, even
   );
 }
 
-function EmptyBillsState({
-  canEdit,
-  groupId,
-  eventId,
-}: {
-  canEdit: boolean;
-  groupId: string;
-  eventId: string;
-}) {
+function EmptyBillsState({ canEdit, onAdd }: { canEdit: boolean; onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-md bg-white px-6 py-11 text-center dark:bg-dark-card">
       <div className="mb-4 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-mint-tint text-emerald dark:bg-mint/16 dark:text-mint">
@@ -285,12 +309,13 @@ function EmptyBillsState({
         Log your first expense to start tracking who owes what.
       </p>
       {canEdit && (
-        <Link
-          href={`/g/${groupId}/events/${eventId}/bills/new`}
+        <button
+          type="button"
+          onClick={onAdd}
           className="rounded-md bg-forest px-5.5 py-3 text-[13.5px] font-bold text-cream dark:bg-dark-forest"
         >
           + Add bill
-        </Link>
+        </button>
       )}
     </div>
   );

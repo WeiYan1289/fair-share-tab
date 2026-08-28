@@ -122,9 +122,9 @@ export function GroupWorkspace({
   }
 
   return (
-    <div className="min-h-screen bg-cream px-5 py-6 sm:px-9 sm:py-9 dark:bg-dark-bg">
-      <div className="mx-auto max-w-[1400px]">
-        <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+    <div className="min-h-screen bg-cream dark:bg-dark-bg">
+      <GroupHeader groupId={groupId} groupName={groupName} actorType={actorType} />
+      <div className="mx-auto max-w-[1400px] px-5 py-6 sm:px-9 sm:py-9">
 
         <div className="mb-6 flex flex-wrap items-center gap-2.5">
           {actorType === "member" && (

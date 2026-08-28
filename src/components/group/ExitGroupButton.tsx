@@ -3,14 +3,20 @@
 import { useState } from "react";
 import { DoorOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
+
+// `forest` recolours the control to sit on GroupHeader's forest band; the
+// default `light` keeps the muted-on-cream look the settle-flow headers use.
+type HeaderTone = "light" | "forest";
 
 // The visitor counterpart to MemberAccountControls' "Log out" — occupies
 // the identical header slot, which is otherwise empty for a visitor
 // session (session-persistence-and-ownership design §4). Same
 // icon-on-mobile / text-on-sm+ responsive pattern as MemberAccountControls,
 // so the header layout doesn't shift based on actor type.
-export function ExitGroupButton() {
+export function ExitGroupButton({ tone = "light" }: { tone?: HeaderTone }) {
   const [confirming, setConfirming] = useState(false);
+  const forest = tone === "forest";
 
   return (
     <>
@@ -19,14 +25,24 @@ export function ExitGroupButton() {
         onClick={() => setConfirming(true)}
         aria-label="Exit group"
         title="Exit group"
-        className="flex h-7 w-7 items-center justify-center text-muted hover:text-ink sm:hidden dark:text-dark-muted dark:hover:text-dark-text"
+        className={cn(
+          "flex h-7 w-7 items-center justify-center sm:hidden",
+          forest
+            ? "text-cream/80 hover:text-cream"
+            : "text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+        )}
       >
         <DoorOpen className="h-4 w-4" aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="hidden text-[12px] font-bold text-muted hover:text-ink sm:inline dark:text-dark-muted dark:hover:text-dark-text"
+        className={cn(
+          "hidden text-[12px] font-bold sm:inline",
+          forest
+            ? "text-cream/85 hover:text-cream"
+            : "text-muted hover:text-ink dark:text-dark-muted dark:hover:text-dark-text",
+        )}
       >
         Exit group
       </button>

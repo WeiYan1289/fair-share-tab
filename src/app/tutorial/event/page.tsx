@@ -36,6 +36,15 @@ export default function TutorialEventPage() {
               alt: "One member's activity view for a single event, showing their share and bills",
             },
           },
+          {
+            title: "One page on desktop",
+            body: "On a laptop, the One-page view puts the whole group on a single screen — every event with its bills, balances, and a live settle-up preview side by side. Add a bill or settle up right there without leaving the page, and flip back to the classic one-event view any time with the Classic / One-page toggle.",
+            screenshot: {
+              src: "/tutorial/workspace.png",
+              mobileSrc: "/tutorial/workspace.png",
+              alt: "The one-page desktop workspace showing a group's events, bills, balances and a live settle-up preview",
+            },
+          },
         ]}
       />
     </Suspense>
